@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <title>🔗 Transazioni On-chain 🔗</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <h1>🔗 Transazioni On-chain 🔗</h1>
+    <!-- 🔹 Saldo SATOSHI -->
+    <p class="saldo-totale">
+      💰 Saldo On-chain🔗: {{ "%.8f"|format(saldo_totale_btc) }} BTC
+    </p>
+    <!-- 🔹 Controvalore totale in EUR (opzionale) -->
+    {% if transazioni_onchain %} {% set totale_eur = transazioni_onchain |
+    map(attribute=9) | sum %}
+    <p class="saldo-totale">
+      💶 Controvalore Totale: {{ "%.2f"|format(totale_eur) }} €
+    </p>
+    {% endif %}
+
+    <div class="csv-buttons">
+      <a href="{{ url_for('scarica_csv_onchain') }}">
+        <button type="button" class="csv-button">📥 Esporta CSV</button>
+      </a>
+      <a href="{{ url_for('scarica_csv_per_mese_onchain') }}">
+        <button type="button" class="csv-button">
+          📥 Esporta CSV per mese
+        </button>
+      </a>
+    </div>
+    <p>
+      <a href="{{ url_for('nuova_transazione_onchain') }}"
+        >➕ Aggiungi una nuova transazione On-chain</a
+      >
+    </p>
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %}
+    <ul>
+      {% for category, message in messages %} {% if 'onchain' in category %}
+      <li class="{{ category }}">{{ message }}</li>
+      {% endif %} {% endfor %}
+    </ul>
+    {% endif %} {% endwith %}
+
+    <table border="1">
+      <tr>
+        <th>ID</th>
+        <th>Data</th>
+        <th>Wallet</th>
+        <th>Descrizione</th>
+        <th>Categoria</th>
+        <th>Sottocategoria</th>
+        <th>TransactionID</th>
+        <th>Importo BTC</th>
+        <th>fee</th>
+        <th>Controvalore €</th>
+        <th>Valore BTC/€</th>
+      </tr>
+      {% for t in transazioni_onchain %}
+      <tr>
+        <td>{{ t[0] }}</td>
+        <td>{{ t[1] }}</td>
+        <td>{{ t[2] }}</td>
+        <td>{{ t[3] }}</td>
+        <td>{{ t[4] }}</td>
+        <td>{{ t[5] }}</td>
+        <td>{{ t[6] }}</td>
+        <td
+          class="{% if t[7] >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+        >
+          {{ '%.8f' % t[7] if t[7] is not none else '0.00000000' }}
+        </td>
+        <td
+          class="{% if t[8] >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+        >
+          {{ '%.8f' % t[8] if t[8] is not none else '0.00000000' }}
+        </td>
+
+        <td>{{ "%.2f"|format(t[9]) }}</td>
+        <td>{{ "%.2f"|format(t[10]) }}</td>
+        <td>
+          <form
+            method="post"
+            action="{{ url_for('elimina_transazione_web_onchain', id_transazione=t[0]) }}"
+            style="display: inline"
+          >
+            <button
+              type="submit"
+              onclick="return confirm('Sei sicuro di voler eliminare questa transazione On-chain?');"
+            >
+              🗑️ Elimina
+            </button>
+          </form>
+          <a
+            href="{{ url_for('modifica_transazione_web_onchain', id_transazione=t[0]) }}"
+            >✏️ Modifica</a
+          >
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    <p><a href="/">⬅️ Torna alla home</a></p>
+  </body>
+</html>

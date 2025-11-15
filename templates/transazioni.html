@@ -1,0 +1,77 @@
+  <!DOCTYPE html>
+  <html lang="it">
+    <head>
+      <meta charset="UTF-8" />
+      <title>Le tue transazioni</title>
+      <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+      />
+    </head>
+    <body>
+      <h1>📋 Transazioni €</h1>
+      <!-- Qui il saldo totale -->
+      <p class="saldo-totale">
+        💰 Saldo Totale: {{ "%.2f"|format(saldo_totale) }} €
+      </p>
+      <div class="csv-buttons">
+        <a href="{{ url_for('scarica_csv') }}">
+        <button type="button" class="csv-button">📥 Esporta CSV</button>
+        </a>
+        <a href="{{ url_for('scarica_csv_per_mese') }}">
+        <button type="button" class="csv-button">📥Esporta CSV per mese</button>
+        </a>
+      </div>
+      <div class="nuova-transazione">
+        <p><a href="/nuova_transazione">➕ Aggiungi una nuova transazione</a></p>
+      </div>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <ul>
+            {% for category, message in messages %}
+              {% if 'euro' in category %}
+                <li class="{{ category }}">{{ message }}</li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
+      
+      <table border="1">
+        <tr>
+          <th>ID</th>
+          <th>Data</th>
+          <th>Descrizione</th>
+          <th>Categoria</th>
+          <th>Sottocategoria</th>
+          <th>Importo (€)</th>
+          <th>Controvalore BTC</th>
+          <th>Valore BTC</th>
+        </tr>
+        {% for t in transazioni %}
+        <tr>
+          <td>{{ t[0] }}</td>
+          <td>{{ t[1] }}</td>
+          <td>{{ t[2] }}</td>
+          <td>{{ t[3] }}</td>
+          <td>{{ t[4] }}</td>
+          <td class="{% if t[5] >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}">
+            {{ "%.2f"|format(t[5]) }}
+          </td>
+          <td>{{ "%.8f"|format(t[6]) if t[6] is not none else "-" }}</td>
+          <td>{{"%.2f"|format(t[7]) if t[7] is not none else "-"}}</td>
+          <td>
+            <!-- Form elimina -->
+            <form method="post" action={{ url_for('elimina_transazione_web', id_transazione=t[0]) }} style="display:inline;">
+              <button type="submit" onclick="return confirm('Sei sicuro di voler eliminare questa transazione?');">🗑️ Elimina</button>
+            </form>
+            <!-- Link modifica -->
+            <a href = {{ url_for('modifica_transazione_web', id_transazione=t[0]) }}>✏️ Modifica</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+
+      <p><a href="/">⬅️ Torna alla home</a></p>
+    </body>
+  </html>

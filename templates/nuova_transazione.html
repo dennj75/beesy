@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nuova transazione</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <h1>➕ Aggiungi una nuova transazione</h1>
+    <form method="post" action="/nuova_transazione">
+      <label for="data">📅 Data (YYYY-MM-DD):</label><br />
+      <input type="date" id="data" name="data" required /><br /><br />
+
+      <label for="descrizione">📝Descrizione:</label><br />
+      <input
+        type="text"
+        id="descrizione"
+        name="descrizione"
+        required
+      /><br /><br />
+
+      <label>Categoria:</label><br>
+      <select name="categoria" id="categoria" onchange="popolaSottocategoria()" required>
+        <option value="">-- Seleziona Categoria --</option>
+          {% for cat in categorie %}
+          <option value="{{ cat }}" {% if transazione and transazione[3] == cat %}selected{% endif %}>{{ cat }}</option>
+
+            {% endfor %}
+      </select><br><br>
+
+      <label>Sottocategoria:</label><br>
+      <select name="sottocategoria" id="sottocategoria" required></select><br><br>
+
+      <label for="importo">💸 Importo (€):</label><br />
+      <input type="text" id="importo" name="importo" step="0.01" required />
+
+      <button type="submit">✅ Aggiungi</button>
+    </form>    
+    <p><a href="/">⬅️ Torna alla home</a></p>
+  </body>
+</html>
+
+<script>
+    // Dati JS statici per categorie e sottocategorie
+    const categorie = {
+      'Entrate': ['Stipendio', 'Rimborso', 'Regalo', 'Donazioni', 'Altro'],
+      'Abitazione': ['Affitto/Mutuo', 'Bollette: Luce', 'Bollette: acqua', 'Bollette: Gas', 'Bollette: Rifiuti', 'Manutenzione', 'Spese condominiali', 'Assicurazione casa'],
+      'Alimentari': ['Supermercato', 'Ristorante - Bar', 'Spesa online', 'Altro'],
+      'Trasporti': ['Carburante', 'Mezzi pubblici', 'Manutenzione auto / moto', 'Assicurazione auto', 'Taxi / Uber', 'Noleggi', 'Parcheggi / pedaggi', 'Altro'],
+      'Spese Personali': ['Abbigliamento / Scarpe', 'Igiene personale', 'Parrucchiere / estetista', 'Abbonamenti personali (Netflix, Spotify)', 'Libri / Riviste'],
+      'Tempo Libero & Intrattenimento': ['Cinema / Teatro / Eventi', 'Sport / Palestra', 'Viaggi / Vacanze', 'Hobby / Collezioni', 'Giochi / App a pagamento'],
+      'Finanze & Banche': ['Commissioni bancarie', 'Interessi passivi', 'Prelievi / Depositi', 'Investimenti', 'Criptovalute', 'Giroconti'],
+      'Lavoro & Studio': ['Spese di ufficio / coworking', 'Formazione / Corsi', 'Libri / Materiali didattici', 'Trasporti lavoro / studio', 'Pasti lavoro'],
+      'Famiglia & Bambini': ['Spese scolastiche', 'Abbigliamento bambino', 'Salute bambino', 'Giocattoli', 'Baby sitter / Asilo', 'Altro'],
+      'Salute': ['Farmacia', 'Visita medica', 'Altro']
+    };
+
+    // Salviamo la sottocategoria corrente dal backend
+    const sottocategoriaAttuale = {{ (transazione[5] if transazione else '') | tojson | safe }};
+
+    function popolaSottocategoria() {
+      const categoriaSelezionata = document.getElementById("categoria").value;
+      const sottoSel = document.getElementById("sottocategoria");
+      sottoSel.innerHTML = "";
+
+      if (categorie[categoriaSelezionata]) {
+        categorie[categoriaSelezionata].forEach(sotto => {
+          const opt = document.createElement("option");
+          opt.value = sotto;
+          opt.text = sotto;
+
+          // Se questa è la sottocategoria selezionata nel database
+          if (sotto === sottocategoriaAttuale) {
+            opt.selected = true;
+          }
+
+          sottoSel.appendChild(opt);
+        });
+      } else {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.text = "-- Nessuna sottocategoria --";
+        sottoSel.appendChild(opt);
+      }
+    }
+
+    // Popoliamo al caricamento della pagina
+    document.addEventListener("DOMContentLoaded", () => {
+      popolaSottocategoria();
+    });
+  </script>

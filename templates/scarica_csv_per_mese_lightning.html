@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Scarica CSV per mese</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <h1>📥 Scarica CSV per mese</h1>
+    <form method="post" action="/scarica_csv_lightning_per_mese">
+      <label for="mese">Inserisci mese:</label><br />
+      <input
+        type="text"
+        id="mese"
+        name="mese"
+        placeholder="2025-09"
+        pattern="^\d{4}-(0[1-9]|1[0-2])$"
+        title="Inserisci un mese nel formato AAAA-MM (es: 2025-09)"
+        required
+      />
+      <br /><br />
+      <button type="submit">📥 Scarica CSV</button>
+    </form>
+    <p><a href="/">⬅️ Torna alla home</a></p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %}
+    <ul class="flashes">
+      {% for category, message in messages %}
+      <li class="{{ category }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %} {% endwith %}
+  </body>
+</html>

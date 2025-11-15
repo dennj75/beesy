@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+.venv/
+.ven/
+venv/
+ENV/
+env/
+
+# Database - NON pubblicare i tuoi dati personali!
+*.db
+*.sqlite
+*.sqlite3
+
+# Exports - file CSV con le tue transazioni
+exports/
+*.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# File temporanei e di documentazione personale
+document.txt
+TODO.txt
+EE_File_Unico.txt
+Hai costruito un mini-gestionale.txt
+*.html_old_style.txt
+
+# Test cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables (se usi .env)
+.env

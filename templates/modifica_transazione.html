@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modifica transazione</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <h1>✏️ Modifica Transazione</h1>
+
+  <form method="post" action="/modifica-transazione/{{ transazione[0] }}">
+    <label>Data:</label><br>
+    <input type="date" id="data" name="data" value="{{ transazione[1] }}" required><br><br>
+
+    <label>Descrizione:</label><br>
+    <input type="text" id="descrizione" name="descrizione" value="{{ transazione[2] }}" required><br><br>
+
+    <label>Categoria:</label><br>
+<select name="categoria" id="categoria" onchange="popolaSottocategoria()" required>
+  <option value="">-- Seleziona Categoria --</option>
+  {% for cat in categorie %}
+    <option value="{{ cat }}" {% if transazione[3] == cat %}selected{% endif %}>{{ cat }}</option>
+  {% endfor %}
+</select><br><br>
+
+<label>Sottocategoria:</label><br>
+<select name="sottocategoria" id="sottocategoria" required></select><br><br>
+
+    <label>Importo (€):</label><br>
+    <input type="text" id="importo" name="importo" value="{{ '%.2f'|format(transazione[4]|float) }}" required><br><br>
+
+    <button type="submit">✅ Salva Modifiche</button>
+  </form>
+
+  <p><a href="/transazioni">⬅️ Torna alle transazioni</a></p>
+</body>
+</html>
+<script>
+  // Riceviamo il dizionario categorie direttamente dal backend
+  const categorie = {{ categorie_json | safe }};
+  const sottocategoriaAttuale = {{ transazione[4] | tojson | safe }};
+  const categoriaAttuale = "{{ transazione[3] }}";
+
+  function popolaSottocategoria() {
+    const categoriaSelezionata = document.getElementById("categoria").value;
+    const sottoSel = document.getElementById("sottocategoria");
+    sottoSel.innerHTML = "";
+
+    if (categorie[categoriaSelezionata]) {
+      categorie[categoriaSelezionata].forEach(sotto => {
+        const opt = document.createElement("option");
+        opt.value = sotto;
+        opt.text = sotto;
+        if (sotto === sottocategoriaAttuale) {
+          opt.selected = true;
+        }
+        sottoSel.appendChild(opt);
+      });
+    } else {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.text = "-- Nessuna sottocategoria --";
+      sottoSel.appendChild(opt);
+    }
+  }
+
+  // Al caricamento della pagina: seleziona la categoria giusta
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("categoria").value = categoriaAttuale;
+    popolaSottocategoria();
+  });
+</script>

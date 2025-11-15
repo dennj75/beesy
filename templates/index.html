@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Gestione finanze</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <h1>💰 Benvenuto nel tuo tracker finaziario</h1>
+
+    <p>Qui puoi monitorare le tue entrate e uscite finanziarie.</p>
+    <table border="1">
+      <tr>
+        <th>
+          <div class="transazioni-buttons">
+            <a href="{{ url_for('transazioni') }}">
+              <button type="button" class="transazioni">📄 TRACKER €</button>
+            </a>
+          </div>
+        </th>
+        <th>
+          <div class="transazioni_lightning-buttons">
+            <a href="{{ url_for('transazioni_lightning') }}">
+              <button type="button" class="transazioni_lightning">
+                ⚡️Lightning Network⚡️
+              </button>
+            </a>
+          </div>
+        </th>
+        <th>
+          <div class="transazioni_onchain-buttons">
+            <a href="{{ url_for('transazioni_onchain') }}">
+              <button type="button" class="transazioni_onchain">
+                👀₿itcoin on-chain🔗
+              </button>
+            </a>
+          </div>
+        </th>
+      </tr>
+      <tr>
+        <td>
+          <p class="saldo-totale">
+            💰 Saldo Totale TRACKER €: {{ "%.2f"|format(saldo_totale) }} €
+          </p>
+          <br />
+          0.0110000BTC
+        </td>
+
+        <td>
+          <p class="saldo-sats">
+            💰 Saldo Totale {{
+            "{:,}".format(saldo_totale_satoshi|int).replace(",",".") }} SATS
+          </p>
+          <p class="saldo-totale-eur">
+            {{ "%.2f"|format(saldo_eur_lightning) }} €
+          </p>
+        </td>
+        <td>
+          <br />
+          0,00030000BTC<br />
+          27,27€
+        </td>
+      </tr>
+    </table>
+    <div class="dropdown">
+      <button class="dropbtn">➕ Inserisci nuova transazione</button>
+      <div class="dropdown-content">
+        <a href="/nuova_transazione">TRACKER €</a>
+        <a href="/nuova_transazione_lightning">Lightning Network ⚡️</a>
+        <a href="/nuova_transazione_onchain">₿itcoin on-chain🔗</a>
+      </div>
+    </div>
+  </body>
+</html>
