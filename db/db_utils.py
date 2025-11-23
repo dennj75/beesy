@@ -13,7 +13,8 @@ def verifica_ownership_transazione(id_transazione, user_id, tabella):
     """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute(f'SELECT user_id FROM {tabella} WHERE id = ?', (id_transazione,))
+    cursor.execute(
+        f'SELECT user_id FROM {tabella} WHERE id = ?', (id_transazione,))
     row = cursor.fetchone()
     conn.close()
     if not row:
@@ -43,6 +44,7 @@ def inizializza_db():
             'ALTER TABLE transazioni ADD COLUMN user_id INTEGER DEFAULT 1')
     except sqlite3.OperationalError:
         pass
+
     # Tabella per Lightning Network
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS transazioni_lightning(
@@ -77,16 +79,20 @@ def inizializza_db():
             fee REAL NOT NULL,
             controvalore_eur REAL NOT NULL,
             valore_btc_eur REAL NOT NULL
-        )
+        )  
     ''')
     try:
         cursor.execute(
             'ALTER TABLE transazioni_onchain ADD COLUMN user_id INTEGER DEFAULT 1')
     except sqlite3.OperationalError:
         pass
+    conn.commit()
+    conn.close()
 
     # Tabella per utenti (auth)
-    cursor.execute('''
+    conn_users = sqlite3.connect('database.db')
+    cursor_users = conn_users.cursor()
+    cursor_users.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -94,8 +100,13 @@ def inizializza_db():
             password_hash TEXT NOT NULL
         )
     ''')
-    conn.commit()
-    conn.close()
+    try:
+        cursor_users.execute('ALTER TABLE users ADD COLUMN npub TEXT')
+    except sqlite3.OperationalError:
+        pass  # La colonna esiste già
+
+    conn_users.commit()
+    conn_users.close()
 
 
 def salva_su_db_onchain(user_id, data, wallet, descrizione, categoria, sottocategoria, transactionID, importo_btc, fee, controvalore_eur, valore_btc_eur):
@@ -127,7 +138,8 @@ def elimina_transazione_da_db_onchain(id_transazione, user_id):
     cursor = conn.cursor()
     if not verifica_ownership_transazione(id_transazione, user_id, 'transazioni_onchain'):
         conn.close()
-        raise PermissionError(f"Non hai il permesso di eliminare questa transazione")
+        raise PermissionError(
+            f"Non hai il permesso di eliminare questa transazione")
     cursor.execute(
         'DELETE FROM transazioni_onchain WHERE id = ?', (id_transazione,))
     conn.commit()
@@ -143,7 +155,8 @@ def modifica_transazione_db_onchain(id_transazione, campo, nuovo_valore, user_id
     cursor = conn.cursor()
     if not verifica_ownership_transazione(id_transazione, user_id, 'transazioni_onchain'):
         conn.close()
-        raise PermissionError(f"Non hai il permesso di modificare questa transazione")
+        raise PermissionError(
+            f"Non hai il permesso di modificare questa transazione")
     query = f'UPDATE transazioni_onchain SET {campo} = ? WHERE id = ?'
     cursor.execute(query, (nuovo_valore, id_transazione))
     conn.commit()
@@ -222,7 +235,8 @@ def elimina_transazione_da_db_lightning(id_transazione, user_id):
     cursor = conn.cursor()
     if not verifica_ownership_transazione(id_transazione, user_id, 'transazioni_lightning'):
         conn.close()
-        raise PermissionError(f"Non hai il permesso di eliminare questa transazione")
+        raise PermissionError(
+            f"Non hai il permesso di eliminare questa transazione")
     cursor.execute(
         'DELETE FROM transazioni_lightning WHERE id = ?', (id_transazione,))
     conn.commit()
@@ -238,7 +252,8 @@ def modifica_transazione_db_lightning(id_transazione, campo, nuovo_valore, user_
     cursor = conn.cursor()
     if not verifica_ownership_transazione(id_transazione, user_id, 'transazioni_lightning'):
         conn.close()
-        raise PermissionError(f"Non hai il permesso di modificare questa transazione")
+        raise PermissionError(
+            f"Non hai il permesso di modificare questa transazione")
     query = f'UPDATE transazioni_lightning SET {campo} = ? WHERE id = ?'
     cursor.execute(query, (nuovo_valore, id_transazione))
     conn.commit()
@@ -288,7 +303,8 @@ def elimina_transazione_da_db(id_transazione, user_id):
     cursor = conn.cursor()
     if not verifica_ownership_transazione(id_transazione, user_id, 'transazioni'):
         conn.close()
-        raise PermissionError(f"Non hai il permesso di eliminare questa transazione")
+        raise PermissionError(
+            f"Non hai il permesso di eliminare questa transazione")
     cursor.execute('DELETE FROM transazioni WHERE id = ?', (id_transazione,))
     conn.commit()
     conn.close()
@@ -303,7 +319,8 @@ def modifica_transazione_db(id_transazione, campo, nuovo_valore, user_id):
     cursor = conn.cursor()
     if not verifica_ownership_transazione(id_transazione, user_id, 'transazioni'):
         conn.close()
-        raise PermissionError(f"Non hai il permesso di modificare questa transazione")
+        raise PermissionError(
+            f"Non hai il permesso di modificare questa transazione")
     query = f'UPDATE transazioni SET {campo} = ? WHERE id = ?'
     cursor.execute(query, (nuovo_valore, id_transazione))
     conn.commit()
@@ -368,3 +385,28 @@ def get_user_by_id(user_id):
     row = cursor.fetchone()
     conn.close()
     return row
+
+
+def get_user_by_npub(npub):
+    """Trova un utente tramite il suo npub"""
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, username FROM users WHERE npub = ?', (npub,))
+    user = cursor.fetchone()
+    conn.close()
+    return user
+
+
+def create_user_from_npub(npub):
+    """Crea un nuovo utente dal npub"""
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    username = f"nostr_{npub[:8]}"
+    cursor.execute(
+        'INSERT INTO users (username, email, password_hash, npub) VALUES (?, ?, ?, ?)',
+        (username, None, '', npub)  # email=None, password_hash='', npub=valore
+    )
+    conn.commit()
+    user_id = cursor.lastrowid
+    conn.close()
+    return user_id

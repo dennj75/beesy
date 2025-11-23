@@ -9,6 +9,17 @@ from utils.helpers import normalizza_importo
 import json
 import sqlite3
 from flask_login import LoginManager, login_remembered, current_user
+import os
+import binascii
+import hashlib
+from flask import Flask, session, jsonify, request
+from ecdsa import VerifyingKey, SECP256k1, BadSignatureError
+from bech32 import bech32_decode, convertbits
+from btclib.ecc import ssa
+from hashlib import sha256
+import time
+from coincurve import PublicKey
+from coincurve._libsecp256k1 import lib, ffi
 
 inizializza_db()  # <<--- aggiungi questa riga
 CATEGORIE = {
@@ -61,6 +72,179 @@ app = Flask(__name__)
 # Chiave necessaria per i flash e da cambiare in produzione
 app.secret_key = 'supersecretkey'
 
+
+@app.get("/api/challenge")
+def get_challenge():
+    challenge = binascii.hexlify(os.urandom(32)).decode()
+    timestamp = int(time.time())
+    session["challenge"] = challenge
+    session["challenge_timestamp"] = timestamp
+    return {"challenge": challenge, "timestamp": timestamp}
+
+
+@app.route('/login_nostr')
+def login_nostr():
+    return render_template('login_nostr.html')
+
+
+def npub_to_hex(npub):
+    hrp, data = bech32_decode(npub)
+    decoded = convertbits(data, 5, 8, False)
+    return bytes(decoded).hex()
+
+
+@app.post("/api/verify")
+def verify_signature():
+    body = request.json
+    event = body["event"]
+    npub_hex = body["npub"]
+
+    print("=" * 60)
+    print("INIZIO VERIFICA NOSTR")
+    print("=" * 60)
+    print(f"Evento ricevuto:\n{json.dumps(event, indent=2)}")
+
+    # Verifica presenza challenge
+    challenge = session.get("challenge")
+    timestamp_challenge = session.get("challenge_timestamp")
+
+    if not challenge:
+        print("❌ ERRORE: Nessuna challenge in sessione")
+        return {"ok": False, "error": "no challenge"}, 400
+
+    # Verifica content == challenge
+    if event["content"] != challenge:
+        print(f"❌ ERRORE: Content mismatch")
+        return {"ok": False, "error": "content mismatch"}, 400
+
+    # Verifica timestamp (180 secondi di tolleranza)
+    if abs(event["created_at"] - timestamp_challenge) > 180:
+        print(f"❌ ERRORE: Timestamp fuori range")
+        return {"ok": False, "error": "timestamp mismatch"}, 400
+
+    # Verifica pubkey
+    if event["pubkey"] != npub_hex:
+        print(f"❌ ERRORE: Pubkey mismatch")
+        return {"ok": False, "error": "pubkey mismatch"}, 400
+
+    try:
+        # ========================================
+        # CALCOLO ID EVENTO SECONDO NIP-01
+        # ========================================
+
+        serialized_array = [
+            0,
+            event["pubkey"],
+            event["created_at"],
+            event["kind"],
+            event["tags"],
+            event["content"]
+        ]
+
+        serialized_str = json.dumps(
+            serialized_array,
+            separators=(',', ':'),
+            ensure_ascii=False
+        )
+
+        print(f"\n📝 Stringa serializzata:")
+        print(f"   {serialized_str[:150]}...")
+
+        # Calcola SHA256
+        event_id_bytes = sha256(serialized_str.encode('utf-8')).digest()
+        calculated_id = event_id_bytes.hex()
+
+        print(f"\n🔐 Verifica ID:")
+        print(f"   Calcolato: {calculated_id}")
+        print(f"   Ricevuto : {event['id']}")
+        print(f"   Match: {'✅' if calculated_id == event['id'] else '❌'}")
+
+        # ========================================
+        # VERIFICA FIRMA SCHNORR (BIP340)
+        # ========================================
+
+        pubkey_xonly = bytes.fromhex(event["pubkey"])  # 32 bytes x-only
+        sig_bytes = bytes.fromhex(event["sig"])        # 64 bytes signature
+
+        print(f"\n🔏 Verifica firma Schnorr (BIP340)...")
+        print(f"   Pubkey x-only: {len(pubkey_xonly)} bytes")
+        print(f"   Signature: {len(sig_bytes)} bytes")
+        print(f"   Message hash: {len(event_id_bytes)} bytes")
+
+        # Crea contesto secp256k1
+        ctx = lib.secp256k1_context_create(lib.SECP256K1_CONTEXT_NONE)
+
+        # Crea struttura per pubkey x-only
+        xonly_pubkey = ffi.new('secp256k1_xonly_pubkey *')
+
+        # Parse della pubkey x-only (32 bytes)
+        result = lib.secp256k1_xonly_pubkey_parse(
+            ctx, xonly_pubkey, pubkey_xonly)
+
+        if result != 1:
+            print(f"   ❌ Impossibile parsare pubkey x-only")
+            lib.secp256k1_context_destroy(ctx)
+            return {"ok": False, "error": "invalid pubkey"}, 400
+
+        print(f"   ✓ Pubkey x-only parsata correttamente")
+
+        # Verifica firma Schnorr (BIP340)
+        result = lib.secp256k1_schnorrsig_verify(
+            ctx,
+            sig_bytes,
+            event_id_bytes,
+            32,  # lunghezza messaggio (sempre 32 per SHA256)
+            xonly_pubkey
+        )
+
+        # Pulisci il contesto
+        lib.secp256k1_context_destroy(ctx)
+
+        is_valid = (result == 1)
+
+        if is_valid:
+            print(f"   ✅ Firma Schnorr verificata!")
+            print(f"\n✅ LOGIN RIUSCITO!")
+
+            # Salva npub in sessione
+            session["npub"] = npub_hex
+
+            # IMPORTANTE: Usa Flask-Login per fare il login
+            from flask_login import login_user
+            from db.db_utils import get_user_by_npub, create_user_from_npub
+
+            # Cerca l'utente nel DB tramite npub
+            user_row = get_user_by_npub(npub_hex)
+
+            # Se non esiste, crealo
+            if not user_row:
+                print(
+                    f"   📝 Creazione nuovo utente per npub: {npub_hex[:16]}...")
+                user_id = create_user_from_npub(npub_hex)
+                user_row = get_user_by_npub(npub_hex)
+
+            # Crea oggetto user e fai login
+            user = SimpleUser(id=user_row[0], username=user_row[1])
+            login_user(user, remember=True)
+
+            print(f"   ✓ Login Flask completato per user_id={user_row[0]}")
+            print("=" * 60)
+            return {"ok": True}
+        else:
+            print(f"   ❌ Firma Schnorr non valida (result={result})")
+            print(f"\n❌ FIRMA NON VALIDA")
+            print("=" * 60)
+            return {"ok": False, "error": "invalid signature"}, 401
+
+    except Exception as e:
+        print(f"\n❌ ECCEZIONE durante la verifica:")
+        print(f"   {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        print("=" * 60)
+        return {"ok": False, "error": f"verification failed: {str(e)}"}, 400
+
+
 # LOGIN: inizializzazione minimale di Flask-Login
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
@@ -90,8 +274,10 @@ def home():
     if not current_user.is_authenticated:
         return redirect(url_for('auth.login'))
     dati, saldo_totale_eur = get_transazioni_con_saldo(current_user.id)
-    dati_lightning, saldo_totale_satoshi, saldo_eur_lightning = get_transazioni_con_saldo_lightning(current_user.id)
-    dati_onchain, saldo_totale_btc = get_transazioni_con_saldo_onchain(current_user.id)
+    dati_lightning, saldo_totale_satoshi, saldo_eur_lightning = get_transazioni_con_saldo_lightning(
+        current_user.id)
+    dati_onchain, saldo_totale_btc = get_transazioni_con_saldo_onchain(
+        current_user.id)
 
     # Calcola controvalore BTC per il tracker EUR
     saldo_btc_da_eur = sum(float(t[6]) for t in dati if t[6] is not None)
@@ -191,11 +377,14 @@ def modifica_transazione_web(id_transazione):
 
         # chiama la funzione di modifica
         modifica_transazione_db(id_transazione, 'data', data, current_user.id)
-        modifica_transazione_db(id_transazione, 'descrizione', descrizione, current_user.id)
-        modifica_transazione_db(id_transazione, 'categoria', categoria, current_user.id)
+        modifica_transazione_db(
+            id_transazione, 'descrizione', descrizione, current_user.id)
+        modifica_transazione_db(
+            id_transazione, 'categoria', categoria, current_user.id)
         modifica_transazione_db(
             id_transazione, 'sottocategoria', sottocategoria, current_user.id)
-        modifica_transazione_db(id_transazione, 'importo', importo, current_user.id)
+        modifica_transazione_db(
+            id_transazione, 'importo', importo, current_user.id)
         # Ricalcola e aggiorna BTC
         valore_btc_eur = ottieni_valore_btc_eur(data)
 
@@ -225,7 +414,8 @@ def modifica_transazione_web(id_transazione):
 @login_required
 def scarica_csv():
     nome_file = 'exports/transazioni.csv'
-    esporta_csv(nome_file, user_id=current_user.id)  # Genera il csv aggiornato filtrato per utente
+    # Genera il csv aggiornato filtrato per utente
+    esporta_csv(nome_file, user_id=current_user.id)
     return send_file(nome_file, as_attachment=True, download_name=f"transazioni.csv")
 
 
@@ -239,7 +429,8 @@ def scarica_csv_per_mese():
             return redirect(url_for('scarica_csv_per_mese'))
 
         nome_file = f'exports/transazioni_{mese}.csv'
-        esporta_csv_per_mese(mese, user_id=current_user.id)  # Genera il csv aggiornato filtrato per utente
+        # Genera il csv aggiornato filtrato per utente
+        esporta_csv_per_mese(mese, user_id=current_user.id)
         return send_file(nome_file, as_attachment=True, download_name=f"transazioni_{mese}.csv")
 
     return render_template('scarica_csv_per_mese.html')
@@ -250,7 +441,8 @@ def scarica_csv_per_mese():
 def transazioni_lightning():
 
     # Questa funzione restituisce 3 valori (lista, saldo sats, saldo eur)
-    dati_lightning, saldo_totale_satoshi, saldo_eur_lightning = get_transazioni_con_saldo_lightning(current_user.id)
+    dati_lightning, saldo_totale_satoshi, saldo_eur_lightning = get_transazioni_con_saldo_lightning(
+        current_user.id)
 
     # *CAMBIARE 'index.html' con 'transazioni_lightning.html'*
     return render_template("transazioni_lightning.html",
@@ -307,7 +499,8 @@ def nuova_transazione_lightning():
 def elimina_transazione_web_lightning(id_transazione):
     elimina_transazione_da_db_lightning(id_transazione, current_user.id)
     flash("Transazione eliminata con successo", "success")
-    dati_Lightning, saldo_totale_satoshi, saldo_eur_lightning = get_transazioni_con_saldo_lightning(current_user.id)
+    dati_Lightning, saldo_totale_satoshi, saldo_eur_lightning = get_transazioni_con_saldo_lightning(
+        current_user.id)
     return render_template('transazioni_lightning.html',
                            transazioni_lightning=dati_Lightning,
                            saldo_totale_satoshi=saldo_totale_satoshi,
@@ -336,15 +529,18 @@ def modifica_transazione_web_lightning(id_transazione):
         sottocategoria = request.form['sottocategoria']
         satoshi = request.form['satoshi']
         # chiama la funzione di modifica
-        modifica_transazione_db_lightning(id_transazione, 'data', data, current_user.id)
-        modifica_transazione_db_lightning(id_transazione, 'wallet', wallet, current_user.id)
+        modifica_transazione_db_lightning(
+            id_transazione, 'data', data, current_user.id)
+        modifica_transazione_db_lightning(
+            id_transazione, 'wallet', wallet, current_user.id)
         modifica_transazione_db_lightning(
             id_transazione, 'descrizione', descrizione, current_user.id)
         modifica_transazione_db_lightning(
             id_transazione, 'categoria', categoria, current_user.id)
         modifica_transazione_db_lightning(
             id_transazione, 'sottocategoria', sottocategoria, current_user.id)
-        modifica_transazione_db_lightning(id_transazione, 'satoshi', satoshi, current_user.id)
+        modifica_transazione_db_lightning(
+            id_transazione, 'satoshi', satoshi, current_user.id)
         # Ricalcola e aggiorna BTC
         valore_btc_eur = ottieni_valore_btc_eur(data)
 
@@ -360,11 +556,12 @@ def modifica_transazione_web_lightning(id_transazione):
         else:
             flash("⚠️ Impossibile ottenere il valore BTC per la data selezionata. Verifica la connessione o riprova più tardi.", "error")
 
-        dati_lightning, saldo_totale_satoshi, saldo_eur_lightning = get_transazioni_con_saldo_lightning(current_user.id)
+        dati_lightning, saldo_totale_satoshi, saldo_eur_lightning = get_transazioni_con_saldo_lightning(
+            current_user.id)
         return render_template('transazioni_lightning.html',
-                       transazioni_lightning=dati_lightning,
-                       saldo_totale_satoshi=saldo_totale_satoshi,
-                       saldo_eur_lightning=saldo_eur_lightning)
+                               transazioni_lightning=dati_lightning,
+                               saldo_totale_satoshi=saldo_totale_satoshi,
+                               saldo_eur_lightning=saldo_eur_lightning)
 
     # Se GET, mostra il form con i dati precompilati
     return render_template(
@@ -379,7 +576,8 @@ def modifica_transazione_web_lightning(id_transazione):
 @login_required
 def scarica_csv_lightning():
     nome_file = 'exports/transazioni_lightning.csv'
-    esporta_csv_lightning(nome_file, user_id=current_user.id)  # Genera il csv aggiornato filtrato per utente
+    # Genera il csv aggiornato filtrato per utente
+    esporta_csv_lightning(nome_file, user_id=current_user.id)
     return send_file(nome_file, as_attachment=True, download_name=f"transazioni_lightning.csv")
 
 
@@ -393,7 +591,8 @@ def scarica_csv_per_mese_lightning():
             return redirect(url_for('scarica_csv_per_mese_lightning'))
 
         nome_file = f'exports/transazioni_{mese}_lightning.csv'
-        esporta_csv_per_mese_lightning(mese, user_id=current_user.id)  # Genera il csv aggiornato filtrato per utente
+        # Genera il csv aggiornato filtrato per utente
+        esporta_csv_per_mese_lightning(mese, user_id=current_user.id)
         return send_file(nome_file, as_attachment=True, download_name=f"transazioni_{mese}_lightning.csv")
 
     return render_template('scarica_csv_per_mese_lightning.html')
@@ -402,7 +601,8 @@ def scarica_csv_per_mese_lightning():
 @app.route('/transazioni_onchain')
 @login_required
 def transazioni_onchain():
-    dati_onchain, saldo_totale_btc = get_transazioni_con_saldo_onchain(current_user.id)
+    dati_onchain, saldo_totale_btc = get_transazioni_con_saldo_onchain(
+        current_user.id)
     return render_template("transazioni_onchain.html", transazioni_onchain=dati_onchain, saldo_totale_btc=saldo_totale_btc)
 
 
@@ -458,7 +658,8 @@ def nuova_transazione_onchain():
 def elimina_transazione_web_onchain(id_transazione):
     elimina_transazione_da_db_onchain(id_transazione, current_user.id)
     flash("Transazione eliminata con successo", "success")
-    dati_onchain, saldo_totale_satoshi_onchain = get_transazioni_con_saldo_satoshi_onchain(current_user.id)
+    dati_onchain, saldo_totale_satoshi_onchain = get_transazioni_con_saldo_satoshi_onchain(
+        current_user.id)
     return render_template('transazioni_onchain.html', transazioni_lightning=dati_onchain, saldo_totale_satoshi=saldo_totale_satoshi_onchain)
 
 
@@ -486,8 +687,10 @@ def modifica_transazione_web_onchain(id_transazione):
         importo_btc = float(request.form['importo_btc'])
         fee = float(request.form['fee'])
         # chiama la funzione di modifica
-        modifica_transazione_db_onchain(id_transazione, 'data', data, current_user.id)
-        modifica_transazione_db_onchain(id_transazione, 'wallet', wallet, current_user.id)
+        modifica_transazione_db_onchain(
+            id_transazione, 'data', data, current_user.id)
+        modifica_transazione_db_onchain(
+            id_transazione, 'wallet', wallet, current_user.id)
         modifica_transazione_db_onchain(
             id_transazione, 'descrizione', descrizione, current_user.id)
         modifica_transazione_db_onchain(
@@ -498,7 +701,8 @@ def modifica_transazione_web_onchain(id_transazione):
             id_transazione, 'transactionID', transactionID, current_user.id)
         modifica_transazione_db_onchain(
             id_transazione, 'importo_btc', importo_btc, current_user.id)
-        modifica_transazione_db_onchain(id_transazione, 'fee', fee, current_user.id)
+        modifica_transazione_db_onchain(
+            id_transazione, 'fee', fee, current_user.id)
         # Ricalcola e aggiorna BTC
         valore_btc_eur = ottieni_valore_btc_eur(data)
         if valore_btc_eur:
@@ -526,7 +730,8 @@ def modifica_transazione_web_onchain(id_transazione):
 @login_required
 def scarica_csv_onchain():
     nome_file = 'exports/transazioni_onchain.csv'
-    esporta_csv_onchain(nome_file, user_id=current_user.id)  # Genera il csv aggiornato filtrato per utente
+    # Genera il csv aggiornato filtrato per utente
+    esporta_csv_onchain(nome_file, user_id=current_user.id)
     return send_file(nome_file, as_attachment=True, download_name=f"transazioni_onchain.csv")
 
 
@@ -540,7 +745,8 @@ def scarica_csv_per_mese_onchain():
             return redirect(url_for('scarica_csv_per_mese_onchain'))
 
         nome_file = f'exports/transazioni_{mese}_onchain.csv'
-        esporta_csv_per_mese_onchain(mese, user_id=current_user.id)  # Genera il csv aggiornato filtrato per utente
+        # Genera il csv aggiornato filtrato per utente
+        esporta_csv_per_mese_onchain(mese, user_id=current_user.id)
         return send_file(nome_file, as_attachment=True, download_name=f"transazioni_{mese}_onchain.csv")
 
     return render_template('scarica_csv_per_mese_onchain.html')
