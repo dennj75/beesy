@@ -1,3 +1,5 @@
+from db.db_utils import DB_PATH
+from utils.crypto import _carica_storico_btc_eur
 from db.db_utils import get_user_by_id
 from flask_login import LoginManager, login_required, UserMixin
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -18,6 +20,7 @@ from bech32 import bech32_decode, convertbits
 from btclib.ecc import ssa
 from hashlib import sha256
 import time
+from datetime import datetime, date
 from coincurve import PublicKey
 from coincurve._libsecp256k1 import lib, ffi
 
@@ -38,33 +41,42 @@ CATEGORIE = {
 
 def get_transazioni_con_saldo_lightning(user_id):
     transazioni_lightning = leggi_transazioni_da_db_lightning(user_id)
-    # t[6] è la colonna 'satoshi'
-    saldo_satoshi = sum(float(t[6])
-                        for t in transazioni_lightning if t[6] is not None)
-    # t[7] è la colonna 'controvalore_eur'
-    saldo_eur_lightning = sum(float(t[7])
-                              for t in transazioni_lightning if t[7] is not None)
-    # AGGIUNTO saldo_eur_lightning
+
+    saldo_satoshi = sum(
+        float(t['satoshi']) for t in transazioni_lightning
+        if t['satoshi'] not in (None, "", "None")
+    )
+
+    saldo_eur_lightning = sum(
+        float(t['controvalore_eur']) for t in transazioni_lightning
+        if t['controvalore_eur'] not in (None, "", "None")
+    )
+
     return transazioni_lightning, saldo_satoshi, saldo_eur_lightning
 
 
 def get_transazioni_con_saldo(user_id):
     transazioni = leggi_transazioni_da_db(user_id)
-    saldo = sum(float(t[5]) for t in transazioni if t[5] is not None)
-    return transazioni, saldo
+    saldo_totale = sum(float(t["importo"])
+                       for t in transazioni if t["importo"] is not None)
+    saldo_banca = sum(t['importo']
+                      for t in transazioni if t['conto'].lower() == 'banca')
+    saldo_contanti = sum(t['importo']
+                         for t in transazioni if t['conto'].lower() == 'contanti')
+    return transazioni, saldo_totale, saldo_banca, saldo_contanti
 
 
 def get_transazioni_con_saldo_onchain(user_id):
     transazioni = leggi_transazioni_da_db_onchain(user_id)
-    saldo_totale_btc = sum(float(t[7])
-                           for t in transazioni if t[7] is not None)
+    saldo_totale_btc = sum(float(t['importo_btc'])
+                           for t in transazioni if t['importo_btc'] is not None)
     return transazioni, saldo_totale_btc
 
 
 def get_transazioni_con_saldo_satoshi_onchain(user_id):
     transazioni_onchain = leggi_transazioni_da_db_onchain(user_id)
-    saldo_totale_btc = sum(float(t[7])
-                           for t in transazioni_onchain if t[7] is not None)
+    saldo_totale_btc = sum(float(t['importo_btc'])
+                           for t in transazioni_onchain if t['importo_btc'] is not None)
     return transazioni_onchain, saldo_totale_btc
 
 
@@ -273,20 +285,39 @@ def load_user(user_id):
 def home():
     if not current_user.is_authenticated:
         return redirect(url_for('auth.login'))
-    dati, saldo_totale_eur = get_transazioni_con_saldo(current_user.id)
+    dati, saldo_totale_eur, saldo_banca, saldo_contanti = get_transazioni_con_saldo(
+        current_user.id)
     dati_lightning, saldo_totale_satoshi, saldo_eur_lightning = get_transazioni_con_saldo_lightning(
         current_user.id)
     dati_onchain, saldo_totale_btc = get_transazioni_con_saldo_onchain(
         current_user.id)
 
     # Calcola controvalore BTC per il tracker EUR
-    saldo_btc_da_eur = sum(float(t[6]) for t in dati if t[6] is not None)
+    saldo_btc_da_eur = sum(float(t["controvalore_btc"])
+                           for t in dati if t["controvalore_btc"] is not None)
 
     # Calcola controvalore EUR per on-chain
-    saldo_eur_onchain = sum(float(t[9])
-                            for t in dati_onchain if t[9] is not None)
+    saldo_eur_onchain = sum(float(t['controvalore_eur'])
+                            for t in dati_onchain if t['controvalore_eur'] is not None)
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT SUM(importo) FROM transazioni WHERE user_id=? AND conto='BANCA'", (current_user.id,))
+    saldo_banca = cursor.fetchone()[0] or 0
+
+    cursor.execute(
+        "SELECT SUM(importo) FROM transazioni WHERE user_id=? AND conto='CONTANTI'", (current_user.id,))
+    saldo_contanti = cursor.fetchone()[0] or 0
+
+    conn.close()
+
+    saldo_totale_eur = saldo_banca + saldo_contanti
 
     return render_template('index.html',
+                           saldo_banca=saldo_banca,
+                           saldo_contanti=saldo_contanti,
                            saldo_totale_eur=saldo_totale_eur,
                            saldo_btc_da_eur=saldo_btc_da_eur,
                            saldo_totale_satoshi=saldo_totale_satoshi,
@@ -299,8 +330,40 @@ def home():
 @app.route('/transazioni')
 @login_required
 def transazioni():
-    dati, saldo_totale = get_transazioni_con_saldo(current_user.id)
-    return render_template('transazioni.html', transazioni=dati, saldo_totale=saldo_totale)
+    user_id = current_user.id
+
+    # Ora qui ricevi già i dizionari
+    dati, saldo_totale, saldo_banca, saldo_contanti = get_transazioni_con_saldo(
+        user_id)
+
+    # Calcolo saldo BANCA / CONTANTI
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT SUM(importo) FROM transazioni WHERE user_id=? AND conto='BANCA'",
+        (user_id,)
+    )
+    saldo_banca = cursor.fetchone()[0] or 0
+
+    cursor.execute(
+        "SELECT SUM(importo) FROM transazioni WHERE user_id=? AND conto='CONTANTI'",
+        (user_id,)
+    )
+    saldo_contanti = cursor.fetchone()[0] or 0
+
+    conn.close()
+
+    saldo_totale_eur = saldo_banca + saldo_contanti
+
+    return render_template(
+        'transazioni.html',
+        transazioni=dati,
+        saldo_totale=saldo_totale,
+        saldo_banca=saldo_banca,
+        saldo_contanti=saldo_contanti,
+        saldo_totale_eur=saldo_totale_eur
+    )
 
 
 @app.route('/nuova_transazione', methods=['GET', 'POST'])
@@ -311,6 +374,7 @@ def nuova_transazione():
         descrizione = request.form['descrizione']
         categoria = request.form['categoria']
         sottocategoria = request.form.get('sottocategoria', '')
+        conto = request.form['conto']
 
         try:
             importo_normalizzato = float(
@@ -324,8 +388,10 @@ def nuova_transazione():
                 importo, valore_btc_eur) if valore_btc_eur else None
 
         # Salviamo sia valore controvalore (btc) che BTC (€/BTC)
-            salva_su_db(current_user.id, data, descrizione, categoria, sottocategoria,
-                        importo, controvalore_btc, valore_btc_eur)
+            registra_transazione_conto(
+                current_user.id, data, descrizione, categoria, sottocategoria, importo, controvalore_btc=controvalore_btc,
+                valore_btc_eur=valore_btc_eur, conto=conto)
+
             return redirect(url_for('transazioni'))
         except ValueError:
             return "Importo non valido", 400
@@ -339,25 +405,60 @@ def nuova_transazione():
         categorie_json=json.dumps(CATEGORIE))
 
 
-@app.route('/elimina-transazione/<int:id_transazione>', methods=['POST'])
+@app.route('/elimina_transazione/<int:id_transazione>', methods=['POST'])
 @login_required
-def elimina_transazione_web(id_transazione):
-    elimina_transazione_da_db(id_transazione, current_user.id)
-    flash("Transazione eliminata con successo", "success")
-    dati, saldo_totale = get_transazioni_con_saldo(current_user.id)
-    return render_template('transazioni.html', transazioni=dati, saldo_totale=saldo_totale)
+def elimina_transazione_eur(id_transazione):
+    user_id = current_user.id
+
+    # Elimina la transazione
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "DELETE FROM transazioni WHERE id=? AND user_id=?", (id_transazione, user_id))
+    conn.commit()
+    conn.close()
+
+    # Ricarica le transazioni aggiornate
+    dati, saldo_totale, saldo_banca, saldo_contanti = get_transazioni_con_saldo(
+        user_id)
+
+    # Saldi banca/contanti
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT SUM(importo) FROM transazioni WHERE user_id=? AND conto='BANCA'",
+        (user_id,)
+    )
+    saldo_banca = cursor.fetchone()[0] or 0
+
+    cursor.execute(
+        "SELECT SUM(importo) FROM transazioni WHERE user_id=? AND conto='CONTANTI'",
+        (user_id,)
+    )
+    saldo_contanti = cursor.fetchone()[0] or 0
+
+    conn.close()
+
+    saldo_totale_eur = saldo_banca + saldo_contanti
+
+    return render_template(
+        'transazioni.html',
+        transazioni=dati,
+        saldo_totale=saldo_totale,
+        saldo_banca=saldo_banca,
+        saldo_contanti=saldo_contanti,
+        saldo_totale_eur=saldo_totale_eur
+    )
 
 
 @app.route('/modifica-transazione/<int:id_transazione>', methods=['GET', 'POST'])
 @login_required
-def modifica_transazione_web(id_transazione):
-    # Leggi tutte le transazioni e e cerca quella con id = id_transazione
+def modifica_transazione_eur(id_transazione):
+    # Leggi la transazione
     transazioni = leggi_transazioni_da_db(current_user.id)
-    t = None
-    for tr in transazioni:
-        if tr[0] == id_transazione:
-            t = tr
-            break
+    t = next((tr for tr in transazioni if tr["id"] == id_transazione), None)
+
     if t is None:
         flash("Transazione non trovata", "error")
         return redirect(url_for('transazioni'))
@@ -367,44 +468,81 @@ def modifica_transazione_web(id_transazione):
         descrizione = request.form['descrizione']
         categoria = request.form['categoria']
         sottocategoria = request.form['sottocategoria']
-        importo_normalizzato = float(
-            normalizza_importo(request.form['importo']))
+        conto = request.form['conto']
+        importo_normalizzato = normalizza_importo(request.form['importo'])
+
         if importo_normalizzato is None:
             flash("Importo non valido", "error")
-            return redirect(url_for('modifica_transazione_web', id_transazione=id_transazione))
+            return redirect(url_for('modifica_transazione_eur', id_transazione=id_transazione))
 
         importo = float(importo_normalizzato)
 
-        # chiama la funzione di modifica
-        modifica_transazione_db(id_transazione, 'data', data, current_user.id)
-        modifica_transazione_db(
-            id_transazione, 'descrizione', descrizione, current_user.id)
-        modifica_transazione_db(
-            id_transazione, 'categoria', categoria, current_user.id)
-        modifica_transazione_db(
-            id_transazione, 'sottocategoria', sottocategoria, current_user.id)
-        modifica_transazione_db(
-            id_transazione, 'importo', importo, current_user.id)
-        # Ricalcola e aggiorna BTC
-        valore_btc_eur = ottieni_valore_btc_eur(data)
+        # Aggiorna i campi base
+        campi_da_modificare = {
+            'data': data,
+            'descrizione': descrizione,
+            'categoria': categoria,
+            'sottocategoria': sottocategoria,
+            'importo': importo,
+            'conto': conto
+        }
 
-        if valore_btc_eur is not None:
-            controvalore_btc = euro_to_btc(importo, valore_btc_eur)
+        for campo, valore in campi_da_modificare.items():
             modifica_transazione_db(
-                id_transazione, 'valore_btc_eur', valore_btc_eur, current_user.id)
-            modifica_transazione_db(
-                id_transazione, 'controvalore_btc', controvalore_btc, current_user.id)
+                id_transazione, campo, valore, current_user.id)
+
+        # --- Ricalcolo BTC ---------------------
+        from datetime import datetime, date
+
+        data_dt = datetime.strptime(data, "%Y-%m-%d").date()
+        oggi = date.today()
+
+        if data_dt > oggi:
+            # Data futura → NON chiamare CoinGecko
+            flash("⚠️ La data è futura: mantengo i valori BTC già presenti.", "info")
+
         else:
-            flash("⚠️ Impossibile ottenere il valore BTC per la data selezionata. Verifica la connessione o riprova più tardi.", "error")
+            valore_btc_eur = ottieni_valore_btc_eur(data)
 
-        dati, saldo_totale = get_transazioni_con_saldo(current_user.id)
-        return render_template('transazioni.html', transazioni=dati, saldo_totale=saldo_totale)
-        # return redirect(url_for('transazioni'))
+            if valore_btc_eur is not None:
+                controvalore_btc = euro_to_btc(importo, valore_btc_eur)
+                modifica_transazione_db(
+                    id_transazione, 'valore_btc_eur', valore_btc_eur, current_user.id)
+                modifica_transazione_db(
+                    id_transazione, 'controvalore_btc', controvalore_btc, current_user.id)
+            else:
+                flash(
+                    "⚠️ Impossibile ottenere il valore BTC per la data selezionata.", "error")
 
-    # Se GET, mostra il form con i dati precompilati
+        # Aggiorna tabella
+        dati, saldo_totale, saldo_banca, saldo_contanti = get_transazioni_con_saldo(
+            current_user.id)
+
+        return render_template(
+            'transazioni.html',
+            transazioni=dati,
+            saldo_totale=saldo_totale,
+            saldo_banca=saldo_banca,
+            saldo_contanti=saldo_contanti
+        )
+
+    # ----- GET -----
+    transazione_dict = {
+        "id": t["id"],
+        "data": t["data"],
+        "descrizione": t["descrizione"],
+        "categoria": t["categoria"],
+        "sottocategoria": t["sottocategoria"],
+        "importo": t["importo"],
+        "controvalore_btc": t.get("controvalore_btc"),
+        "valore_btc_eur": t.get("valore_btc_eur"),
+        "conto": t["conto"],
+        "user_id": current_user.id
+    }
+
     return render_template(
         'modifica_transazione.html',
-        transazione=t,
+        transazione=transazione_dict,
         categorie=list(CATEGORIE.keys()),
         categorie_json=json.dumps(CATEGORIE)
     )
@@ -434,6 +572,57 @@ def scarica_csv_per_mese():
         return send_file(nome_file, as_attachment=True, download_name=f"transazioni_{mese}.csv")
 
     return render_template('scarica_csv_per_mese.html')
+
+
+def registra_transazione_conto(user_id, data, descrizione, categoria, sottocategoria, importo, conto, controvalore_btc=None, valore_btc_eur=None):
+    """
+    Gestisce automaticamente i trasferimenti BANCA ↔ CONTANTI.
+    Ora accetta e passa i valori BTC.
+    """
+
+    # PRELIEVO (importo negativo dalla banca)
+    if categoria == "Finanze & Banche" and sottocategoria == "Prelievi / Depositi" and importo < 0:
+        # 1. Togli dalla banca
+        salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
+                    # Passa i valori BTC originali per la transazione madre (banca)
+                    controvalore_btc, valore_btc_eur, conto="BANCA")
+
+        # 2. Aggiungi ai contanti (la transazione di trasferimento è in EUR, quindi i campi BTC rimangono a None)
+        salva_su_db(user_id, data,
+                    "Trasferimento da banca a contanti",
+                    "Finanze & Banche",
+                    "Trasferimento",
+                    abs(importo),
+                    # I trasferimenti interni (contrari) non devono avere valori BTC
+                    None, None,
+                    conto="CONTANTI")
+        return
+
+    # DEPOSITO (importo positivo nei contanti → banca)
+    if categoria == "Finanze & Banche" and sottocategoria == "Prelievi / Depositi" and importo > 0:
+        # 1. Aggiungi alla banca
+        salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
+                    # Passa i valori BTC originali per la transazione madre (banca)
+                    controvalore_btc, valore_btc_eur, conto="BANCA")
+
+        # 2. Togli dai contanti
+        salva_su_db(user_id, data,
+                    "Trasferimento da contanti a banca",
+                    "Finanze & Banche",
+                    "Trasferimento",
+                    -abs(importo),
+                    # I trasferimenti interni (contrari) non devono avere valori BTC
+                    None, None,
+                    conto="CONTANTI")
+        return
+
+    # Altre transazioni normali
+    # BANCA di default a meno che non arrivi conto="CONTANTI" dal form
+    salva_su_db(user_id, data, descrizione, categoria,
+                sottocategoria, importo,
+                # ✅ Passa i valori BTC calcolati
+                controvalore_btc, valore_btc_eur,
+                conto=conto)
 
 
 @app.route('/transazioni_lightning')
@@ -514,7 +703,7 @@ def modifica_transazione_web_lightning(id_transazione):
     transazioni_lightning = leggi_transazioni_da_db_lightning(current_user.id)
     t = None
     for tr in transazioni_lightning:
-        if tr[0] == id_transazione:
+        if tr['id'] == id_transazione:
             t = tr
             break
     if t is None:
@@ -590,11 +779,18 @@ def scarica_csv_per_mese_lightning():
             flash("⚠️ Formato mese non valido. Usa YYYY-MM.", "error")
             return redirect(url_for('scarica_csv_per_mese_lightning'))
 
-        nome_file = f'exports/transazioni_{mese}_lightning.csv'
-        # Genera il csv aggiornato filtrato per utente
-        esporta_csv_per_mese_lightning(mese, user_id=current_user.id)
-        return send_file(nome_file, as_attachment=True, download_name=f"transazioni_{mese}_lightning.csv")
-
+        nome_file_completo = esporta_csv_per_mese_lightning(
+            mese, user_id=current_user.id)
+        if nome_file_completo:
+            # Se il nome del file è stato restituito, il file esiste.
+            download_name = f"transazioni_{mese}_lightning.csv"
+            return send_file(nome_file_completo, as_attachment=True, download_name=download_name)
+        else:
+            # Se è None, il file non è stato creato (es. dati mancanti)
+            flash(
+                f"⚠️ Nessuna transazione Lightning trovata per il mese {mese}.", "error_lightning")
+            # Reindirizza l'utente alla pagina di download
+            return redirect(url_for('scarica_csv_per_mese_lightning'))
     return render_template('scarica_csv_per_mese_lightning.html')
 
 
@@ -644,23 +840,42 @@ def nuova_transazione_onchain():
             flash(f"Errore: {e}", "error")
             return redirect(url_for('nuova_transazione_onchain'))
 
+    placeholder_transazione = {
+        "id": None, "data": "", "wallet": "", "descrizione": "",
+        "categoria": "", "sottocategoria": "", "transactionID": "",
+        "importo_btc": 0.0, "fee": 0.0, "controvalore_eur": 0.0, "valore_btc_eur": 0.0
+    }
+
     return render_template(
         'nuova_transazione_onchain.html',
-        transazione_onchain=[None, '', '', '', '', '',
-                             '', '', '', '', ''],  # placeholder vuoti
+        transazione_onchain=placeholder_transazione,  # Passa un dizionario
         categorie=list(CATEGORIE.keys()),
         categorie_json=json.dumps(CATEGORIE)
     )
 
 
+# Nel tuo file app.py, funzione elimina_transazione_web_onchain
+
 @app.route('/elimina_transazione_onchain/<int:id_transazione>', methods=['POST'])
 @login_required
 def elimina_transazione_web_onchain(id_transazione):
+    # Aggiungi questa riga
+    print(f"ID Utente Loggato (current_user.id): {current_user.id}")
     elimina_transazione_da_db_onchain(id_transazione, current_user.id)
     flash("Transazione eliminata con successo", "success")
-    dati_onchain, saldo_totale_satoshi_onchain = get_transazioni_con_saldo_satoshi_onchain(
+
+    # 1. Ricalcolo dei dati aggiornati (usa i nomi che ricevi)
+    # Assumendo che 'get_transazioni_con_saldo_satoshi_onchain' esista e sia corretta:
+    transazioni_aggiornate, saldo_aggiornato = get_transazioni_con_saldo_satoshi_onchain(
         current_user.id)
-    return render_template('transazioni_onchain.html', transazioni_lightning=dati_onchain, saldo_totale_satoshi=saldo_totale_satoshi_onchain)
+
+    # 2. Passa le variabili al template con i NOMI CORRETTI
+    return render_template(
+        'transazioni_onchain.html',
+        # <-- Nome corretto per la lista transazioni
+        transazioni_onchain=transazioni_aggiornate,
+        saldo_totale_btc=saldo_aggiornato         # <-- Nome corretto per il saldo
+    )
 
 
 @app.route('/modifica-transazione_onchain/<int:id_transazione>', methods=['GET', 'POST'])
@@ -670,7 +885,7 @@ def modifica_transazione_web_onchain(id_transazione):
     transazioni_onchain = leggi_transazioni_da_db_onchain(current_user.id)
     t = None
     for tr in transazioni_onchain:
-        if tr[0] == id_transazione:
+        if tr['id'] == id_transazione:
             t = tr
             break
     if t is None:

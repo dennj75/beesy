@@ -29,7 +29,7 @@
     </p>
     <!-- 🔹 Controvalore totale in EUR (opzionale) -->
     {% if transazioni_onchain %} {% set totale_eur = transazioni_onchain |
-    map(attribute=9) | sum %}
+    map(attribute="controvalore_eur") | sum %}
     <p class="saldo-totale">
       💶 Controvalore Totale: {{ "%.2f"|format(totale_eur) }} €
     </p>
@@ -75,30 +75,30 @@
       </tr>
       {% for t in transazioni_onchain %}
       <tr>
-        <td>{{ t[0] }}</td>
-        <td>{{ t[1] }}</td>
-        <td>{{ t[2] }}</td>
-        <td>{{ t[3] }}</td>
-        <td>{{ t[4] }}</td>
-        <td>{{ t[5] }}</td>
-        <td>{{ t[6] }}</td>
+        <td>{{ t["id"] }}</td>
+        <td>{{ t["data"] }}</td>
+        <td>{{ t["wallet"] }}</td>
+        <td>{{ t["descrizione"] }}</td>
+        <td>{{ t["categoria"] }}</td>
+        <td>{{ t["sottocategoria"] }}</td>
+        <td>{{ t["transactionID"] }}</td>
         <td
-          class="{% if t[7] >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+          class="{% if t["importo_btc"] >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
         >
-          {{ '%.8f' % t[7] if t[7] is not none else '0.00000000' }}
+          {{ '%.8f' % t["importo_btc"] if t["importo_btc"] is not none else '0.00000000' }}
         </td>
         <td
-          class="{% if t[8] >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+          class="{% if t["fee"] >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
         >
-          {{ '%.8f' % t[8] if t[8] is not none else '0.00000000' }}
+          {{ '%.8f' % t["fee"] if t["fee"] is not none else '0.00000000' }}
         </td>
 
-        <td>{{ "%.2f"|format(t[9]) }}</td>
-        <td>{{ "%.2f"|format(t[10]) }}</td>
+        <td>{{ "%.2f"|format(t["controvalore_eur"]) }}</td>
+        <td>{{ "%.2f"|format(t["valore_btc_eur"]) }}</td>
         <td>
           <form
             method="post"
-            action="{{ url_for('elimina_transazione_web_onchain', id_transazione=t[0]) }}"
+            action="{{ url_for('elimina_transazione_web_onchain', id_transazione=t["id"]) }}"
             style="display: inline"
           >
             <button
@@ -109,7 +109,7 @@
             </button>
           </form>
           <a
-            href="{{ url_for('modifica_transazione_web_onchain', id_transazione=t[0]) }}"
+            href="{{ url_for('modifica_transazione_web_onchain', id_transazione=t["id"]) }}"
             >✏️ Modifica</a
           >
         </td>

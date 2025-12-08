@@ -14,6 +14,7 @@ Most expense trackers treat Bitcoin as just another "crypto asset." Bitcoin Expe
 - ⚡ **Native Lightning Network:** Track your Lightning transactions separately with satoshi precision.
 - 🔗 **On-chain Transaction Tracking:** Full support for regular Bitcoin transactions and fee management.
 - 💱 **Automatic BTC/EUR Conversion:** Uses historical BTC prices for accurate expense tracking.
+- 💰 **Conto Corrente Management:** Gestione integrata di transazioni e prelievi Bancomat.
 - 🔐 **Privacy-First:** Your data stays local, stored in an SQLite database on your machine.
 - 🆔 **Nostr Authentication:** Log in with your Nostr identity (via nos2x browser extension).
 - 👥 **Multi-user Support:** Complete data isolation between different users.
@@ -37,9 +38,9 @@ Here are some views of the Bitcoin Expense Tracker interface:
 
 ## ✨ Features
 
-### 💰 Multi-Currency Tracking
+### 💰 Multi-Currency Tracking & Fiat Management
 
-- **EUR** - Traditional fiat transactions.
+- **EUR** - Traditional fiat expenses, inclusa la **corretta gestione dei prelievi Bancomat**.
 - **Bitcoin (On-chain)** - Regular BTC transactions with fee tracking.
 - **Lightning Network** - Satoshi-level precision for Lightning payments.
 
@@ -47,16 +48,16 @@ Here are some views of the Bitcoin Expense Tracker interface:
 
 - **Traditional Login** - Standard Username/Password authentication.
 - ⚡ **Nostr Login** - Decentralized authentication using NIP-07 (nos2x extension):
-  - Sign in with your existing Nostr identity.
-  - Schnorr signature verification (BIP340).
-  - No password needed.
+    - Sign in with your existing Nostr identity.
+    - Schnorr signature verification (BIP340).
+    - No password needed.
 
 ### 📊 Financial Management
 
 - **Detailed Categorization:** 10+ categories with custom subcategories.
 - **Automatic BTC Conversion:** Fetches historical BTC prices via CoinGecko API.
 - **Real-time Balance:** View your balance in EUR, BTC, and satoshis.
-- **CSV Export:** Export transactions by month or all-time.
+- **CSV Export:** Export transactions by month or all-time, con dati formattati tramite dizionari Python.
 
 ### 🛡️ Security & Privacy
 
@@ -76,119 +77,116 @@ Here are some views of the Bitcoin Expense Tracker interface:
 
 ### Installation
 
-1.  Clone the repository
+1.  Clone the repository
 
-```bash
-git clone https://github.com/yourusername/EE.git
+````bash
+git clone [https://github.com/yourusername/EE.git](https://github.com/yourusername/EE.git)
 cd EE
-```
 
 2. Create virtual environment:
 
-Windows:
-
 ```bash
 python -m venv .venv
-.venv\Scripts\activate
-```
+````
 
-inux / Mac:
+3. Activate virtual environment:
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
+- Windows: `.venv\Scripts\activate`
+- Linux/Mac: `source .venv/bin/activate`
 
-3. Install dependencies
+4. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Run the application
+5. Run the web app:
 
 ```bash
 python app.py
 ```
 
-5. Open your browser  
-   Access the application at: [http://127.0.0.1:5000](http://127.0.0.1:5000)
+6. Open browser at `http://127.0.0.1:5000`
 
-### 📖 Usage WorkflowFirst Time SetupCreate an Account:
+### 📖 Usage Workflow
 
-Click **_"Registrati"_** for a traditional account OR Click **_"Login with Nostr"_** if you have the nos2x extension installed.
+First Time Setup Create an Account: Click "Registrati" for a traditional account OR Click "Login with Nostr" if you have the nos2x extension installed.
 
-- Start Tracking:Use **_"Nuova Transazione"_** for EUR expenses.
-- Use **_"Transazioni Lightning"_** for Lightning payments.
-- Use **_"Transazioni On-chain"_** for regular Bitcoin transactions.
-- Adding EUR Transactions (Automatic Conversion)Go to "Nuova Transazione".
-  - Select date, category, and amount in EUR.The system automatically converts to BTC based on the historical price for that date.
+- Start Tracking: Use "Nuova Transazione" for EUR expenses.
+- Use "Transazioni Lightning" for Lightning payments.
+- Use "Transazioni On-chain" for regular Bitcoin transactions.
+- Adding EUR Transactions (Automatic Conversion) Go to "Nuova Transazione".   - Select date, category, and amount in EUR. The system automatically converts to BTC based on the historical price for that date.
 
-### Adding Lightning / On-chain
+## Adding Lightning / On-chain
 
-- TransactionsLightning:  
-  Navigate to "Transazioni Lightning" and enter the amount in satoshis. The system calculates the EUR equivalent.On-chain: Go to "Transazioni On-chain" and enter transaction details, including fees.
+- Transactions Lightning:     Navigate to "Transazioni Lightning" and enter the amount in satoshis. The system calculates the EUR equivalent. On-chain: Go to "Transazioni On-chain" and enter transaction details, including fees.
 
-### Exporting DataExport all transactions:
+## Exporting CSV Data
 
-- Click "Scarica CSV."Export by month: Select the month in YYYY-MM format.
+Export all transactions:
 
-## ⚡ Nostr Login Details
+- Click "Scarica CSV."
+  Export by month:
+- Select the month in YYYY-MM format.
 
-Bitcoin Expense Tracker leverages the Nostr protocol for decentralized authentication:FeatureDescriptionPassword-lessAuthentication based on the cryptographic signature of your Nostr key.Unified IdentityUse the same Nostr identity you use for other Nostr-enabled apps.  
-NIP-07 StandardUses browser extensions (like nos2x) to sign requests without exposing your private key.  
-How to Use Nostr LoginInstall nos2x:
+### ⚡ Nostr Login Details
+
+Bitcoin Expense Tracker leverages the Nostr protocol for decentralized authentication:
+
+| Feature              | Description                                                                              |
+| :------------------- | :--------------------------------------------------------------------------------------- |
+| **Password-less**    | Authentication based on the cryptographic signature of your Nostr key.                   |
+| **Unified Identity** | Use the same Nostr identity you use for other Nostr-enabled apps.                        |
+| **NIP-07 Standard**  | Uses browser extensions (like nos2x) to sign requests without exposing your private key. |
+
+## How to Use Nostr Login Install nos2x:
 
 - Install the nos2x extension (Chrome/Brave/Firefox).
 - Set up Keys: Generate new keys or import your existing Nostr keys (NPUB/NSEC) in the extension.
 
-### Log in to App 🚀:
+## Log in to App 🚀:
 
-- On the login page, click "Login with Nostr.  
-  The nos2x extension will prompt you to approve the signature of a challenge.Approve the request, and you are logged in!
+- On the login page, click "Login with Nostr."     The nos2x extension will prompt you to approve the signature of a challenge. Approve the request, and you are logged in!
 
-### 🧪 TestingRunning
+## 🧪 Testing
 
-Multi-user Tests (E2E)Verify that user data isolation works correctly by running the End-to-End test script:Bashpython test_multiuser_e2e.py  
- This automated script performs the following checks:Creates multiple test users.Inserts transactions for each user.Verifies that each user only sees their own data.Tests ownership checks during delete/modify operations.
+Running Multi-user Tests (E2E) Verify that user data isolation works correctly by running the End-to-End test script:
 
-### 📁 Project Structure bitcoin-expense-tracker/
-
-```
-├── app.py # Main Flask web application
-├── auth.py # Authentication blueprint (traditional & Nostr)
-├── requirements.txt # Python dependencies
-├── db/
-│ └── db_utils.py # SQLite database utilities
-├── utils/
-│ ├── crypto.py # BTC price fetching (CoinGecko) and conversion
-│ └── export.py # CSV export logic
-├── templates/ # HTML templates (login, index, transactions, etc.)
-└── static/ # CSS, JavaScript, images
+```Bash
+python test_multiuser_e2e.py
 ```
 
+This automated script performs the following checks:
+
+- Creates multiple test users.
+- Inserts transactions for each user.
+- Verifies that each user only sees their own data.
+- Tests ownership checks during delete/modify operations.
+
+## 🗂️ Project Structure
+
+```markdown
 ### 🛠️ TechStack
 
-Component Technology Role
+| Component            | Technology                      | Role                                     |
+| :------------------- | :------------------------------ | :--------------------------------------- |
+| **Backend**          | Flask (Python)                  |                                          |
+| **Database**         | SQLite                          |                                          |
+| **API**              | CoinGecko (BTC prices)          |                                          |
+| **Frontend**         | HTML, CSS, JavaScript (Vanilla) |                                          |
+| **_Authentication_** | Flask-Login + Nostr (NIP-07)    | Session management and Nostr login       |
+| Cryptography         | coincurve                       | BIP340/Schnorr signatures implementation |
+| External             |                                 |                                          |
 
-- **Backend**: Flask (Python)
-- **Database**: SQLite
-- **API**: CoinGecko (BTC prices)
-- **Frontend**: HTML, CSS, JavaScript (Vanilla)
-- **_Authentication_** Flask-Login + Nostr (NIP-07)Session management and Nostr login Cryptography coincurve BIP340/Schnorr signatures implementation External
+## 🔄 Change Log v2.1 (Current)
 
-## 🔄 Change Log v2.0
+### 📈 Miglioramenti Funzionali e Stabilità
 
-### 🦤Nostr Authentication (Latest)
+- 💡 **Standardizzazione DB:** Tutte le funzioni di lettura del DB ora restituiscono liste di **dizionari** (non più tuple) per una migliore compatibilità con Jinja2 e il codice Python.
+- 💾 **Gestione Conto Euro:** Aggiunto il supporto e la corretta gestione dei **prelievi Bancomat** nella registrazione delle transazioni in EUR (`registra_transazione_conto`).
+- 🛡️ **Risoluzione Bug:** Corretti errori di `ValueError` (I/O su file chiuso) e `jinja2.exceptions.UndefinedError` (variabili mancanti) nelle funzioni di esportazione e visualizzazione.
 
-⚡ Nostr login implemented with nos2x extension support.  
-🔐 BIP340 Schnorr signature verification.  
-📝 Database separation: transazioni.db (transactions) and database.db (users).v1.5 - Multi-user Support  
-👥 Each transaction linked by user_id.  
-🔒 Ownership checks for delete/modify operations enforced.  
-📊 Per-user data isolation and filtered CSV exports.v1.0 - Core Features  
-💰 EUR, Lightning, and on-chain tracking.💱 Automatic BTC conversion via CoinGecko.  
-🏷️ Category and subcategory management.
+---
 
 ## 🗺️ Roadmap
 
@@ -222,9 +220,9 @@ This is a learning project built in public! Contributions, issues, and feature r
 
 ### Development Guidelines
 
-Always use parameterized SQL queries to prevent SQL injection.  
- Always check current_user.id for data modification operations.  
- Add tests for new features.
+Always use parameterized SQL queries to prevent SQL injection.  
+ Always check current_user.id for data modification operations.  
+ Add tests for new features.
 
 ## ⚠️ Disclaimer and Security
 
@@ -232,9 +230,12 @@ This is an early-stage project built for learning purposes. Use at your own risk
 
 ## ⚠️ Backup:
 
-Always backup your transazioni.db and database.db files regularly.  
- 🔒 Nostr Keys: Never share your Nostr private keys (NSEC).  
- ⚙️ Production: For production deployment, use a strong app.secret_key, enable HTTPS, and consider using a WSGI server (e.g., Gunicorn/uWSGI).  
- 📬 Contact & SupportIssues: GitHub IssuesDiscussions: GitHub
+Always backup your transazioni.db and database.db files regularly.  
+ 🔒 Nostr Keys: Never share your Nostr private keys (NSEC).  
+ ⚙️ Production: For production deployment, use a strong app.secret_key, enable HTTPS, and consider using a WSGI server (e.g., Gunicorn/uWSGI).  
+ 📬 Contact & Support
+Issues: GitHub Issues
+Discussions: GitHub Discussions
 
-Discussions Building in public 🚀 | Stay humble, stack sats ⚡
+Building in public 🚀 | Stay humble, stack sats ⚡
+```

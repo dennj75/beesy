@@ -8,7 +8,7 @@
 <body>
   <h1>✏️ Modifica Transazione Lightning ⚡️</h1>
 
-  <form method="post" action="{{ url_for('modifica_transazione_web_lightning', id_transazione=transazione_lightning[0]) }}">
+  <form method="post" action="{{ url_for('modifica_transazione_web_lightning', id_transazione=transazione_lightning["id"]) }}">
     
     <label for="data">📅 Data:</label><br />
     <input type="date" id="data" name="data" value="{{ transazione_lightning[1] }}" required /><br /><br />

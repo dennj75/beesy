@@ -252,3 +252,13 @@ li.euro-error, li.lightning-error {
     border: 1px solid #444;
     margin-top: 10px;
 }
+
+.saldi-container {
+    text-align: center;      /* Centra tutto */
+    margin-bottom: 20px;
+}
+
+.saldi-container p {
+    margin: 5px 0;           /* Spaziatura uniforme */
+    font-size: 1.2em;
+}

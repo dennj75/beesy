@@ -30,6 +30,10 @@
             <a href="{{ url_for('transazioni') }}">
               <button type="button" class="transazioni">📄 TRACKER €</button>
             </a>
+            <p class="saldo-banca {% if saldo_banca >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}">
+            🏦 Banca: {{ "%.2f"|format(saldo_banca) }} €</p>
+            <p class="saldo-contanti {% if saldo_contanti >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}">
+            💼 Contanti: {{ "%.2f"|format(saldo_contanti) }} €</p>
           </div>
         </th>
         <th>

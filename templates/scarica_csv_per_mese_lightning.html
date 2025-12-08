@@ -10,7 +10,10 @@
   </head>
   <body>
     <h1>📥 Scarica CSV per mese</h1>
-    <form method="post" action="/scarica_csv_lightning_per_mese">
+    <form
+      method="post"
+      action="{{ url_for('scarica_csv_per_mese_lightning') }}"
+    >
       <label for="mese">Inserisci mese:</label><br />
       <input
         type="text"

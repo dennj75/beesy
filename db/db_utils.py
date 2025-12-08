@@ -36,12 +36,20 @@ def inizializza_db():
             sottocategoria TEXT NOT NULL,
             importo REAL NOT NULL,
             controvalore_btc REAL,
-            valore_btc_eur REAL
+            valore_btc_eur REAL,
+            conto TEXT DEFAULT 'BANCA'
         )
     ''')
+
     try:
         cursor.execute(
             'ALTER TABLE transazioni ADD COLUMN user_id INTEGER DEFAULT 1')
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute(
+            "ALTER TABLE transazioni ADD COLUMN conto TEXT DEFAULT 'BANCA'")
     except sqlite3.OperationalError:
         pass
 
@@ -128,9 +136,20 @@ def leggi_transazioni_da_db_onchain(user_id):
            transactionID, importo_btc, fee, controvalore_eur, valore_btc_eur
     FROM transazioni_onchain WHERE user_id = ? ORDER BY data ASC
     ''', (user_id,))
+    # Ottieni i nomi delle colonne (intestazioni)
+    colonne = [desc[0] for desc in cursor.description]
+
     righe = cursor.fetchall()
     conn.close()
-    return righe
+    # 💡 CONVERSIONE TUPLE -> DIZIONARI
+    # Crea una lista di dizionari, dove le chiavi sono i nomi delle colonne
+    dati_onchain = []
+    for riga in righe:
+        # zip combina le colonne con i valori della riga
+        dizionario_transazione = dict(zip(colonne, riga))
+        dati_onchain.append(dizionario_transazione)
+
+    return dati_onchain  # Ora restituisce una lista di dizionari
 
 
 def elimina_transazione_da_db_onchain(id_transazione, user_id):
@@ -163,20 +182,68 @@ def modifica_transazione_db_onchain(id_transazione, campo, nuovo_valore, user_id
     conn.close()
 
 
+def leggi_transazioni_da_db_onchain(user_id):
+    """
+    Legge le transazioni on-chain dal DB e le restituisce come lista di dizionari.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute('''
+    SELECT id, data, wallet, descrizione, categoria, sottocategoria,
+           transactionID, importo_btc, fee, controvalore_eur, valore_btc_eur
+    FROM transazioni_onchain WHERE user_id = ? ORDER BY data ASC
+    ''', (user_id,))
+
+    # Ottiene i nomi delle colonne (intestazioni)
+    colonne = [desc[0] for desc in cursor.description]
+
+    # Ottiene le righe come lista di tuple
+    righe_tuple = cursor.fetchall()
+
+    conn.close()
+
+    # 💡 Converte le tuple in dizionari
+    dati_onchain = []
+    for riga in righe_tuple:
+        # Crea un dizionario mappando i nomi delle colonne ai valori della riga
+        dizionario_transazione = dict(zip(colonne, riga))
+        dati_onchain.append(dizionario_transazione)
+
+    return dati_onchain
+
+
 def leggi_transazioni_filtrate_onchain(filtro_data, user_id):
+    """
+    Legge le transazioni on-chain filtrate per data dal DB e le restituisce 
+    come lista di dizionari.
+    """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     query = '''
-        SELECT id, data, wallet, descrizione, categoria, sottocategoria, transactionID, importo_btc, fee, controvalore_eur, valore_btc_eur
+        SELECT id, data, wallet, descrizione, categoria, sottocategoria, 
+               transactionID, importo_btc, fee, controvalore_eur, valore_btc_eur
         FROM transazioni_onchain
         WHERE user_id = ? AND data LIKE ?
         ORDER BY data ASC
     '''
     cursor.execute(query, (user_id, filtro_data + '%'))
-    righe = cursor.fetchall()
-    conn.close()
-    return righe
 
+    # Ottiene i nomi delle colonne (intestazioni)
+    colonne = [desc[0] for desc in cursor.description]
+
+    # Ottiene le righe come lista di tuple
+    righe_tuple = cursor.fetchall()
+
+    conn.close()
+
+    # 💡 Converte le tuple in dizionari
+    dati_filtrati = []
+    for riga in righe_tuple:
+        dizionario_transazione = dict(zip(colonne, riga))
+        dati_filtrati.append(dizionario_transazione)
+
+    return dati_filtrati
 
 def get_transazioni_con_saldo_lightning():
     """
@@ -220,14 +287,34 @@ def salva_su_db_lightning(user_id, data, wallet, descrizione, categoria, sottoca
 
 def leggi_transazioni_da_db_lightning(user_id):
     conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row        # <<---- RITORNA DICTIONARY
     cursor = conn.cursor()
-    cursor.execute(
-        'SELECT id, data, wallet, descrizione, categoria, sottocategoria, satoshi, controvalore_eur, valore_btc_eur FROM transazioni_lightning WHERE user_id = ? ORDER BY data ASC', (
-            user_id,)
-    )
+
+    cursor.execute("""
+        SELECT id, data, wallet, descrizione, categoria, sottocategoria,
+               satoshi, controvalore_eur, valore_btc_eur
+        FROM transazioni_lightning
+        WHERE user_id = ?
+        ORDER BY data ASC
+    """, (user_id,))
+
     righe = cursor.fetchall()
     conn.close()
-    return righe
+
+    transazioni_ligtning = []
+    for r in righe:
+        d = dict(r)
+
+        # 🎯 AGGIUNTO: Conversione dei campi numerici a float
+        d['satoshi'] = float(d['satoshi']) if d['satoshi'] is not None else 0.0
+        d['controvalore_eur'] = float(
+            d['controvalore_eur']) if d['controvalore_eur'] is not None else None
+        d['valore_btc_eur'] = float(
+            d['valore_btc_eur']) if d['valore_btc_eur'] is not None else None
+
+        # 🟢 CORREZIONE FONDAMENTALE: Aggiungi il dizionario elaborato alla lista
+        transazioni_ligtning.append(d)
+    return transazioni_ligtning
 
 
 def elimina_transazione_da_db_lightning(id_transazione, user_id):
@@ -262,6 +349,8 @@ def modifica_transazione_db_lightning(id_transazione, campo, nuovo_valore, user_
 
 def leggi_transazioni_filtrate_lightning(filtro_data, user_id):
     conn = sqlite3.connect(DB_PATH)
+    # 🎯 AGGIUNTO: Ritorna oggetti Row (simili a dict)
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     query = '''
         SELECT id, data, wallet, descrizione, categoria, sottocategoria, satoshi, controvalore_eur, valore_btc_eur
@@ -272,16 +361,52 @@ def leggi_transazioni_filtrate_lightning(filtro_data, user_id):
     cursor.execute(query, (user_id, filtro_data + '%'))
     righe = cursor.fetchall()
     conn.close()
-    return righe
+
+    transazioni_lightning = []
+    for r in righe:
+        d = dict(r)
+
+        # 🎯 AGGIUNTO: Conversione dei campi numerici a float
+        d['satoshi'] = float(d['satoshi']) if d['satoshi'] is not None else 0.0
+        d['controvalore_eur'] = float(
+            d['controvalore_eur']) if d['controvalore_eur'] is not None else None
+        d['valore_btc_eur'] = float(
+            d['valore_btc_eur']) if d['valore_btc_eur'] is not None else None
+        transazioni_lightning.append(d)
+    return transazioni_lightning
 
 
-def salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo, controvalore_btc, valore_btc_eur):
+def salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
+                importo, controvalore_btc, valore_btc_eur, conto):
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+
     cursor.execute('''
-    INSERT INTO transazioni(user_id, data, descrizione, categoria, sottocategoria, importo, controvalore_btc, valore_btc_eur)
-    VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (user_id, data, descrizione, categoria, sottocategoria, float(importo), controvalore_btc, valore_btc_eur))
+        INSERT INTO transazioni (
+            user_id,
+            data,
+            descrizione,
+            categoria,
+            sottocategoria,
+            importo,
+            controvalore_btc,
+            valore_btc_eur,
+            conto
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        user_id,
+        data,
+        descrizione,
+        categoria,
+        sottocategoria,
+        float(importo),
+        controvalore_btc,
+        valore_btc_eur,
+        conto
+    ))
+
     conn.commit()
     conn.close()
 
@@ -290,12 +415,34 @@ def leggi_transazioni_da_db(user_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(
-        'SELECT id, data, descrizione, categoria, sottocategoria, importo, controvalore_btc, valore_btc_eur FROM transazioni WHERE user_id = ? ORDER BY data ASC',
-        (user_id,)  # ← TUPLA FUORI dalla query, come parametro di execute()
+        '''SELECT 
+            id, data, descrizione, categoria, sottocategoria, importo,
+            controvalore_btc, valore_btc_eur, conto
+        FROM transazioni 
+        WHERE user_id = ? 
+        ORDER BY data ASC''',
+        (user_id,)
     )
     righe = cursor.fetchall()
     conn.close()
-    return righe
+
+    transazioni = []
+    for r in righe:
+        importo = float(r[5]) if r[5] is not None else 0.0
+        controvalore_btc = float(r[6]) if r[6] is not None else None
+        valore_btc_eur = float(r[7]) if r[7] is not None else None
+        transazioni.append({
+            "id": r[0],
+            "data": r[1],
+            "descrizione": r[2],
+            "categoria": r[3],
+            "sottocategoria": r[4],
+            "importo": importo,  # <-- Sintassi corretta Chiave: Valore
+            "controvalore_btc": controvalore_btc,
+            "valore_btc_eur": valore_btc_eur,
+            "conto": r[8]
+        })
+    return transazioni
 
 
 def elimina_transazione_da_db(id_transazione, user_id):
@@ -312,7 +459,7 @@ def elimina_transazione_da_db(id_transazione, user_id):
 
 def modifica_transazione_db(id_transazione, campo, nuovo_valore, user_id):
     campi_consentiti = {'data', 'descrizione', 'categoria', 'sottocategoria',
-                        'importo', 'controvalore_btc', 'valore_btc_eur'}
+                        'importo', 'controvalore_btc', 'valore_btc_eur', 'conto'}
     if campo not in campi_consentiti:
         raise ValueError("Campo non valido")
     conn = sqlite3.connect(DB_PATH)
