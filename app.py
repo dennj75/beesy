@@ -22,6 +22,7 @@ from hashlib import sha256
 import time
 from datetime import datetime, date
 from coincurve import PublicKey
+from dotenv import load_dotenv
 from coincurve._libsecp256k1 import lib, ffi
 
 inizializza_db()  # <<--- aggiungi questa riga
@@ -79,11 +80,13 @@ def get_transazioni_con_saldo_satoshi_onchain(user_id):
                            for t in transazioni_onchain if t['importo_btc'] is not None)
     return transazioni_onchain, saldo_totale_btc
 
+load_dotenv()
 
 app = Flask(__name__)
-# Chiave necessaria per i flash e da cambiare in produzione
-app.secret_key = 'supersecretkey'
 
+# Prende la chiave dal file .env. 
+# Se non la trova, usa un valore di backup (solo per sviluppo!)
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'default-key-per-test')
 
 @app.get("/api/challenge")
 def get_challenge():
@@ -272,10 +275,7 @@ class SimpleUser(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    try:
-        row = get_user_by_id(int(user_id))
-    except Exception:
-        return None
+    row = get_user_by_id(int(user_id))
     if not row:
         return None
     return SimpleUser(id=row[0], username=row[1])
