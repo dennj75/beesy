@@ -1,29 +1,7 @@
-<!DOCTYPE html>
-<html lang="it">
-  <head>
-    <meta charset="UTF-8" />
-    <title>🔗 Transazioni ₿itcoin On-chain 🔗</title>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
-    />
-  </head>
-  <body>
-    <header
-      style="display: flex; justify-content: space-between; align-items: center"
-    >
+{% extends "base.html" %} {% block title %}Dashboard{% endblock %} {% block
+content %}
       <h1>🔗 Transazioni ₿itcoin On-chain 🔗</h1>
-      <nav>
-        {% if current_user.is_authenticated %}
-        <span>Ciao, {{ current_user.username }}</span>
-        <a href="{{ url_for('auth.logout') }}">Logout</a>
-        {% else %}
-        <a href="{{ url_for('auth.login') }}">Login</a>
-        <a href="{{ url_for('auth.register') }}">Register</a>
-        {% endif %}
-      </nav>
-    </header>
-    <!-- 🔹 Saldo SATOSHI -->
+      <!-- 🔹 Saldo SATOSHI -->
     <p class="saldo-totale">
       💰 Saldo ₿itcoin On-chain🔗: {{ "%.8f"|format(saldo_totale_btc) }} BTC
     </p>
@@ -72,6 +50,7 @@
         <th>fee</th>
         <th>Controvalore €</th>
         <th>Valore BTC/€</th>
+        <th>Azioni</th>
       </tr>
       {% for t in transazioni_onchain %}
       <tr>
@@ -118,5 +97,4 @@
     </table>
 
     <p><a href="/">⬅️ Torna alla home</a></p>
-  </body>
-</html>
+  {% endblock %}

@@ -32,16 +32,27 @@ exports/
 Thumbs.db
 
 # File temporanei e di documentazione personale
+docs/
 document.txt
 TODO.txt
 EE_File_Unico.txt
 Hai costruito un mini-gestionale.txt
 *.html_old_style.txt
+Index_old.html
+login_nostr_old.html.txt
+Import_old.txt
+README_OLD.md
 
 # Test cache
 .pytest_cache/
 .coverage
 htmlcov/
 
-# Environment variables (se usi .env)
+# Environment variables
 .env
+
+# Cache e Database (già inclusi sopra, ma non guasta)
+__pycache__/
+*.db
+
+ngrok_recovery_codes.txt

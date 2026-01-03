@@ -1,0 +1,22 @@
+{
+  "name": "Beesy Dashboard",
+  "short_name": "Beesy",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#f39c12",
+  "icons": [
+    {
+      "src": "/static/img/beesy_icon_circular_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/img/beesy_icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

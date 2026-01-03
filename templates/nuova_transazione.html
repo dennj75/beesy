@@ -4,19 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nuova transazione</title>
+    <link rel="icon" href="/static/img/favicon.ico" type="image/png" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   </head>
   <body>
+    {% include "partials/logo.html" %}
     <h1>➕ Aggiungi una nuova transazione</h1>
     <form method="post" action="{{ url_for('nuova_transazione') }}">
       
-      <label for="data">📅 Data (YYYY-MM-DD):</label><br />
+      <label for="data">📅 Data (YYYY-MM-DD):</label>
       <input type="date" id="data" name="data" required value="{{ transazione['data'] if transazione else '' }}" /><br /><br />
 
-      <label for="descrizione">📝Descrizione:</label><br />
+      <label for="descrizione">📝Descrizione:</label>
       <input type="text" id="descrizione" name="descrizione" required value="{{ transazione.descrizione if transazione else '' }}" /><br /><br />
 
-      <label>Categoria:</label><br>
+      <label>Categoria:</label>
       <select name="categoria" id="categoria" onchange="popolaSottocategoria()" required>
         <option value="">-- Seleziona Categoria --</option>
         {% for cat in categorie %}
@@ -24,17 +26,17 @@
         {% endfor %}
       </select><br><br>
 
-      <label>Sottocategoria:</label><br>
+      <label>Sottocategoria:</label>
       <select name="sottocategoria" id="sottocategoria" required>
         {% if transazione %}
           <option value="{{ transazione.sottocategoria }}">{{ transazione.sottocategoria }}</option>
         {% endif %}
       </select><br><br>
 
-      <label for="importo">💸 Importo (€):</label><br />
+      <label for="importo">💸 Importo (€):</label>
       <input type="text" id="importo" name="importo" step="0.01" required value="{{ transazione.importo if transazione else '' }}" />
       <br><br>
-      <label for="conto">Conto:</label><br>
+      <label for="conto">Conto:</label>
       <select name="conto" id="conto" required>
         <option value="BANCA">🏦 Banca</option>
         <option value="CONTANTI">💶 Contanti</option>
@@ -42,8 +44,9 @@
       <br><br>
       <button type="submit">✅ Aggiungi</button>
     </form>    
-
+    
     <p><a href="{{ url_for('transazioni') }}">⬅️ Torna alle transazioni</a></p>
+    <p><a href="{{ url_for('home') }}">⬅️ Torna alla Home</a></p>
   </body>
 </html>
 

@@ -3,22 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <title>Nuova transazione Lightning ⚡️</title>
+    <link rel="icon" href="/static/img/favicon.ico" type="image/png" />
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
     />
   </head>
   <body>
+    {% include "partials/logo.html" %}
     <h1>➕ Nuova transazione Lightning ⚡️</h1>
 
     <form method="post" action="/nuova_transazione_lightning">
-      <label for="data">📅 Data:</label><br />
+      <label for="data">📅 Data:</label>
       <input type="date" id="data" name="data" required /><br /><br />
 
-      <label for="wallet">👛 Wallet:</label><br />
+      <label for="wallet">👛 Wallet:</label>
       <input type="text" id="wallet" name="wallet" required /><br /><br />
 
-      <label for="descrizione">📝 Descrizione:</label><br />
+      <label for="descrizione">📝 Descrizione:</label>
       <input
         type="text"
         id="descrizione"
@@ -26,7 +28,7 @@
         required
       /><br /><br />
 
-      <label for="categoria">📂 Categoria:</label><br />
+      <label for="categoria">📂 Categoria:</label>
       <select
         name="categoria"
         id="categoria"
@@ -39,11 +41,11 @@
         {% endfor %}</select
       ><br /><br />
 
-      <label for="sottocategoria">🔖 Sottocategoria:</label><br />
+      <label for="sottocategoria">🔖 Sottocategoria:</label>
       <select name="sottocategoria" id="sottocategoria" required></select
       ><br /><br />
 
-      <label for="satoshi">⚡️ Importo (satoshi):</label><br />
+      <label for="satoshi">⚡️ Importo (satoshi):</label>
       <input
         type="number"
         id="satoshi"
@@ -56,8 +58,12 @@
       <button type="submit">✅ Aggiungi</button>
     </form>
 
-    <p><a href="/">⬅️ Torna alla home</a></p>
-
+    <p>
+      <a href="{{ url_for('transazioni_lightning') }}"
+        >⬅️ Torna alle transazioni Lightning ⚡️</a
+      >
+    </p>
+    <p><a href="{{ url_for('home') }}">⬅️ Torna alla Home</a></p>
     <script>
       const categorie = {{ categorie_json | safe }};
       const sottocategoriaAttuale = "";

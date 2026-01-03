@@ -2,18 +2,33 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Register - EE</title>
+    <title>Register - ₿eesy</title>
+    <link rel="icon" href="/static/img/favicon.ico" type="image/png" />
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
     />
   </head>
   <body>
-    <h1>Register</h1>
+    {% include "partials/logo.html" %}
+    <h1>Registrati</h1>
     <form method="post">
       <label>Username: <input name="username" /></label><br />
       <label>Email: <input name="email" type="email" /></label><br />
-      <label>Password: <input name="password" type="password" /></label><br />
+      <label
+        >Password: <input name="password" type="password" />
+        <div style="border: 1px solid #ccc; padding: 15px; margin-bottom: 20px">
+          <p><strong>Requisiti Minimi:</strong></p>
+          <ul>
+            <li>
+              Almeno 12 caratteri (spazi ammessi, ad esempio per una frase)
+            </li>
+            <li>Almeno una lettera maiuscola</li>
+            <li>Almeno un numero</li>
+            <li>Almeno un carattere speciale (!, @, #, $, ecc.)</li>
+          </ul>
+        </div> </label
+      ><br />
       <button type="submit">Register</button>
     </form>
     <p><a href="/login">Already have an account? Login</a></p>

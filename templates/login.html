@@ -1,20 +1,250 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
   <head>
     <meta charset="utf-8" />
-    <title>Login - EE</title>
+    <title>Login - ₿eesy</title>
+    <link rel="icon" href="/static/img/favicon.ico" type="image/png" />
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
     />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+  .logo-container {
+    display: flex;
+    justify-content: center; /* Centra orizzontalmente */
+    align-items: center;     /* Centra verticalmente se serve */
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  .site-logo {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 150px; /* Regola la grandezza come preferisci */
+  }
+</style>
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#f39c12">
+<link rel="apple-touch-icon" href="/static/img/beesy_icon_512.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
   </head>
   <body>
+    {% include "partials/logo.html" %}
+    </div>
+
     <h1>Login</h1>
+
     <form method="post">
-      <label>Username: <input name="username" /></label><br />
-      <label>Password: <input name="password" type="password" /></label><br />
-      <button type="submit">Login</button>
+      <label>Username: <input name="username" /></label>
+      <label>Password: <input name="password" type="password" /></label>
+      <button type="submit" class="btn-base btn-primary">Login</button>
     </form>
-    <p><a href="/register">Create an account</a></p>
+    <!-- <p><a href="/register">Registrati ⬅ </a></p>-->
+    <br />
+    <div class="nostr-info">
+      <h2>𓅦 Nostr Login</h2>
+      <p>
+        Nostr è un protocollo decentralizzato per comunicazioni e identità
+        crittografiche. In pratica puoi fare login senza password, usando il tuo
+        wallet compatibile (es. <strong>nos2x</strong>, <strong>Alby</strong>,
+        <strong>Amber</strong>).
+      </p>
+      <p>Vantaggi del login Nostr:</p>
+      <ul>
+        <li>Nessuna password da ricordare</li>
+        <li>Decentralizzato e sicuro</li>
+        <li>Unico account su diversi siti compatibili</li>
+      </ul>
+      <p>
+        Per loggarti basta cliccare il pulsante qui sotto e scegliere il tuo
+        signer.
+      </p>
+
+      <button onclick="loginNostr(); return false;" class="btn-base nostr-btn">
+        𓅦 Nostr Login
+      </button>
+    </div>
+
+    <br />
+    <hr class="main-separator" />
+    <h2>💝 Supporta il progetto</h2>
+
+    <div class="donation-row">
+      <!-- Lightning Network -->
+      <div class="donation-card">
+        <div class="donation-title">⚡ Lightning Network</div>
+        <div class="donation-address">dennj75@blink.sv</div>
+        <img
+          src="/static/Blink_Lightning.png"
+          class="qr-img"
+          alt="QR Lightning"
+        />
+        <div class="donation-address">
+          lnbc1p533fcupp586jkums59acur6kmwlpvqm54fcyhkep2xa0sdetkvykp43j4v5pqdp82pshjgr5dusyymrfde4jq4mpd3kx2apq24ek2uscqzpuxqr8pqsp56dhmdx4a3jshg76d49vhg8nguj3x6w6n9qe9vrnyzew5krsgk9ns9qxpqysgqnrjmqmdtnjqayen4fjct0m7k9a4zkydhk7lkl2wr0ag6yk3vmsdpvt5tupvp8swq8n04z6da57dazle5jsrrppwzxsnqukmcaml8uegqqaxl9z
+        </div>
+      </div>
+
+      <!-- Bitcoin address (Blink) -->
+      <div class="donation-card">
+        <div class="donation-title">₿ Bitcoin (Blink)</div>
+        <div class="donation-address">
+          bc1qwxsmkcwpnrjng2lvw9hezmznftcg893rvck3uq
+        </div>
+        <img
+          src="/static/Blink_Onchain.png"
+          class="qr-img"
+          alt="QR Bitcoin Blink"
+        />
+      </div>
+
+      <!-- Bitcoin On-chain Ledger -->
+      <div class="donation-card">
+        <div class="donation-title">🔗 Bitcoin On-chain</div>
+        <div class="donation-address">36U83knk5fSmXmqd2RgzboogGbRE4WpoFq</div>
+        <img
+          src="/static/Ledger_QRCodeBTC.png"
+          class="qr-img"
+          alt="QR On-chain"
+        />
+      </div>
+    </div>
+
+    <!-- Selettore estensioni Nostr -->
+    <div class="selector-overlay" id="selectorOverlay"></div>
+    <div class="extension-selector" id="extensionSelector">
+      <button class="close-selector" onclick="closeExtensionSelector()">
+        ×
+      </button>
+      <h3>🔑 Scegli il tuo Nostr Signer</h3>
+      <div id="extensionList"></div>
+    </div>
+
+    <script>
+      // 1. CATTURA DATI DA AMBER (MOBILE)
+      // Cerchiamo la pubkey o la firma nell'URL (formato Amber)
+      function getAmberData() {
+        const url = window.location.href;
+        const m = url.match(/[0-9a-f]{64,128}/i);
+        if (m) return m[0];
+        return null;
+      }
+
+      window.onload = async function () {
+        const extraData = getAmberData();
+        const url = window.location.href;
+
+        if (extraData) {
+          if (extraData.length === 64 && !url.includes("signature")) {
+            // Abbiamo la pubkey -> Chiediamo la firma
+            localStorage.setItem("beesy_pubkey", extraData);
+            await startAmberSignature(extraData);
+          } else if (
+            url.includes("signature") ||
+            (extraData && extraData.length > 64)
+          ) {
+            // Abbiamo la firma -> Verifichiamo
+            console.log("✅ Firma mobile rilevata, invio al server...");
+            await verifyAmberOnServer(extraData);
+          }
+        }
+      };
+
+      // 2. FUNZIONE ATTIVATA DAL PULSANTE "NOSTR LOGIN"
+      async function loginNostr() {
+        const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+
+        if (isMobile) {
+          console.log("📱 Avvio procedura Amber Mobile");
+          // Usiamo window.location.origin + "/login" perché abbiamo confermato che la rotta è questa!
+          const cb = window.location.origin + "/login?";
+          window.location.href = `intent:#Intent;scheme=nostrsigner;S.type=get_public_key;S.callbackUrl=${encodeURIComponent(
+            cb
+          )};end`;
+        } else {
+          console.log("💻 Avvio procedura Desktop (Alby/nos2x)");
+          await loginDesktop();
+        }
+      }
+
+      // 3. FIRMA MOBILE (AMBER)
+      async function startAmberSignature(pubkey) {
+        const res = await fetch("/api/challenge");
+        const { challenge, timestamp } = await res.json();
+
+        const event = {
+          kind: 27235,
+          created_at: timestamp,
+          content: challenge,
+          pubkey: pubkey,
+          tags: [["u", window.location.origin]],
+        };
+
+        localStorage.setItem("beesy_event", JSON.stringify(event));
+
+        const cb = window.location.origin + "/login?";
+        const intent = `intent:${encodeURIComponent(
+          JSON.stringify(event)
+        )}#Intent;scheme=nostrsigner;S.type=sign_event;S.pubKey=${pubkey};S.callbackUrl=${encodeURIComponent(
+          cb
+        )};S.resultType=signature;end`;
+        window.location.href = intent;
+      }
+
+      // 4. VERIFICA FINALE (INVIO A /API/VERIFY)
+      async function verifyAmberOnServer(signature) {
+        const event = JSON.parse(localStorage.getItem("beesy_event"));
+        if (!event) return;
+        event.sig = signature;
+
+        const response = await fetch("/api/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ npub: event.pubkey, event: event }),
+        });
+
+        const result = await response.json();
+        if (result.ok) {
+          window.location.href = "/"; // 🎉 LOGIN RIUSCITO!
+        } else {
+          alert("Errore login mobile: " + result.error);
+        }
+      }
+
+      // 5. LOGIN DESKTOP (VECCHIO METODO CHE FUNZIONA GIÀ)
+      async function loginDesktop() {
+        if (!window.nostr) {
+          alert("Installa Alby o nos2x sul tuo browser desktop!");
+          return;
+        }
+        try {
+          const pubkey = await window.nostr.getPublicKey();
+          const res = await fetch("/api/challenge");
+          const { challenge, timestamp } = await res.json();
+
+          const event = {
+            kind: 27235,
+            created_at: timestamp,
+            content: challenge,
+            pubkey: pubkey,
+            tags: [["u", window.location.origin]],
+          };
+
+          const signed = await window.nostr.signEvent(event);
+          const verifyRes = await fetch("/api/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ npub: pubkey, event: signed }),
+          });
+
+          const result = await verifyRes.json();
+          if (result.ok) {
+            window.location.href = "/";
+          }
+        } catch (e) {
+          alert("Errore desktop: " + e.message);
+        }
+      }
+    </script>
   </body>
 </html>

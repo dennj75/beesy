@@ -4,19 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Modifica transazione</title>
+  <link rel="icon" href="/static/img/favicon.ico" type="image/png" />
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+  {% include "partials/logo.html" %}
   <h1>✏️ Modifica Transazione</h1>
 
   <form method="post" action="{{ url_for('modifica_transazione_eur', id_transazione=transazione['id']) }}">
-    <label>Data:</label><br>
+    <label>Data:</label>
     <input type="date" name="data" value="{{ transazione['data'] }}" required><br><br>
 
-    <label>Descrizione:</label><br>
+    <label>Descrizione:</label>
     <input type="text" name="descrizione" value="{{ transazione['descrizione'] }}" required><br><br>
 
-    <label>Categoria:</label><br>
+    <label>Categoria:</label>
     <select name="categoria" id="categoria" onchange="popolaSottocategoria()" required>
       <option value="">-- Seleziona Categoria --</option>
       {% for cat in categorie %}
@@ -24,13 +26,13 @@
       {% endfor %}
     </select><br><br>
 
-    <label>Sottocategoria:</label><br>
+    <label>Sottocategoria:</label>
     <select name="sottocategoria" id="sottocategoria" required></select><br><br>
 
-    <label>Importo (€):</label><br>
+    <label>Importo (€):</label>
     <input type="text" name="importo" value="{{ '%.2f'|format(transazione['importo']|float) }}" required><br><br>
 
-    <label>Conto:</label><br>
+    <label>Conto:</label>
     <select name="conto" required>
       <option value="BANCA" {% if transazione['conto'] == "BANCA" %}selected{% endif %}>🏦 BANCA</option>
       <option value="CONTANTI" {% if transazione['conto'] == "CONTANTI" %}selected{% endif %}>💶 CONTANTI</option>

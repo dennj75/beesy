@@ -3,7 +3,7 @@
 import sqlite3
 import os
 
-DB_PATH = 'transazioni.db'
+DB_PATH = 'database.db'
 
 
 def verifica_ownership_transazione(id_transazione, user_id, tabella):
@@ -98,7 +98,8 @@ def inizializza_db():
     conn.close()
 
     # Tabella per utenti (auth)
-    conn_users = sqlite3.connect('database.db')
+    conn_users = sqlite3.connect(DB_PATH)
+
     cursor_users = conn_users.cursor()
     cursor_users.execute('''
         CREATE TABLE IF NOT EXISTS users (
@@ -245,33 +246,45 @@ def leggi_transazioni_filtrate_onchain(filtro_data, user_id):
 
     return dati_filtrati
 
-def get_transazioni_con_saldo_lightning():
-    """
-    Legge tutte le transazioni Lightning e calcola il saldo totale in satoshi.
-    Ritorna: (lista_transazioni, saldo_totale_satoshi)
-    """
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
 
-    # Legge tutte le transazioni
-    cursor.execute('''
-    SELECT id, data, wallet, descrizione, categoria, sottocategoria, satoshi, controvalore_eur, valore_btc_eur
-    FROM transazioni_lightning
-    ORDER BY data ASC''')
-    dati_lightning = cursor.fetchall()
+# --- SPOSTA QUESTE NEI TUOI UTILS ---
 
-    # Calcola il saldo totale sommando la colonna 'satoshi' (indice 6)
-    cursor.execute('SELECT SUM(satoshi) FROM transazioni_lightning')
-    saldo_totale_satoshi = cursor.fetchone()[0]
+def get_transazioni_con_saldo(user_id):
+    """Recupera transazioni Fiat e calcola i saldi (Banca, Contanti, Totale, BTC)."""
+    transazioni = leggi_transazioni_da_db(user_id)
 
-    conn.close()
+    saldo_banca = sum(t['importo']
+                      for t in transazioni if t['conto'].upper() == 'BANCA')
+    saldo_contanti = sum(t['importo']
+                         for t in transazioni if t['conto'].upper() == 'CONTANTI')
+    saldo_totale = saldo_banca + saldo_contanti
 
-    # Gestione del caso in cui non ci siano transazioni (SUM restituisce None)
-    if saldo_totale_satoshi is None:
-        saldo_totale_satoshi = 0
+    # Calcola il controvalore BTC accumulato dalle spese EUR
+    saldo_btc_da_eur = sum(float(t["controvalore_btc"]) for t in transazioni
+                           if t.get("controvalore_btc") is not None)
 
-    # **IMPORTANTE: Restituisce DUE valori, risolvendo l'errore**
-    return dati_lightning, saldo_totale_satoshi
+    return transazioni, saldo_totale, saldo_banca, saldo_contanti, saldo_btc_da_eur
+
+
+def get_transazioni_con_saldo_lightning(user_id):
+    """Recupera transazioni Lightning e calcola i saldi."""
+    transazioni = leggi_transazioni_da_db_lightning(user_id)
+
+    saldo_satoshi = sum(float(t['satoshi'])
+                        for t in transazioni if t.get('satoshi'))
+    saldo_eur = sum(float(t['controvalore_eur'])
+                    for t in transazioni if t.get('controvalore_eur'))
+
+    return transazioni, saldo_satoshi, saldo_eur
+
+
+def get_transazioni_con_saldo_onchain(user_id):
+    """Recupera transazioni On-chain e calcola il saldo BTC."""
+    transazioni = leggi_transazioni_da_db_onchain(user_id)
+    saldo_btc = sum(float(t['importo_btc'])
+                    for t in transazioni if t.get('importo_btc'))
+
+    return transazioni, saldo_btc
 
 
 def salva_su_db_lightning(user_id, data, wallet, descrizione, categoria, sottocategoria, satoshi, controvalore_eur, valore_btc_eur):
@@ -536,7 +549,8 @@ def get_user_by_id(user_id):
 
 def get_user_by_npub(npub):
     """Trova un utente tramite il suo npub"""
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DB_PATH)
+
     cursor = conn.cursor()
     cursor.execute('SELECT id, username FROM users WHERE npub = ?', (npub,))
     user = cursor.fetchone()
@@ -546,7 +560,8 @@ def get_user_by_npub(npub):
 
 def create_user_from_npub(npub):
     """Crea un nuovo utente dal npub"""
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DB_PATH)
+
     cursor = conn.cursor()
     username = f"nostr_{npub[:8]}"
     cursor.execute(
@@ -557,3 +572,23 @@ def create_user_from_npub(npub):
     user_id = cursor.lastrowid
     conn.close()
     return user_id
+
+
+def update_user_password_hash(user_id, pw_hash):
+    """Aggiorna l'hash della password di un utente nel DB."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    # Assumendo che la tabella utenti si chiami 'utenti' e la colonna 'password_hash'
+    cursor.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ?", (pw_hash, user_id))
+    conn.commit()
+    conn.close()
+
+
+def delete_user(user_id):
+    import sqlite3
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()

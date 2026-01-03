@@ -1,31 +1,41 @@
-from db.db_utils import DB_PATH
-from utils.crypto import _carica_storico_btc_eur
-from db.db_utils import get_user_by_id
-from flask_login import LoginManager, login_required, UserMixin
-from flask import Flask, render_template, request, redirect, url_for, flash
-from db.db_utils import get_transazioni_con_saldo_lightning, leggi_transazioni_da_db, salva_su_db, elimina_transazione_da_db, modifica_transazione_db, inizializza_db, salva_su_db_lightning, leggi_transazioni_da_db_lightning, modifica_transazione_db_lightning, elimina_transazione_da_db_lightning, leggi_transazioni_da_db_onchain, salva_su_db_onchain, leggi_transazioni_filtrate_onchain, elimina_transazione_da_db_onchain, modifica_transazione_db_onchain
-from flask import send_file
-from utils.export import esporta_csv, esporta_csv_per_mese, esporta_csv_lightning, esporta_csv_per_mese_lightning, esporta_csv_onchain, esporta_csv_per_mese_onchain
-from utils.crypto import ottieni_valore_btc_eur, euro_to_btc
-from utils.helpers import normalizza_importo
+import os
 import json
 import sqlite3
-from flask_login import LoginManager, login_remembered, current_user
-import os
 import binascii
 import hashlib
-from flask import Flask, session, jsonify, request
-from ecdsa import VerifyingKey, SECP256k1, BadSignatureError
-from bech32 import bech32_decode, convertbits
-from btclib.ecc import ssa
-from hashlib import sha256
 import time
 from datetime import datetime, date
-from coincurve import PublicKey
-from dotenv import load_dotenv
-from coincurve._libsecp256k1 import lib, ffi
 
-inizializza_db()  # <<--- aggiungi questa riga
+# Flask & Estensioni
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
+from flask_login import LoginManager, login_required, UserMixin, current_user, login_remembered
+
+# Crittografia & Nostr
+from coincurve import PublicKey
+from coincurve._libsecp256k1 import lib, ffi
+from btclib.ecc import ssa
+from hashlib import sha256
+from dotenv import load_dotenv
+from bech32 import bech32_decode, convertbits
+
+# Logica di Progetto (i tuoi moduli)
+from db.db_utils import (
+    DB_PATH, get_user_by_id, inizializza_db, salva_su_db, leggi_transazioni_da_db,
+    elimina_transazione_da_db, modifica_transazione_db, get_transazioni_con_saldo,
+    salva_su_db_lightning, leggi_transazioni_da_db_lightning, modifica_transazione_db_lightning,
+    elimina_transazione_da_db_lightning, get_transazioni_con_saldo_lightning,
+    leggi_transazioni_da_db_onchain, salva_su_db_onchain, leggi_transazioni_filtrate_onchain,
+    elimina_transazione_da_db_onchain, modifica_transazione_db_onchain, get_transazioni_con_saldo_onchain
+)
+from utils.crypto import ottieni_valore_btc_eur, euro_to_btc, _carica_storico_btc_eur
+from utils.export import (
+    esporta_csv, esporta_csv_per_mese, esporta_csv_lightning,
+    esporta_csv_per_mese_lightning, esporta_csv_onchain, esporta_csv_per_mese_onchain
+)
+from utils.helpers import normalizza_importo
+
+load_dotenv()
+
 CATEGORIE = {
     'Entrate': ['Stipendio', 'Rimborso', 'Regalo', 'Donazioni', 'claim giochi online', 'Altro'],
     'Abitazione': ['Affitto/Mutuo', 'Bollette: Luce', 'Bollette: acqua', 'Bollette: Gas', 'Bollette: Rifiuti', 'Manutenzione', 'Spese condominiali', 'Assicurazione casa'],
@@ -40,53 +50,41 @@ CATEGORIE = {
 }
 
 
-def get_transazioni_con_saldo_lightning(user_id):
-    transazioni_lightning = leggi_transazioni_da_db_lightning(user_id)
-
-    saldo_satoshi = sum(
-        float(t['satoshi']) for t in transazioni_lightning
-        if t['satoshi'] not in (None, "", "None")
-    )
-
-    saldo_eur_lightning = sum(
-        float(t['controvalore_eur']) for t in transazioni_lightning
-        if t['controvalore_eur'] not in (None, "", "None")
-    )
-
-    return transazioni_lightning, saldo_satoshi, saldo_eur_lightning
-
-
-def get_transazioni_con_saldo(user_id):
-    transazioni = leggi_transazioni_da_db(user_id)
-    saldo_totale = sum(float(t["importo"])
-                       for t in transazioni if t["importo"] is not None)
-    saldo_banca = sum(t['importo']
-                      for t in transazioni if t['conto'].lower() == 'banca')
-    saldo_contanti = sum(t['importo']
-                         for t in transazioni if t['conto'].lower() == 'contanti')
-    return transazioni, saldo_totale, saldo_banca, saldo_contanti
-
-
-def get_transazioni_con_saldo_onchain(user_id):
-    transazioni = leggi_transazioni_da_db_onchain(user_id)
-    saldo_totale_btc = sum(float(t['importo_btc'])
-                           for t in transazioni if t['importo_btc'] is not None)
-    return transazioni, saldo_totale_btc
-
-
-def get_transazioni_con_saldo_satoshi_onchain(user_id):
-    transazioni_onchain = leggi_transazioni_da_db_onchain(user_id)
-    saldo_totale_btc = sum(float(t['importo_btc'])
-                           for t in transazioni_onchain if t['importo_btc'] is not None)
-    return transazioni_onchain, saldo_totale_btc
-
-load_dotenv()
-
 app = Flask(__name__)
 
-# Prende la chiave dal file .env. 
+# Prende la chiave dal file .env.
 # Se non la trova, usa un valore di backup (solo per sviluppo!)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'default-key-per-test')
+
+# --- INIZIALIZZAZIONE AUTOMATICA (Plug & Play) ---
+
+
+def setup_application():
+    """Crea le cartelle necessarie e inizializza i database se non esistono."""
+    # 1. Crea la cartella static/img se non esiste (per le icone)
+    os.makedirs(os.path.join('static', 'img'), exist_ok=True)
+
+    # 2. Controlla e inizializza i database
+    if not os.path.exists(DB_PATH):
+        print("🟡 Database non trovato. Inizializzazione in corso...")
+        inizializza_db()
+        print("🟢 Database creato con successo!")
+    else:
+        print("🔵 Database esistente rilevato.")
+
+
+# Esegui il setup prima di far partire il server
+with app.app_context():
+    setup_application()
+
+
+@app.route('/test-amber')
+@app.route('/test-amber<path:extra>')
+def test_amber(extra=None):
+    # Passiamo 'extra' (che contiene la chiave o la firma) direttamente al template
+    return render_template('test_amber.html', extra_data=extra)
+# ----------------------------------------------------
+
 
 @app.get("/api/challenge")
 def get_challenge():
@@ -113,6 +111,17 @@ def verify_signature():
     body = request.json
     event = body["event"]
     npub_hex = body["npub"]
+
+    # --- AGGIUNTA PER COMPATIBILITÀ AMBER (MOBILE) ---
+    if "id" not in event:
+        # Calcoliamo l'ID al volo se Amber non l'ha inviato
+        serialized_array = [0, event["pubkey"], event["created_at"],
+                            event["kind"], event["tags"], event["content"]]
+        serialized_str = json.dumps(
+            serialized_array, separators=(',', ':'), ensure_ascii=False)
+        event["id"] = sha256(serialized_str.encode('utf-8')).hexdigest()
+        print(f"💡 ID mancante (Mobile): Calcolato -> {event['id']}")
+        # --------------------------------------------------
 
     print("=" * 60)
     print("INIZIO VERIFICA NOSTR")
@@ -282,10 +291,11 @@ def load_user(user_id):
 
 
 @app.route('/')
+@login_required
 def home():
     if not current_user.is_authenticated:
         return redirect(url_for('auth.login'))
-    dati, saldo_totale_eur, saldo_banca, saldo_contanti = get_transazioni_con_saldo(
+    dati, saldo_totale_eur, saldo_banca, saldo_contanti, saldo_btc_da_eur = get_transazioni_con_saldo(
         current_user.id)
     dati_lightning, saldo_totale_satoshi, saldo_eur_lightning = get_transazioni_con_saldo_lightning(
         current_user.id)
@@ -333,7 +343,7 @@ def transazioni():
     user_id = current_user.id
 
     # Ora qui ricevi già i dizionari
-    dati, saldo_totale, saldo_banca, saldo_contanti = get_transazioni_con_saldo(
+    dati, saldo_totale, saldo_banca, saldo_contanti, saldo_btc_da_eur = get_transazioni_con_saldo(
         user_id)
 
     # Calcolo saldo BANCA / CONTANTI
@@ -410,7 +420,7 @@ def nuova_transazione():
 def elimina_transazione_eur(id_transazione):
     user_id = current_user.id
 
-    # Elimina la transazione
+    # 1. Elimina la transazione (fai solo questo)
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(
@@ -418,38 +428,13 @@ def elimina_transazione_eur(id_transazione):
     conn.commit()
     conn.close()
 
-    # Ricarica le transazioni aggiornate
-    dati, saldo_totale, saldo_banca, saldo_contanti = get_transazioni_con_saldo(
-        user_id)
+    # 2. Messaggio per l'utente
+    flash("Transazione eliminata con successo", "success")
 
-    # Saldi banca/contanti
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT SUM(importo) FROM transazioni WHERE user_id=? AND conto='BANCA'",
-        (user_id,)
-    )
-    saldo_banca = cursor.fetchone()[0] or 0
-
-    cursor.execute(
-        "SELECT SUM(importo) FROM transazioni WHERE user_id=? AND conto='CONTANTI'",
-        (user_id,)
-    )
-    saldo_contanti = cursor.fetchone()[0] or 0
-
-    conn.close()
-
-    saldo_totale_eur = saldo_banca + saldo_contanti
-
-    return render_template(
-        'transazioni.html',
-        transazioni=dati,
-        saldo_totale=saldo_totale,
-        saldo_banca=saldo_banca,
-        saldo_contanti=saldo_contanti,
-        saldo_totale_eur=saldo_totale_eur
-    )
+    # 3. REINDIRIZZA alla pagina principale delle transazioni
+    # Supponendo che la tua rotta per vedere le transazioni EUR si chiami 'home'
+    # (quella che abbiamo sistemato prima con le 5 variabili)
+    return redirect(url_for('transazioni'))
 
 
 @app.route('/modifica-transazione/<int:id_transazione>', methods=['GET', 'POST'])
@@ -515,7 +500,7 @@ def modifica_transazione_eur(id_transazione):
                     "⚠️ Impossibile ottenere il valore BTC per la data selezionata.", "error")
 
         # Aggiorna tabella
-        dati, saldo_totale, saldo_banca, saldo_contanti = get_transazioni_con_saldo(
+        dati, saldo_totale, saldo_banca, saldo_contanti, saldo_btc_da_eur = get_transazioni_con_saldo(
             current_user.id)
 
         return render_template(
@@ -686,14 +671,16 @@ def nuova_transazione_lightning():
 @app.route('/elimina_transazione_lightning/<int:id_transazione>', methods=['POST'])
 @login_required
 def elimina_transazione_web_lightning(id_transazione):
+    # 1. Esegui l'eliminazione
     elimina_transazione_da_db_lightning(id_transazione, current_user.id)
+
+    # 2. Manda il messaggio di conferma
     flash("Transazione eliminata con successo", "success")
-    dati_Lightning, saldo_totale_satoshi, saldo_eur_lightning = get_transazioni_con_saldo_lightning(
-        current_user.id)
-    return render_template('transazioni_lightning.html',
-                           transazioni_lightning=dati_Lightning,
-                           saldo_totale_satoshi=saldo_totale_satoshi,
-                           saldo_eur_lightning=saldo_eur_lightning)
+
+    # 3. REINDIRIZZA alla rotta che elenca le transazioni
+    # In questo modo 'get_transazioni_con_saldo_lightning' verrà chiamata
+    # automaticamente dalla funzione 'transazioni_lightning'
+    return redirect(url_for('transazioni_lightning'))
 
 
 @app.route('/modifica-transazione_lightning/<int:id_transazione>', methods=['GET', 'POST'])
@@ -862,20 +849,13 @@ def elimina_transazione_web_onchain(id_transazione):
     # Aggiungi questa riga
     print(f"ID Utente Loggato (current_user.id): {current_user.id}")
     elimina_transazione_da_db_onchain(id_transazione, current_user.id)
+    # 2. Manda il messaggio di conferma
     flash("Transazione eliminata con successo", "success")
 
-    # 1. Ricalcolo dei dati aggiornati (usa i nomi che ricevi)
-    # Assumendo che 'get_transazioni_con_saldo_satoshi_onchain' esista e sia corretta:
-    transazioni_aggiornate, saldo_aggiornato = get_transazioni_con_saldo_satoshi_onchain(
-        current_user.id)
-
-    # 2. Passa le variabili al template con i NOMI CORRETTI
-    return render_template(
-        'transazioni_onchain.html',
-        # <-- Nome corretto per la lista transazioni
-        transazioni_onchain=transazioni_aggiornate,
-        saldo_totale_btc=saldo_aggiornato         # <-- Nome corretto per il saldo
-    )
+    # 3. REINDIRIZZA alla rotta che elenca le transazioni
+    # In questo modo 'get_transazioni_con_saldo_lightning' verrà chiamata
+    # automaticamente dalla funzione 'transazioni_lightning'
+    return redirect(url_for('transazioni_onchain'))
 
 
 @app.route('/modifica-transazione_onchain/<int:id_transazione>', methods=['GET', 'POST'])
@@ -974,4 +954,4 @@ if __name__ == '__main__':
         app.register_blueprint(auth_bp)
     except Exception:
         pass
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

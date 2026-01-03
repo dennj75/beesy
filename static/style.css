@@ -1,13 +1,55 @@
-body{
-    background-color: #121212;
-    color: #e0e0e0;
+/* =================================================================
+   SEZIONE 1: VARIABILI CSS (TEMA DARK MODE)
+   Utilizza queste variabili per un'aggiornamento rapido del tema.
+   ================================================================= */
+:root {
+    /* Colori Base Dark Mode */
+    --color-bg-primary: #121212; /* Sfondo principale */
+    --color-bg-secondary: #1a1a1a; /* Sfondo elementi secondari (es. righe tabella pari, box donazioni) */
+    --color-bg-tertiary: #1e1e1e; /* Sfondo intestazioni o th tabella */
+    --color-text-primary: #e0e0e0; /* Testo chiaro principale */
+    --color-text-secondary: #ddd; /* Testo leggermente meno prominente */
+    --color-border: #333; /* Bordo generico */
+    --color-input-bg: #222; /* Sfondo input */
+    --color-input-border: #444; /* Bordo input */
+
+    /* Colori del Tema / Brand */
+    --color-brand-primary: #4caf50; /* Verde principale per azioni/successo */
+    --color-brand-hover: #45a049;
+    --color-link: #4fc3f7; /* Blu per link generici */
+    --color-link-hover: #8ab4f8; /* Blu per link nei paragrafi */
+    --color-nostr-btn: #fa0e71; /* Rosa Nostr */
+    --color-nostr-btn-hover: #d8f87b; /* Giallo Nostr/hover */
+
+    /* Colori Stati (Importi/Notifiche) */
+    --color-success: var(--color-brand-primary); /* Verde per saldi e importi positivi */
+    --color-error: #f44336; /* Rosso per importi negativi */
+    --color-flash-success-bg: #d4edda;
+    --color-flash-success-text: #155724;
+    --color-flash-error-bg: #f8d7da;
+    --color-flash-error-text: #721c24;
+}
+
+/* =================================================================
+   SEZIONE 2: STILI DI BASE E TIPOGRAFIA
+   (Corrisponde al blocco 'body' unificato)
+   ================================================================= */
+body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
     font-family: Arial, sans-serif;
-    margin: 20px;
+    margin: 40px auto; /* Centra il body */
     padding: 20px;
+    max-width: 600px; /* Limita la larghezza massima per i contenuti principali */
+    box-sizing: border-box;
+}
+
+h1 {
+    color: var(--color-text-primary);
 }
 
 a {
-    color: #4fc3f7;
+    color: var(--color-link);
     text-decoration: none;
 }
 
@@ -15,250 +57,567 @@ a:hover {
     text-decoration: underline;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
+/* Stili link all'interno dei testi lunghi */
+p a {
+    color: var(--color-link-hover);
+}
+p a:hover {
+    color: #aac7ff;
 }
 
-th, td {
-    border: 1px solid #333;
-    padding: 10px;
-    text-align: left;
+/* =================================================================
+   SEZIONE 3: HEADER, LOGO E NAVBAR (Home)
+   ================================================================= */
+
+/* Per login/register */
+
+.site-logo {
+    max-width: 150px;
+    height: auto;
+    opacity: 0.9;
+    transition: opacity 0.2s;
+    mix-blend-mode: screen; 
+    filter: brightness(1.1) contrast(1.2);
+}
+.site-logo:hover {
+    opacity: 1;
+    filter: brightness(1.2) contrast(1.3);
+}
+body {
+  margin-top: 20px; /* invece di 40 */
 }
 
-th {
-    background-color: #1e1e1e;
+/* Layout Header Home */
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
 }
-
-tr:nth-child(even) {
-    background-color: #1a1a1a;
+.user-info-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
-
-tr:nth-child(odd) {
-    background-color: #141414;
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    mix-blend-mode: screen;
 }
-
-input, select, button { 
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 10px;
-    border: 1px solid #444;
-    background-color: #222;
-    color: #e0e0e0;
-    box-sizing: border-box;
-}
-
-button {
-    cursor: pointer;
-    background-color: #4caf50;
-    color: white;
-    font-weight: bold;
-}
-
-button:hover {
-    background-color: #45a049;
-}
-
-.fleshes .success{  color: green;
-  font-weight: bold;
-}
-
-.flashes .error {
-  color: red;
-  font-weight: bold;
-}
-
-/* Stile unificato per i saldi principali */
-.saldo-principale {
-    text-align: center;
-    font-size: 1.5em;
-    font-weight: bold;
-    margin: 10px 0;
-}
-
-/* Stile per i saldi secondari (controvalori) */
-.saldo-secondario {
-    text-align: center;
-    font-size: 1.2em;
-    margin: 5px 0;
-}
-
-/* Manteniamo la classe saldo-totale per retrocompatibilità */
-.saldo-totale {
-    text-align: center;
-    color: #4caf50;
-    font-size: 1.5em;
-    font-weight: bold;
-    margin: 20px 0;
-}
-
-.csv-buttons {
-  display: flex;
-  justify-content: left;
-  gap: 20px;
-  margin: 20px 0;
-}
-
-.csv-button {
-  background-color: #4CAF50;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1em;
-  transition: background-color 0.3s ease;
-}
-
-.csv-button:hover {
-  background-color: #45a049;
+.user-details, .auth-links {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.9em;
 }
 
 .top-bar {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
 }
 
-.export-buttons {
-  display: flex;
-  gap: 10px;
+.top-logo {
+  max-height: 80px;
+  opacity: 0.9;
+    transition: opacity 0.2s;
+    mix-blend-mode: screen; 
+    filter: brightness(1.1) contrast(1.2);
 }
 
-.btn {
-  padding: 8px 14px;
-  text-decoration: none;
-  color: white;
-  border-radius: 5px;
-  font-weight: bold;
-}
-
-.btn.green {
-  background-color: #28a745;
-}
-
-.btn.green:hover {
-  background-color: #218838;
-}
-.importo-positivo {
-  color: #4caf50; /* Verde */
-  font-weight: bold;
-}
-
-.importo-negativo {
-  color: #f44336; /* Rosso */
-  font-weight: bold;
-}
-/* Dropdown menu */
-.dropdown {
+.user-menu {
   position: relative;
-  display: inline-block;
-  margin-top: 20px;
 }
 
-.dropbtn {
-  background-color: #4CAF50;
-  color: white;
-  padding: 10px 20px;
-  font-size: 16px;
-  border: none;
+.user-menu-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  padding: 6px 10px;
+  border-radius: 6px;
   cursor: pointer;
-  border-radius: 5px;
 }
 
-.dropdown-content {
+.user-menu-dropdown {
   display: none;
   position: absolute;
-  background-color: #f1f1f1;
-  min-width: 200px;
-  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-  z-index: 1;
-  border-radius: 5px;
+  right: 0;
+  top: 110%;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 180px;
+  z-index: 10;
 }
 
-.dropdown-content a {
-  color: black;
-  padding: 12px 16px;
-  text-decoration: none;
-  display: block;
-  border-bottom: 1px solid #ddd;
-}
-
-.dropdown-content a:hover{
-  background-color: #ddd;
-}
-.dropdown:hover .dropdown-content {
+.user-menu-dropdown.show {
   display: block;
 }
 
-.dropdown:hover .dropbtn {
-  background-color: #3e8e41;
+.user-menu-dropdown a,
+.user-menu-dropdown button {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--color-text-primary);
+  padding: 8px;
+  text-align: left;
+  cursor: pointer;
 }
 
-li.euro-success, li.lightning-success {
-  color: limegreen;
-  list-style-type: "✅ ";
+.danger-btn {
+  color: #ff5555;
+}
+.top-left,
+.top-right {
+  display: flex;
+  align-items: center;
 }
 
-li.euro-error, li.lightning-error {
-  color: red;
-  list-style-type: "❌ ";
+/* =================================================================
+   SEZIONE 4: FORM E INPUTS
+   ================================================================= */
+form {
+    margin-bottom: 20px;
+}
+label {
+    display: block;
+    margin: 10px 0;
+}
+
+/* Stile unificato per Input/Select (non include i pulsanti) */
+input:not([type="submit"]), select { 
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid var(--color-input-border);
+    background-color: var(--color-input-bg);
+    color: var(--color-text-primary);
+    box-sizing: border-box;
+    border-radius: 4px;
+}
+
+/* Stili specifici per i campi login/password/autofill */
+input[name="username"],
+input[name="password"],
+input[name="new_password"],
+input[name="confirm_password"] {
+    /* Sovrascrivi il background per il login */
+    background-color: #2a2a2a !important; 
+    color: #eee !important;
+    border: 1px solid #444 !important;
+    padding: 10px 12px !important;
+    border-radius: 4px !important;
+}
+
+/* Fix Autocomplete */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0px 1000px #2a2a2a inset !important;
+    -webkit-text-fill-color: #eee !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+/* =================================================================
+   SEZIONE 5: PULSANTI E LINK DI AZIONE (UNIFICATI)
+   ================================================================= */
+
+/* Stile Base per tutti i pulsanti/link usati come pulsanti */
+.btn-base {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    text-decoration: none;
+    text-align: center;
+    box-sizing: border-box;
+    transition: background-color 0.3s ease;
+}
+
+/* Pulsante Primario/Default (per form submit) */
+button[type="submit"],
+.btn-primary { 
+    /* Eredita da .btn-base, ma ha anche: */
+    width: 100%;
+    display: block; 
+    margin-top: 15px;
+    
+    background-color: var(--color-brand-primary);
+    color: white;
+}
+button[type="submit"]:hover,
+.btn-primary:hover {
+    background-color: var(--color-brand-hover);
+}
+
+/* Pulsanti Contenuti in flexbox (es. CSV) - li rendiamo di larghezza auto */
+.csv-button {
+    /* Riadotta .btn-base */
+    background-color: var(--color-brand-primary);
+    color: white;
+}
+.csv-button:hover {
+    background-color: var(--color-brand-hover);
+}
+
+/* Stile per i pulsanti specifici sulle card della home (tracker-button) */
+.tracker-button {
+    /* Riadotta .btn-base */
+    width: 100%;
+    margin-bottom: 15px;
+    background-color: var(--color-bg-tertiary); /* Grigio scuro per le card */
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+}
+.tracker-button:hover {
+    background-color: #2a2a2a;
+}
+
+/* Pulsante Nostr (Molto specifico) */
+.nostr-btn {
+    /* Eredita da .btn-base */
+    display: block;
+    width: 100%;
+    background: var(--color-nostr-btn);
+    color: #000;
+    margin-top: 15px;
+    margin-bottom: 10px;
+    border: none; 
+}
+.nostr-btn:hover {
+    background: var(--color-nostr-btn-hover);
+}
+
+/* =================================================================
+   SEZIONE 6: COMPONENTI DI LAYOUT E CARD
+   ================================================================= */
+
+/* Layout Grid per Saldi (Home) */
+.balances-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 30px;
+}
+.balance-card {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+.saldo-detail, .placeholder-detail {
+    margin: 8px 0;
+    font-size: 1em;
+    color: var(--color-text-secondary);
+}
+.separator {
+    border: 0;
+    height: 1px;
+    background: var(--color-border);
+    margin: 10px 0;
+}
+
+/* Stili Saldi (unificato) */
+.saldo-principale, .saldo-totale { 
+    font-size: 1.5em;
+    font-weight: bold;
+    margin: 15px 0 5px 0; /* Spaziatura uniforme */
+    color: var(--color-success);
+}
+.saldo-secondario {
+    font-size: 1.1em;
+    margin: 5px 0 15px 0;
+    color: var(--color-text-secondary);
+}
+
+/* Box Nostr e Donazioni (consolidato) */
+.nostr-info {
+    background: #2a2a2a;
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 20px;
+    color: #eee;
+    border: 1px solid #444;
+}
+.nostr-info h2 {
+    margin-top: 0;
+    color: #eee;
+}
+.nostr-info ul {
+    margin: 10px 0;
+    padding-left: 20px;
 }
 .donation-box {
     margin-top: 30px;
     padding: 20px;
-    background: #1a1a1a;
+    background: var(--color-bg-secondary);
     border-radius: 12px;
-    border: 1px solid #333;
+    border: 1px solid var(--color-border);
 }
-
 .donation-row {
     display: flex;
     justify-content: space-between;
     gap: 20px;
-    flex-wrap: wrap; /* per adattarsi su mobile */
+    flex-wrap: wrap;
 }
-
 .donation-card {
     flex: 1;
     min-width: 250px;
-    background: #121212;
-    border: 1px solid #333;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
     border-radius: 10px;
     padding: 15px;
     text-align: center;
 }
-
-.donation-title {
-    font-size: 1.2em;
-    font-weight: bold;
-    margin-bottom: 10px;
+.qr-img {
+  width: 150px;       /* scegli tu: 120 / 150 / 180 */
+  height: auto;
+  margin-top: 10px;
 }
 
 .donation-address {
-    font-family: monospace;
-    font-size: 0.9em;
-    margin-bottom: 10px;
-    word-break: break-all;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  font-size: 0.85rem; /* opzionale */
 }
 
-.qr-img {
-    width: 140px;
-    height: 140px;
-    object-fit: contain;
-    border-radius: 10px;
-    background: white;
-    padding: 8px;
-    border: 1px solid #444;
-    margin-top: 10px;
-}
 
+/* ... Altri stili donazione (address, qr-img) ... */
+
+/* =================================================================
+   SEZIONE 7: TABELLE E UTILITY (Es. Pagina Transazioni)
+   ================================================================= */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* Aggiunto per allineamento verticale */
+    margin-bottom: 20px;
+}
+.csv-buttons, .export-buttons {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+    justify-content: flex-start;
+}
 .saldi-container {
-    text-align: center;      /* Centra tutto */
+    text-align: lifT;
     margin-bottom: 20px;
 }
 
-.saldi-container p {
-    margin: 5px 0;           /* Spaziatura uniforme */
-    font-size: 1.2em;
+/* Tabella */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+th, td {
+    border: 1px solid var(--color-border);
+    padding: 10px;
+    text-align: left;
+}
+th {
+    background-color: var(--color-bg-tertiary);
+}
+tr:nth-child(even) {
+    background-color: var(--color-bg-secondary);
+}
+tr:nth-child(odd) {
+    background-color: #141414;
+}
+
+/* Colori Importi */
+.importo-positivo {
+    color: var(--color-success);
+    font-weight: bold;
+}
+.importo-negativo {
+    color: var(--color-error);
+    font-weight: bold;
+}
+
+/* Flashes (Messaggi di stato) */
+.flashes {
+    list-style-type: none;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+    font-weight: bold;
+}
+.flashes li {
+    padding: 0;
+    margin: 0;
+}
+.error {
+    background-color: var(--color-flash-error-bg);
+    color: var(--color-flash-error-text);
+    border: 1px solid #f5c6cb;
+}
+.success {
+    background-color: var(--color-flash-success-bg);
+    color: var(--color-flash-success-text);
+    border: 1px solid #c3e6cb;
+}
+li.euro-success, li.lightning-success {
+    color: limegreen;
+    list-style-type: "✅ ";
+}
+li.euro-error, li.lightning-error {
+    color: red;
+    list-style-type: "❌ ";
+}
+
+/* =================================================================
+   SEZIONE 8: DROP-DOWN MENU (Per "Nuova Transazione")
+   ================================================================= */
+.dropdown {
+    position: relative;
+    /* Rendi il dropdown a tutta larghezza se vuoi che il pulsante lo sia */
+    display: block; 
+    width: 100%; 
+    margin: 20px 0;
+}
+.dropbtn {
+    /* Questo è il pulsante del menu, ora usa lo stile primario */
+    background-color: var(--color-brand-primary);
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    font-weight: bold;
+    /* Forza a tutta larghezza */
+    width: 100%; 
+    box-sizing: border-box;
+}
+.dropdown-content {
+    display: none;
+    position: absolute;
+    /* Colori più scuri per coerenza nel dark mode */
+    background-color: #2a2a2a; 
+    min-width: 100%; /* Occupa tutta la larghezza del contenitore */
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+    z-index: 10; /* Per essere sopra tutto */
+    border-radius: 5px;
+    margin-top: 2px;
+}
+.dropdown-content a {
+    color: var(--color-text-primary); /* Testo chiaro */
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    border-bottom: 1px solid #333; /* Bordo scuro */
+}
+
+.dropdown-content.show {
+  display: block;
+}
+/* =================================================================
+   SELETTORE ESTENSIONI NOSTR - Aggiungi alla fine del file
+   ================================================================= */
+
+.extension-selector {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #1a1a1a;
+  border: 2px solid #f7931a;
+  border-radius: 12px;
+  padding: 24px;
+  z-index: 1000;
+  min-width: 320px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+}
+
+.extension-selector.show {
+  display: block;
+}
+
+.extension-selector h3 {
+  margin: 0 0 16px 0;
+  color: #f7931a;
+  font-size: 18px;
+}
+
+.extension-option {
+  padding: 12px;
+  margin: 8px 0;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.extension-option:hover {
+  background: #333;
+  border-color: #f7931a;
+  transform: translateX(4px);
+}
+
+.extension-icon {
+  font-size: 24px;
+}
+
+.extension-info {
+  flex: 1;
+}
+
+.extension-name {
+  font-weight: bold;
+  color: #fff;
+}
+
+.extension-desc {
+  font-size: 12px;
+  color: #999;
+}
+
+.selector-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 999;
+}
+
+.selector-overlay.show {
+  display: block;
+}
+
+.close-selector {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+}
+
+.close-selector:hover {
+  color: #f7931a;
 }

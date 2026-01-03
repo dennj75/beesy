@@ -3,23 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <title>✏️ Modifica Transazione Lightning ⚡️</title>
+  <link rel="icon" href="/static/img/favicon.ico" type="image/png" />
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
+  {% include "partials/logo.html" %}
   <h1>✏️ Modifica Transazione Lightning ⚡️</h1>
 
   <form method="post" action="{{ url_for('modifica_transazione_web_lightning', id_transazione=transazione_lightning["id"]) }}">
     
-    <label for="data">📅 Data:</label><br />
+    <label for="data">📅 Data:</label>
     <input type="date" id="data" name="data" value="{{ transazione_lightning[1] }}" required /><br /><br />
 
-    <label for="wallet">👛 Wallet:</label><br />
+    <label for="wallet">👛 Wallet:</label>
     <input type="text" id="wallet" name="wallet" value="{{ transazione_lightning[2] }}" required /><br /><br />
 
-    <label for="descrizione">📝 Descrizione:</label><br />
+    <label for="descrizione">📝 Descrizione:</label>
     <input type="text" id="descrizione" name="descrizione" value="{{ transazione_lightning[3] }}" required /><br /><br />
 
-    <label for="categoria">📂 Categoria:</label><br />
+    <label for="categoria">📂 Categoria:</label>
     <select name="categoria" id="categoria" onchange="popolaSottocategoria()" required>
       <option value="">-- Seleziona Categoria --</option>
       {% for cat in categorie %}
@@ -27,10 +29,10 @@
       {% endfor %}
     </select><br /><br />
 
-    <label for="sottocategoria">🔖 Sottocategoria:</label><br />
+    <label for="sottocategoria">🔖 Sottocategoria:</label>
     <select name="sottocategoria" id="sottocategoria" required></select><br /><br />
 
-    <label for="satoshi">⚡️ Importo (satoshi):</label><br />
+    <label for="satoshi">⚡️ Importo (satoshi):</label>
     <input type="number" id="satoshi" name="satoshi" min="-1000000" max="1000000" value="{{ transazione_lightning[6] }}" required /><br /><br />
 
     <button type="submit">✅ Salva Modifiche</button>

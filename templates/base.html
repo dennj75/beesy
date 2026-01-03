@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('static', filename='img/favicon.ico') }}"
+    />
+    <title>{% block title %}Gestione Finanze{% endblock %}</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <link rel="manifest" href="/static/manifest.json" />
+    <meta name="theme-color" content="#f39c12" />
+    <link rel="apple-touch-icon" href="/static/img/beesy_icon_512.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+  </head>
+  <body>
+    <!-- HEADER GLOBALE -->
+    <header class="header-container">
+      <div class="logo-container">
+        <a href="{{ url_for('home') }}">
+          <img
+            src="{{ url_for('static', filename='img/beesy_dark_1.png') }}"
+            alt="Beesy Logo"
+            class="site-logo"
+          />
+        </a>
+      </div>
+
+      {% if current_user.is_authenticated %}
+      <div class="user-menu">
+        <button id="user-menu-btn" class="user-menu-btn">
+          👤 {{ current_user.username }}
+        </button>
+        <div id="user-menu-dropdown" class="user-menu-dropdown">
+          <a href="{{ url_for('auth.logout') }}">Logout</a>
+          <form
+            action="{{ url_for('auth.elimina_utente', user_id=current_user.id) }}"
+            method="POST"
+            onsubmit="return confirm('Sei sicuro?');"
+          >
+            <button type="submit" class="danger-btn">Elimina account</button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+    </header>
+
+    <!-- CONTENUTO SPECIFICO DELLA PAGINA -->
+    <main>{% block content %}{% endblock %}</main>
+
+    <!-- JS MENU UTENTE -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const btn = document.getElementById("user-menu-btn");
+        const dropdown = document.getElementById("user-menu-dropdown");
+
+        if (btn && dropdown) {
+          btn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            dropdown.classList.toggle("show");
+          });
+
+          document.addEventListener("click", function () {
+            dropdown.classList.remove("show");
+          });
+        }
+      });
+    </script>
+  </body>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const dropBtn = document.querySelector(".dropbtn");
+      const dropContent = document.querySelector(".dropdown-content");
+
+      if (dropBtn && dropContent) {
+        dropBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          dropContent.classList.toggle("show");
+        });
+
+        // Chiudi se clicchi fuori
+        document.addEventListener("click", function () {
+          dropContent.classList.remove("show");
+        });
+      }
+    });
+  </script>
+</html>

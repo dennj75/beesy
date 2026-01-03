@@ -3,70 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Login with Nostr</title>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
-    />
+    <title>Redirecting...</title>
   </head>
   <body>
-    <h1>Login with Nostr</h1>
-
-    <button onclick="loginNostr()">Login with Nostr</button>
-    <p><a href="/login">⬅️ Torna al login tradizionale</a></p>
-
+    {% include "partials/logo.html" %}
+    <p>Reindirizzamento alla pagina di login...</p>
     <script>
-      async function loginNostr() {
-        if (!window.nostr) {
-          alert("No Nostr extension (NO2x) found!");
-          return;
-        }
-
-        const npub = await window.nostr.getPublicKey();
-
-        // ✅ Adesso prendi anche il timestamp dal server
-        const challengeRes = await fetch("/api/challenge");
-        const { challenge, timestamp } = await challengeRes.json();
-
-        // Salva il timestamp in sessionStorage così da poterlo usare se serve lato front-end
-        sessionStorage.setItem("challenge_timestamp", timestamp);
-
-        const event = {
-          kind: 27235,
-          tags: [],
-          content: challenge,
-          created_at: timestamp, // 👈 AGGIUNTO
-          pubkey: npub,
-        };
-
-        try {
-          // 4. Firma l'Evento
-          const signed = await window.nostr.signEvent(event);
-
-          // 5. Invia al Backend per la verifica
-          const verify = await fetch("/api/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              npub,
-              event: signed, // manda tutto l’evento
-            }),
-          });
-
-          const out = await verify.json();
-
-          if (out.ok) {
-            alert("Login success!");
-            window.location = "/";
-          } else {
-            alert("Login failed: " + out.error);
-          }
-        } catch (error) {
-          // Cattura eventuali errori di firma in futuro
-          console.error("Errore durante la firma:", error);
-          alert("Login failed: Errore di firma Nostr.");
-        }
-      }
+      // Reindirizza l'utente alla pagina di login principale
+      window.location.href = "/login";
     </script>
   </body>
 </html>

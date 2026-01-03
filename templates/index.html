@@ -1,163 +1,114 @@
-<!DOCTYPE html>
-<html lang="it">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Gestione finanze</title>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
-    />
-  </head>
-  <body>
-    <header style="display:flex;justify-content:space-between;align-items:center;">
-      <h1>💰 Benvenuto nel tuo tracker finaziario</h1>
-      <nav>
-        {% if current_user.is_authenticated %}
-          <span>Ciao, {{ current_user.username }}</span>
-          <a href="{{ url_for('auth.logout') }}">Logout</a>
-        {% else %}
-          <a href="{{ url_for('auth.login') }}">Login</a>
-          <a href="{{ url_for('auth.register') }}">Register</a>
-        {% endif %}
-      </nav>
-    </header>
+{% extends "base.html" %} {% block title %}Dashboard{% endblock %} {% block
+content %}
+<h1 class="main-title">Dashboard</h1>
+<p class="description">
+  Qui puoi monitorare le tue entrate e uscite finanziarie.
+</p>
 
-    <p>Qui puoi monitorare le tue entrate e uscite finanziarie.</p>
-    <table border="1">
-      <tr>
-        <th>
-          <div class="transazioni-buttons">
-            <a href="{{ url_for('transazioni') }}">
-              <button type="button" class="transazioni">📄 TRACKER €</button>
-            </a>
-            <p class="saldo-banca {% if saldo_banca >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}">
-            🏦 Banca: {{ "%.2f"|format(saldo_banca) }} €</p>
-            <p class="saldo-contanti {% if saldo_contanti >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}">
-            💼 Contanti: {{ "%.2f"|format(saldo_contanti) }} €</p>
-          </div>
-        </th>
-        <th>
-          <div class="transazioni_lightning-buttons">
-            <a href="{{ url_for('transazioni_lightning') }}">
-              <button type="button" class="transazioni_lightning">
-                ⚡️Lightning Network⚡️
-              </button>
-            </a>
-          </div>
-        </th>
-        <th>
-          <div class="transazioni_onchain-buttons">
-            <a href="{{ url_for('transazioni_onchain') }}">
-              <button type="button" class="transazioni_onchain">
-                ₿itcoin on-chain🔗
-              </button>
-            </a>
-          </div>
-        </th>
-      </tr>
-      <tr>
-        <td>
-          <p
-            class="saldo-principale {% if saldo_totale_eur >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
-          >
-            💰 Saldo Totale {{ "%.2f"|format(saldo_totale_eur) }} €
-          </p>
-          <p
-            class="saldo-secondario {% if saldo_btc_da_eur >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
-          >
-            {{ "%.8f"|format(saldo_btc_da_eur) }} BTC
-          </p>
-        </td>
-
-        <td>
-          <p
-            class="saldo-principale {% if saldo_totale_satoshi >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
-          >
-            💰 Saldo Totale {{
-            "{:,}".format(saldo_totale_satoshi|int).replace(",",".") }} SATS
-          </p>
-          <p
-            class="saldo-secondario {% if saldo_eur_lightning >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
-          >
-            {{ "%.2f"|format(saldo_eur_lightning) }} €
-          </p>
-        </td>
-
-        <td>
-          <p
-            class="saldo-principale {% if saldo_totale_btc >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
-          >
-            💰 Saldo Totale {{ "%.8f"|format(saldo_totale_btc) }} BTC
-          </p>
-          <p
-            class="saldo-secondario {% if saldo_eur_onchain >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
-          >
-            {{ "%.2f"|format(saldo_eur_onchain) }} €
-          </p>
-        </td>
-      </tr>
-    </table>
-    <div class="dropdown">
-      <button class="dropbtn">➕ Inserisci nuova transazione</button>
-      <div class="dropdown-content">
-        <a href="/nuova_transazione">TRACKER €</a>
-        <a href="/nuova_transazione_lightning">Lightning Network ⚡️</a>
-        <a href="/nuova_transazione_onchain">₿itcoin on-chain🔗</a>
-      </div>
-    </div>
-    <!-- DONATION BOX -->
-    <div class="donation-box">
-  <h2>💝 Supporta il progetto</h2>
-
-  <div class="donation-row">
-
-    <!-- Lightning Network -->
-    <div class="donation-card">
-      <div class="donation-title">⚡ Lightning Network</div>
-      <div class="donation-address">dennj75@blink.sv</div>
-
-      <img
-        src="{{ url_for('static', filename='Blink_Lightning.png') }}"
-        class="qr-img"
-        alt="QR Lightning"
-      />
-
-      <div class="donation-address">
-        lnbc1p533fcupp586jkums59acur6kmwlpvqm54fcyhkep2xa0sdetkvykp43j4v5pqdp82pshjgr5dusyymrfde4jq4mpd3kx2apq24ek2uscqzpuxqr8pqsp56dhmdx4a3jshg76d49vhg8nguj3x6w6n9qe9vrnyzew5krsgk9ns9qxpqysgqnrjmqmdtnjqayen4fjct0m7k9a4zkydhk7lkl2wr0ag6yk3vmsdpvt5tupvp8swq8n04z6da57dazle5jsrrppwzxsnqukmcaml8uegqqaxl9z
-      </div>
-    </div>
-
-    <!-- Bitcoin address (Blink) -->
-    <div class="donation-card">
-      <div class="donation-title">₿ Bitcoin (Blink)</div>
-      <div class="donation-address">bc1qwxsmkcwpnrjng2lvw9hezmznftcg893rvck3uq</div>
-
-      <img
-        src="{{ url_for('static', filename='Blink_Onchain.png') }}"
-        class="qr-img"
-        alt="QR Bitcoin Blink"
-      />
-    </div>
-
-    <!-- Bitcoin On-chain Ledger -->
-    <div class="donation-card">
-      <div class="donation-title">🔗 Bitcoin On-chain</div>
-      <div class="donation-address">36U83knk5fSmXmqd2RgzboogGbRE4WpoFq</div>
-
-      <img
-        src="{{ url_for('static', filename='Ledger_QRCodeBTC.png') }}"
-        class="qr-img"
-        alt="QR On-chain"
-      />
-    </div>
-
+<div class="balances-grid">
+  <div class="balance-card onchain-card">
+    <a href="{{ url_for('transazioni_onchain') }}">
+      <button type="button" class="tracker-button onchain-button">
+        ₿itcoin on-chain🔗
+      </button>
+    </a>
+    <p class="placeholder-detail">Placeholder</p>
+    <p class="placeholder-detail">Placeholder</p>
+    <hr class="separator" />
+    <p class="saldo-principale">
+      💰 Saldo {{ "%.8f"|format(saldo_totale_btc) }} BTC
+    </p>
+    <p class="saldo-secondario">{{ "%.2f"|format(saldo_eur_onchain) }} €</p>
   </div>
 
-  <p style="margin-top: 20px;">
-    For Euro donations: <b>dennj75@msn.com</b>
-  </p>
-</div>
+  <div class="balance-card lightning-card">
+    <a href="{{ url_for('transazioni_lightning') }}">
+      <button type="button" class="tracker-button lightning-button">
+        ⚡️Lightning Network⚡️
+      </button>
+    </a>
+    <p class="placeholder-detail">Placeholder</p>
+    <p class="placeholder-detail">Placeholder</p>
+    <hr class="separator" />
+    <p class="saldo-principale">
+      💰 Saldo {{ "{:,}".format(saldo_totale_satoshi|int).replace(",",".") }}
+      SATS
+    </p>
+    <p class="saldo-secondario">{{ "%.2f"|format(saldo_eur_lightning) }} €</p>
+  </div>
 
+  <div class="balance-card tracker-euro-card">
+    <a href="{{ url_for('transazioni') }}">
+      <button type="button" class="tracker-button tracker-euro-button">
+        📄 TRACKER €
+      </button>
+    </a>
+    <p class="saldo-detail">🏦 Banca: {{ "%.2f"|format(saldo_banca) }} €</p>
+    <p class="saldo-detail">
+      💼 Contanti: {{ "%.2f"|format(saldo_contanti) }} €
+    </p>
+    <hr class="separator" />
+    <p class="saldo-principale">
+      💰 Saldo {{ "%.2f"|format(saldo_totale_eur) }} €
+    </p>
+    <p class="saldo-secondario">{{ "%.8f"|format(saldo_btc_da_eur) }} BTC</p>
+  </div>
+</div>
+<div class="dropdown">
+  <button class="dropbtn">➕ Inserisci nuova transazione</button>
+  <div class="dropdown-content">
+    <a href="/nuova_transazione_onchain">Nuova transazione On-chain (₿)</a>
+
+    <a href="/nuova_transazione_lightning">Nuova transazione Lightning (⚡️)</a>
+    <a href="/nuova_transazione">Nuova transazione Euro (€)</a>
+  </div>
+</div>
+<hr class="main-separator" />
+<h2>💝 Supporta il progetto</h2>
+
+<div class="donation-row">
+  <!-- Lightning Network -->
+  <div class="donation-card">
+    <div class="donation-title">⚡ Lightning Network</div>
+    <div class="donation-address">dennj75@blink.sv</div>
+
+    <img
+      src="{{ url_for('static', filename='Blink_Lightning.png') }}"
+      class="qr-img"
+      alt="QR Lightning"
+    />
+
+    <div class="donation-address">
+      lnbc1p533fcupp586jkums59acur6kmwlpvqm54fcyhkep2xa0sdetkvykp43j4v5pqdp82pshjgr5dusyymrfde4jq4mpd3kx2apq24ek2uscqzpuxqr8pqsp56dhmdx4a3jshg76d49vhg8nguj3x6w6n9qe9vrnyzew5krsgk9ns9qxpqysgqnrjmqmdtnjqayen4fjct0m7k9a4zkydhk7lkl2wr0ag6yk3vmsdpvt5tupvp8swq8n04z6da57dazle5jsrrppwzxsnqukmcaml8uegqqaxl9z
     </div>
-  </body>
-</html>
+  </div>
+
+  <!-- Bitcoin address (Blink) -->
+  <div class="donation-card">
+    <div class="donation-title">₿ Bitcoin (Blink)</div>
+    <div class="donation-address">
+      bc1qwxsmkcwpnrjng2lvw9hezmznftcg893rvck3uq
+    </div>
+
+    <img
+      src="{{ url_for('static', filename='Blink_Onchain.png') }}"
+      class="qr-img"
+      alt="QR Bitcoin Blink"
+    />
+  </div>
+
+  <!-- Bitcoin On-chain Ledger -->
+  <div class="donation-card">
+    <div class="donation-title">🔗 Bitcoin On-chain</div>
+    <div class="donation-address">36U83knk5fSmXmqd2RgzboogGbRE4WpoFq</div>
+
+    <img
+      src="{{ url_for('static', filename='Ledger_QRCodeBTC.png') }}"
+      class="qr-img"
+      alt="QR On-chain"
+    />
+  </div>
+
+  <p style="margin-top: 20px">For Euro donations: <b>dennj75@msn.com</b></p>
+</div>
+{% endblock %}

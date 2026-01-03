@@ -3,12 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <title>Scarica CSV per mese</title>
+    <link rel="icon" href="/static/img/favicon.ico" type="image/png" />
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
     />
   </head>
   <body>
+    {% include "partials/logo.html" %}
     <h1>📥 Scarica CSV per mese</h1>
     <form method="post" action="/scarica_csv_onchain_per_mese">
       <label for="mese">Inserisci mese:</label><br />

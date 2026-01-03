@@ -3,23 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <title>✏️ Modifica Transazione On-Chain 🔗</title>
+  <link rel="icon" href="/static/img/favicon.ico" type="image/png" />
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
+  {% include "partials/logo.html" %}
   <h1>✏️ Modifica Transazione On-Chain 🔗</h1>
 
   <form method="post" action="{{ url_for('modifica_transazione_web_onchain', id_transazione=transazione_onchain["id"]) }}">
     
-    <label for="data">📅 Data:</label><br />
+    <label for="data">📅 Data:</label>
     <input type="date" id="data" name="data" value="{{ transazione_onchain["data"] }}" required /><br /><br />
 
-    <label for="wallet">👛 Wallet:</label><br />
+    <label for="wallet">👛 Wallet:</label>
     <input type="text" id="wallet" name="wallet" value="{{ transazione_onchain["wallet"] }}" required /><br /><br />
 
-    <label for="descrizione">📝 Descrizione:</label><br />
+    <label for="descrizione">📝 Descrizione:</label>
     <input type="text" id="descrizione" name="descrizione" value="{{ transazione_onchain["descrizione"] }}" required /><br /><br />
 
-    <label for="categoria">📂 Categoria:</label><br />
+    <label for="categoria">📂 Categoria:</label>
     <select name="categoria" id="categoria" onchange="popolaSottocategoria()" required>
       <option value="">-- Seleziona Categoria --</option>
       {% for cat in categorie %}
@@ -27,9 +29,9 @@
       {% endfor %}
     </select><br /><br />
 
-    <label for="sottocategoria">🔖 Sottocategoria:</label><br />
+    <label for="sottocategoria">🔖 Sottocategoria:</label>
     <select name="sottocategoria" id="sottocategoria" required></select><br /><br />
-    <label for="transactionID">🔗 Transaction ID:</label><br />
+    <label for="transactionID">🔗 Transaction ID:</label>
     <input
       type="text"
       id="transactionID"
@@ -38,16 +40,16 @@
       required
       /><br /><br />
 
-    <label for="satoshi">₿ Importo (₿itcoin):</label><br />
+    <label for="satoshi">₿ Importo (₿itcoin):</label>
     <input type="text" id="importo" name="importo_btc" value="{{ '%.8f' % (transazione_onchain["importo_btc"] or 0) }}"/><br /><br />
 
-    <label for="fee">₿ Importo fee (₿itcoin):</label><br />
+    <label for="fee">₿ Importo fee (₿itcoin):</label>
     <input type="text" id="fee" name="fee" value="{{ '%.8f' % (transazione_onchain["fee"] or 0) }}"/><br /><br />
 
     <button type="submit">✅ Salva Modifiche</button>
   </form>
 
-  <p><a href="/transazioni_lightning">⬅️ Torna alle transazioni Lightning</a></p>
+  <p><a href="/transazioni_lightning">⬅️ Torna alle transazioni On-Chain</a></p>
 
   <script>
     const categorie = {{ categorie_json | safe }};
