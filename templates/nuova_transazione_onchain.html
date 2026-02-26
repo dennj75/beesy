@@ -1,16 +1,8 @@
-<html lang="it">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Le tue transazioni</title>
-    <link rel="icon" href="/static/img/favicon.ico" type="image/png" />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
-    />
-  </head>
-  <body>
+{% extends "base.html" %} {% block title %}Nuova transazione on-chain - ₿eesy{% endblock %} {% block
+content %}
+
     <h1>₿itcoin on-chain🔗</h1>
-    <p>Qui puoi gestire le tue transazioni ₿itcoin on-chain🔗</p>
+    <p>➕ Nuova transazione ₿itcoin on-chain🔗</p>
     <form method="post" action="{{ url_for('nuova_transazione_onchain') }}">
 
       <label for="data">📅 Data:</label>
@@ -52,8 +44,7 @@
 
     <p><a href="{{ url_for('transazioni_onchain') }}">⬅️ Torna alle transazioni On-chain 🔗</a></p>
     <p><a href="{{ url_for('home') }}">⬅️ Torna alla Home</a></p>
-  </body>
-</html>
+
 <script>
   const categorie = {{ categorie_json | safe }};
   const categoriaAttuale = "{{ transazione_onchain['categoria'] }}";
@@ -85,6 +76,7 @@
     popolaSottocategoria();
   });
 </script>
+{% endblock %}
     
   
 

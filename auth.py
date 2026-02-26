@@ -1,26 +1,16 @@
+# auth.py
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, UserMixin, current_user
 from db.db_utils import crea_utente, get_user_by_username, get_user_by_id, update_user_password_hash
 from app import app, login_manager
+from models import User
+from utils.security import generate_master_key, encrypt_master_key, decrypt_master_key
 import re
 import sqlite3
 
 auth_bp = Blueprint('auth', __name__)
-
-
-class User(UserMixin):
-    def __init__(self, id, username, email, password_hash):
-        self.id = id
-        self.username = username
-        self.email = email
-        self.password_hash = password_hash
-
-    @staticmethod
-    def from_db_row(row):
-        if not row:
-            return None
-        return User(id=row[0], username=row[1], email=row[2], password_hash=row[3])
 
 
 # Impostazione della lunghezza minima per la password
@@ -136,6 +126,21 @@ def login():
             # **********************************************
 
         # 4. Login standard (Password corretta E complessa)
+
+        if not user.encrypted_master_key:
+            m_key = generate_master_key()
+            enc_m_key = encrypt_master_key(m_key, password, user.username)
+
+            # Salviamo nel DB usando sqlite3 direttamente (come fai in elimina_utente)
+            conn = sqlite3.connect('database.db')
+            cursor = conn.cursor()
+            cursor.execute("UPDATE users SET encrypted_master_key = ? WHERE id = ?",
+                           (enc_m_key, user.id))
+            conn.commit()
+            conn.close()
+            # Aggiorniamo l'oggetto user per la sessione corrente
+            user.encrypted_master_key = enc_m_key
+
         login_user(user)
         flash('Login effettuato', 'success')
         return redirect(url_for('home'))
@@ -191,6 +196,22 @@ def force_password_reset():
             # Assicurati che questo return sia presente
             return render_template('force_password_reset.html', username=user.username)
 
+        # Aggiorna la master key crittografata con la nuova password
+        # Recuperiamo la vecchia master key usando la VECCHIA password (se esiste)
+        # Nota: qui servirebbe la vecchia password che l'utente ha inserito al login.
+        # Se non l'abbiamo salvata, la chiave andrà rigenerata (perdendo i vecchi backup criptati).
+        # Per ora, facciamo un approccio conservativo:
+
+        m_key = generate_master_key()  # Generiamo una nuova per la nuova password
+        enc_m_key = encrypt_master_key(m_key, new_password, user.username)
+
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET encrypted_master_key = ? WHERE id = ?",
+                       (enc_m_key, user.id))
+        conn.commit()
+        conn.close()
+
         # Successo: fai il login e pulisci la sessione
         session.pop('force_reset_user_id', None)
         login_user(user)
@@ -219,6 +240,6 @@ def elimina_utente(user_id):
     cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
     conn.commit()
     conn.close()
-    logout_user() # Ti consiglio di aggiungerlo così pulisce la sessione
+    logout_user()  # Ti consiglio di aggiungerlo così pulisce la sessione
     flash("Utente eliminato correttamente", "success")
     return redirect(url_for('home'))

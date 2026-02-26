@@ -114,6 +114,28 @@ def inizializza_db():
     except sqlite3.OperationalError:
         pass  # La colonna esiste già
 
+    # 1. Colonna per la Master Key criptata
+    try:
+        cursor_users.execute(
+            'ALTER TABLE users ADD COLUMN encrypted_master_key TEXT')
+    except sqlite3.OperationalError:
+        pass  # La colonna esiste già
+
+    # 2. Colonna per l'identità tecnica (Hex)
+    try:
+        cursor_users.execute('ALTER TABLE users ADD COLUMN pubkey TEXT')
+        print("✅ Colonna pubkey aggiunta")
+    except sqlite3.OperationalError:
+        pass  # La colonna esiste già
+
+    # Colonna per capire il tipo di login ('local' o 'nostr')
+    try:
+        cursor_users.execute(
+            "ALTER TABLE users ADD COLUMN auth_type TEXT DEFAULT 'local'")
+        print("✅ Colonna auth_type aggiunta")
+    except sqlite3.OperationalError:
+        pass  # La colonna esiste già
+
     conn_users.commit()
     conn_users.close()
 
@@ -530,8 +552,12 @@ def crea_utente(username, email, password_hash):
 def get_user_by_username(username):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute(
-        'SELECT id, username, email, password_hash FROM users WHERE username = ?', (username,))
+    # Ho aggiunto npub, pubkey e auth_type qui per farle combaciare con models.py
+    cursor.execute('''
+        SELECT id, username, email, password_hash, npub, 
+               encrypted_master_key, pubkey, auth_type 
+        FROM users WHERE username = ?
+    ''', (username,))
     row = cursor.fetchone()
     conn.close()
     return row
@@ -540,38 +566,85 @@ def get_user_by_username(username):
 def get_user_by_id(user_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute(
-        'SELECT id, username, email, password_hash FROM users WHERE id = ?', (user_id,))
+    cursor.execute('''
+        SELECT id, username, email, password_hash, npub, 
+               encrypted_master_key, pubkey, auth_type 
+        FROM users WHERE id = ?
+    ''', (user_id,))
     row = cursor.fetchone()
     conn.close()
     return row
 
 
-def get_user_by_npub(npub):
-    """Trova un utente tramite il suo npub"""
+def get_user_by_npub(npub_hex):
     conn = sqlite3.connect(DB_PATH)
-
     cursor = conn.cursor()
-    cursor.execute('SELECT id, username FROM users WHERE npub = ?', (npub,))
-    user = cursor.fetchone()
-    conn.close()
-    return user
-
-
-def create_user_from_npub(npub):
-    """Crea un nuovo utente dal npub"""
-    conn = sqlite3.connect(DB_PATH)
-
-    cursor = conn.cursor()
-    username = f"nostr_{npub[:8]}"
+    # Cerchiamo l'esadecimale nella colonna pubkey (che ora è piena!)
     cursor.execute(
-        'INSERT INTO users (username, email, password_hash, npub) VALUES (?, ?, ?, ?)',
-        (username, None, '', npub)  # email=None, password_hash='', npub=valore
-    )
+        "SELECT id, username, auth_type, npub FROM users WHERE pubkey = ?", (npub_hex,))
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+
+def create_user_from_npub(pubkey_hex, npub_bech32):
+    """
+    Crea un nuovo utente salvando:
+    - username: l'esadecimale pulito (es. b1da9e19...)
+    - pubkey: l'esadecimale pulito
+    - npub: il formato Bech32 (es. npub1k8df...)
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Usiamo l'esadecimale come username. È univoco e pulito.
+    username = pubkey_hex
+
+    cursor.execute('''
+        INSERT INTO users (username, email, password_hash, npub, pubkey, auth_type) 
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (
+        username,
+        None,           # email
+        'NO_PASSWORD',  # Password disabilitata per login Nostr
+        npub_bech32,    # Formato npub1...
+        pubkey_hex,     # Formato hex puro
+        'nostr'         # Tipo di autenticazione
+    ))
+
     conn.commit()
     user_id = cursor.lastrowid
     conn.close()
     return user_id
+
+
+def salva_master_key_nel_db(user_id, encrypted_mk):
+    """Salva la Master Key criptata nel record dell'utente corretto."""
+    try:
+        # Usa il percorso corretto del tuo db (database.db)
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+
+        print(f"DEBUG DB: Tentativo di salvataggio MK per utente {user_id}...")
+
+        cursor.execute(
+            "UPDATE users SET encrypted_master_key = ? WHERE id = ?",
+            (encrypted_mk, user_id)
+        )
+
+        conn.commit()
+        righe_modificate = cursor.rowcount
+        conn.close()
+
+        if righe_modificate > 0:
+            print(
+                f"✅ DEBUG DB: Master Key salvata con successo per ID {user_id}!")
+        else:
+            print(
+                f"❌ DEBUG DB: Nessun utente trovato con ID {user_id}. Salvataggio fallito.")
+
+    except Exception as e:
+        print(f"❌ DEBUG DB: Errore durante il salvataggio: {e}")
 
 
 def update_user_password_hash(user_id, pw_hash):
@@ -592,3 +665,62 @@ def delete_user(user_id):
     cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
     conn.commit()
     conn.close()
+
+
+def ripristina_database_completo(user_id, dati_json):
+    """Svuota le tabelle dell'utente e inserisce i dati dal backup con debug migliorato."""
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    try:
+        # 1. Pulizia (Solo per l'utente specifico!)
+        cursor.execute("DELETE FROM transazioni WHERE user_id = ?", (user_id,))
+        cursor.execute(
+            "DELETE FROM transazioni_lightning WHERE user_id = ?", (user_id,))
+        cursor.execute(
+            "DELETE FROM transazioni_onchain WHERE user_id = ?", (user_id,))
+
+        # 2. Inserimento Euro (Proviamo sia 'euro' che 'transazioni' per compatibilità)
+        transazioni_euro = dati_json.get(
+            'euro') or dati_json.get('transazioni') or []
+        print(
+            f"DEBUG RIPRISTINO: Trovate {len(transazioni_euro)} transazioni Euro")
+
+        for t in transazioni_euro:
+            cursor.execute('''
+                INSERT INTO transazioni (data, descrizione, categoria, sottocategoria, importo, controvalore_btc, valore_btc_eur, conto, user_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (t['data'], t['descrizione'], t['categoria'], t['sottocategoria'], t['importo'], t.get('controvalore_btc', 0), t.get('valore_btc_eur', 0), t.get('conto', 'BANCA'), user_id))
+
+        # 3. Inserimento Lightning
+        transazioni_ln = dati_json.get('lightning', [])
+        print(
+            f"DEBUG RIPRISTINO: Trovate {len(transazioni_ln)} transazioni Lightning")
+
+        for t in transazioni_ln:
+            cursor.execute('''
+                INSERT INTO transazioni_lightning (data, wallet, descrizione, categoria, sottocategoria, satoshi, controvalore_eur, valore_btc_eur, user_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (t['data'], t['wallet'], t['descrizione'], t['categoria'], t['sottocategoria'], t['satoshi'], t.get('controvalore_eur', 0), t.get('valore_btc_eur', 0), user_id))
+
+        # 4. Inserimento On-chain
+        transazioni_on = dati_json.get('onchain', [])
+        print(
+            f"DEBUG RIPRISTINO: Trovate {len(transazioni_on)} transazioni Onchain")
+
+        for t in transazioni_on:
+            cursor.execute('''
+                INSERT INTO transazioni_onchain (data, wallet, descrizione, categoria, sottocategoria, transactionID, importo_btc, fee, controvalore_eur, valore_btc_eur, user_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (t['data'], t['wallet'], t['descrizione'], t['categoria'], t['sottocategoria'], t.get('transactionID', ''), t['importo_btc'], t.get('fee', 0), t.get('controvalore_eur', 0), t.get('valore_btc_eur', 0), user_id))
+
+        conn.commit()
+        print("✅ RIPRISTINO DB: Operazione completata con successo!")
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ ERRORE CRITICO RIPRISTINO DB: {e}")
+        return False
+    finally:
+        conn.close()

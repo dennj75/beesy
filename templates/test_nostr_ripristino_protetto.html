@@ -1,0 +1,116 @@
+{% extends "base.html" %} {% block title %}test_nostr_ripristino_protetto -
+₿eesy{% endblock %} {% block content %}
+<div class="container" style="max-width: 600px; margin-top: 30px">
+  <div class="card shadow">
+    <div class="card-body">
+      <h2 class="text-danger">⚠️ Ripristino Dati</h2>
+      <p class="lead">
+        Carica un file di backup <strong>.json.enc</strong> per ripristinare la
+        tua cronologia.
+      </p>
+
+      <div class="alert alert-warning">
+        <strong>ATTENZIONE:</strong> Il ripristino è un'operazione distruttiva.
+        Tutti i dati attualmente presenti su Beesy (transazioni, conti, ecc.)
+        verranno <strong>cancellati e sostituiti</strong> con quelli contenuti
+        nel file.
+      </div>
+
+      <form
+        id="restore-form"
+        action="javascript:void(0);"
+        method="POST"
+        enctype="multipart/form-data"
+      >
+        <div class="mb-3">
+          <label class="form-label">Seleziona il file .json.enc:</label>
+          <input
+            type="file"
+            name="backup_file"
+            id="backup_file"
+            class="form-control"
+            required
+          />
+        </div>
+        {% if current_user.auth_type == 'nostr' %}
+        <button type="submit" class="btn btn-warning w-100">
+          <i class="fas fa-file-upload"></i> 1. Carica e prepara firma
+        </button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document
+    .getElementById("restore-form")
+    .addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const fileInput = document.getElementById("backup_file");
+      if (!fileInput.files.length) {
+        alert("Per favore, seleziona un file da caricare.");
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const text = await file.text(); // il contenuto .json.enc (o json)
+
+      const resp = await fetch("{{ url_for('carica_file_temporaneo') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ backup_data: text }),
+      });
+
+      if (resp.ok) {
+        const url =
+          "{{ url_for('test_nostr_ripristino_protetto') }}" + "?caricato=true";
+        window.location.href = url;
+      } else {
+        alert("Errore nel caricamento del file temporaneo.");
+      }
+    });
+
+  window.onload = function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("caricato") === "true") {
+      const zone = document.getElementById("restore-form").parentElement;
+
+      zone.innerHTML += `
+      <button class="btn btn-success w-100 mt-3" onclick="lanciaAmberRipristino()">
+        🔐 Firma con Amber e Ripristina
+      </button>
+    `;
+    }
+  };
+
+  function lanciaAmberRipristino() {
+    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    let pubkey = "{{ current_user.username }}".toLowerCase().trim();
+    const messaggio = "Autorizzo Beesy a ripristinare il mio backup";
+
+    if (isMobile) {
+      const event = {
+        kind: 27235,
+        content: messaggio,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [],
+        pubkey: pubkey,
+      };
+      const cb =
+        "{{ url_for('test_nostr_ripristino_protetto', _external=True) }}";
+      const intent =
+        `intent:${encodeURIComponent(JSON.stringify(event))}` +
+        `#Intent;scheme=nostrsigner;S.type=sign_event;S.pubKey=${pubkey}` +
+        `;S.callbackUrl=${cb};S.returnType=signature;end`;
+
+      window.location.href = intent;
+    } else {
+      alert(
+        "Per ora il ripristino Nostr è supportato solo da mobile con Amber.",
+      );
+    }
+  }
+</script>
+{% endblock %}

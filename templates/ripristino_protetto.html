@@ -1,0 +1,112 @@
+{% extends "base.html" %} {% block title %}ripristino_protetto - ₿eesy{%
+endblock %} {% block content %}
+<div class="container" style="max-width: 600px; margin-top: 30px">
+  <div class="card shadow">
+    <div class="card-body">
+      <h2 class="text-danger">⚠️ Ripristino Dati</h2>
+      <p class="lead">
+        Carica un file di backup <strong>.json.enc</strong> per ripristinare la
+        tua cronologia.
+      </p>
+
+      <div class="alert alert-warning">
+        <strong>ATTENZIONE:</strong> Il ripristino è un'operazione distruttiva.
+        Tutti i dati attualmente presenti su Beesy (transazioni, conti, ecc.)
+        verranno <strong>cancellati e sostituiti</strong> con quelli contenuti
+        nel file.
+      </div>
+
+      <form
+        id="restore-form"
+        action="{{ url_for('ripristino_protetto') }}"
+        method="POST"
+        enctype="multipart/form-data"
+      >
+        <div class="mb-3">
+          <label class="form-label">Seleziona il file .json.enc:</label>
+          <input
+            type="file"
+            name="backup_file"
+            id="backup_file"
+            class="form-control"
+            required
+          />
+        </div>
+
+        {% if current_user.auth_type == 'nostr' %}
+        <div class="alert alert-info">
+          Sblocca il file usando la tua firma Nostr.
+        </div>
+        <button
+          type="button"
+          class="btn btn-warning w-100"
+          onclick="avviaRipristinoNostr()"
+        >
+          <i class="fas fa-signature"></i> Firma e Ripristina
+        </button>
+        {% else %}
+        <div class="mb-3">
+          <label class="form-label">Password di Beesy:</label>
+          <input
+            type="password"
+            name="password"
+            class="form-control"
+            required
+          />
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Ripristina</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function avviaRipristinoNostr() {
+    const fileInput = document.getElementById("backup_file");
+    if (fileInput.files.length === 0) {
+      alert("Per favore, seleziona prima il file di backup!");
+      return;
+    }
+
+    try {
+      const messaggio =
+        "Autorizzo Beesy a gestire la mia Master Key crittografica";
+      const event = await window.nostr.signEvent({
+        kind: 27235,
+        content: messaggio,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [],
+        pubkey: "{{ current_user.pubkey }}",
+      });
+
+      if (event.sig) {
+        const formData = new FormData();
+        formData.append("backup_file", fileInput.files[0]);
+        formData.append("password", event.sig);
+
+        // AGGIUNGIAMO IL TOKEN CSRF
+        const csrfToken = "{{ csrf_token() }}";
+
+        const response = await fetch("{{ url_for('ripristino_protetto') }}", {
+          method: "POST",
+          body: formData,
+          headers: {
+            "X-CSRFToken": csrfToken, // Questo impedisce l'errore 400
+          },
+        });
+
+        if (response.ok) {
+          // Se tutto va bene, forziamo il ritorno alla home
+          window.location.href = "{{ url_for('home') }}";
+        } else {
+          const result = await response.text();
+          alert("Errore durante il ripristino. Verifica i log del server.");
+        }
+      }
+    } catch (e) {
+      alert("Errore durante la firma: " + e.message);
+    }
+  }
+</script>
+{% endblock %}

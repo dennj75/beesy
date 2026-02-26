@@ -1,96 +1,81 @@
-<!DOCTYPE html>
-<html lang="it">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Nuova transazione Lightning ⚡️</title>
-    <link rel="icon" href="/static/img/favicon.ico" type="image/png" />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
-    />
-  </head>
-  <body>
-    {% include "partials/logo.html" %}
-    <h1>➕ Nuova transazione Lightning ⚡️</h1>
+{% extends "base.html" %} {% block title %}Nuova transazione Lightning⚡️ -
+₿eesy{% endblock %} {% block content %}
 
-    <form method="post" action="/nuova_transazione_lightning">
-      <label for="data">📅 Data:</label>
-      <input type="date" id="data" name="data" required /><br /><br />
+<h1>₿itcoin Lightning⚡️</h1>
+<h1>➕ Nuova transazione Lightning ⚡️</h1>
 
-      <label for="wallet">👛 Wallet:</label>
-      <input type="text" id="wallet" name="wallet" required /><br /><br />
+<form method="post" action="/nuova_transazione_lightning">
+  <label for="data">📅 Data:</label>
+  <input type="date" id="data" name="data" required /><br /><br />
 
-      <label for="descrizione">📝 Descrizione:</label>
-      <input
-        type="text"
-        id="descrizione"
-        name="descrizione"
-        required
-      /><br /><br />
+  <label for="wallet">👛 Wallet:</label>
+  <input type="text" id="wallet" name="wallet" required /><br /><br />
 
-      <label for="categoria">📂 Categoria:</label>
-      <select
-        name="categoria"
-        id="categoria"
-        onchange="popolaSottocategoria()"
-        required
-      >
-        <option value="">-- Seleziona Categoria --</option>
-        {% for cat in categorie %}
-        <option value="{{ cat }}">{{ cat }}</option>
-        {% endfor %}</select
-      ><br /><br />
+  <label for="descrizione">📝 Descrizione:</label>
+  <input type="text" id="descrizione" name="descrizione" required /><br /><br />
 
-      <label for="sottocategoria">🔖 Sottocategoria:</label>
-      <select name="sottocategoria" id="sottocategoria" required></select
-      ><br /><br />
+  <label for="categoria">📂 Categoria:</label>
+  <select
+    name="categoria"
+    id="categoria"
+    onchange="popolaSottocategoria()"
+    required
+  >
+    <option value="">-- Seleziona Categoria --</option>
+    {% for cat in categorie %}
+    <option value="{{ cat }}">{{ cat }}</option>
+    {% endfor %}</select
+  ><br /><br />
 
-      <label for="satoshi">⚡️ Importo (satoshi):</label>
-      <input
-        type="number"
-        id="satoshi"
-        name="satoshi"
-        min="-1000000"
-        max="1000000"
-        required
-      /><br /><br />
+  <label for="sottocategoria">🔖 Sottocategoria:</label>
+  <select name="sottocategoria" id="sottocategoria" required></select
+  ><br /><br />
 
-      <button type="submit">✅ Aggiungi</button>
-    </form>
+  <label for="satoshi">⚡️ Importo (satoshi):</label>
+  <input
+    type="number"
+    id="satoshi"
+    name="satoshi"
+    min="-1000000"
+    max="1000000"
+    required
+  /><br /><br />
 
-    <p>
-      <a href="{{ url_for('transazioni_lightning') }}"
-        >⬅️ Torna alle transazioni Lightning ⚡️</a
-      >
-    </p>
-    <p><a href="{{ url_for('home') }}">⬅️ Torna alla Home</a></p>
-    <script>
-      const categorie = {{ categorie_json | safe }};
-      const sottocategoriaAttuale = "";
+  <button type="submit">✅ Aggiungi</button>
+</form>
 
-      function popolaSottocategoria() {
-        const categoriaSelezionata = document.getElementById("categoria").value;
-        const sottoSel = document.getElementById("sottocategoria");
-        sottoSel.innerHTML = "";
+<p>
+  <a href="{{ url_for('transazioni_lightning') }}"
+    >⬅️ Torna alle transazioni Lightning ⚡️</a
+  >
+</p>
+<p><a href="{{ url_for('home') }}">⬅️ Torna alla Home</a></p>
+<script>
+  const categorie = {{ categorie_json | safe }};
+  const sottocategoriaAttuale = "";
 
-        if (categorie[categoriaSelezionata]) {
-          categorie[categoriaSelezionata].forEach(sotto => {
-            const opt = document.createElement("option");
-            opt.value = sotto;
-            opt.text = sotto;
-            sottoSel.appendChild(opt);
-          });
-        } else {
-          const opt = document.createElement("option");
-          opt.value = "";
-          opt.text = "-- Nessuna sottocategoria --";
-          sottoSel.appendChild(opt);
-        }
-      }
+  function popolaSottocategoria() {
+    const categoriaSelezionata = document.getElementById("categoria").value;
+    const sottoSel = document.getElementById("sottocategoria");
+    sottoSel.innerHTML = "";
 
-      document.addEventListener("DOMContentLoaded", () => {
-        popolaSottocategoria();
+    if (categorie[categoriaSelezionata]) {
+      categorie[categoriaSelezionata].forEach(sotto => {
+        const opt = document.createElement("option");
+        opt.value = sotto;
+        opt.text = sotto;
+        sottoSel.appendChild(opt);
       });
-    </script>
-  </body>
-</html>
+    } else {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.text = "-- Nessuna sottocategoria --";
+      sottoSel.appendChild(opt);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    popolaSottocategoria();
+  });
+</script>
+{% endblock %}

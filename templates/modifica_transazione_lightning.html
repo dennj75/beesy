@@ -1,13 +1,6 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="UTF-8" />
-  <title>✏️ Modifica Transazione Lightning ⚡️</title>
-  <link rel="icon" href="/static/img/favicon.ico" type="image/png" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-</head>
-<body>
-  {% include "partials/logo.html" %}
+{% extends "base.html" %} {% block title %}Modifica Transazione Lightning - ₿eesy{% endblock %} {% block
+content %}
+
   <h1>✏️ Modifica Transazione Lightning ⚡️</h1>
 
   <form method="post" action="{{ url_for('modifica_transazione_web_lightning', id_transazione=transazione_lightning["id"]) }}">
@@ -39,8 +32,7 @@
   </form>
 
   <p><a href="/transazioni_lightning">⬅️ Torna alle transazioni Lightning</a></p>
-
-  <script>
+ <script>
     const categorie = {{ categorie_json | safe }};
     const categoriaAttuale = "{{ transazione_lightning[4] }}";
     const sottocategoriaAttuale = "{{ transazione_lightning[5] }}";
@@ -71,5 +63,5 @@
       popolaSottocategoria();
     });
   </script>
-</body>
-</html>
+  {% endblock %}
+

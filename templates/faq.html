@@ -1,0 +1,101 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-5">
+  <h1 class="mb-4">🤔 Domande Frequenti & Guida Tecnica</h1>
+
+  <div class="accordion" id="faqAccordion">
+    <div class="accordion-item shadow-sm mb-3">
+      <h2 class="accordion-header" id="headingOne">
+        <button
+          class="accordion-button"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#collapseOne"
+        >
+          🛡️ Perché il backup è un file .json.enc?
+        </button>
+      </h2>
+      <div
+        id="collapseOne"
+        class="accordion-collapse collapse show"
+        data-bs-parent="#faqAccordion"
+      >
+        <div class="accordion-body">
+          I tuoi dati sono criptati con <strong>AES-256</strong>. Senza la tua
+          password, il file è inutilizzabile. Questo garantisce che se perdi la
+          chiavetta USB o il file finisce in mani sbagliate, nessuno potrà
+          vedere le tue transazioni.
+        </div>
+      </div>
+    </div>
+
+    <div class="accordion-item shadow-sm mb-3">
+      <h2 class="accordion-header" id="headingTwo">
+        <button
+          class="accordion-button collapsed"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#collapseTwo"
+        >
+          💻 Come faccio un backup manuale del database "al volo"?
+        </button>
+      </h2>
+      <div
+        id="collapseTwo"
+        class="accordion-collapse collapse"
+        data-bs-parent="#faqAccordion"
+      >
+        <div class="accordion-body">
+          <p>
+            Prima di fare test pericolosi, puoi copiare il file del database sul
+            Desktop tramite il terminale di VS Code:
+          </p>
+          <div class="bg-dark text-white p-3 rounded">
+            <code
+              >cp database.db ~/Desktop/database_backup_$(Get-Date -Format
+              "yyyy-MM-dd").db</code
+            >
+          </div>
+          <p class="mt-2 small text-muted">
+            Questo comando crea una copia datata sul tuo Desktop. Per
+            ripristinarla, basta chiudere Beesy e rimettere il file nella
+            cartella del progetto.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="accordion-item shadow-sm mb-3">
+      <h2 class="accordion-header" id="headingThree">
+        <button
+          class="accordion-button collapsed"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#collapseThree"
+        >
+          🚀 Come verifico se il mio backup funziona davvero? (Test del
+          Paracadute)
+        </button>
+      </h2>
+      <div
+        id="collapseThree"
+        class="accordion-collapse collapse"
+        data-bs-parent="#faqAccordion"
+      >
+        <div class="accordion-body">
+          <ol>
+            <li>Scarica il backup da <strong>/backup-protetto</strong>.</li>
+            <li>Aggiungi una transazione finta (es: "Test" 1€).</li>
+            <li>
+              Vai su <strong>/ripristino-protetto</strong> e carica il file.
+            </li>
+            <li>
+              Se la transazione "Test" scompare e tornano i vecchi dati, il
+              sistema è perfetto!
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

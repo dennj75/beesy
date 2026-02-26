@@ -1,6 +1,27 @@
+# utils/export.py
+
 import csv
+import json
 import os
 from db.db_utils import leggi_transazioni_da_db, leggi_transazioni_filtrate, leggi_transazioni_da_db_lightning, leggi_transazioni_filtrate_lightning, leggi_transazioni_filtrate_onchain, leggi_transazioni_da_db_onchain
+from datetime import datetime
+
+
+def genera_stringa_backup_json(user_id=None):
+    # Recuperiamo tutti i dati usando le funzioni esistenti
+    dati = {
+        "metadata": {
+            "user_id": user_id,
+            "data_backup": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "versione_beesy": "1.0"
+        },
+        "onchain": leggi_transazioni_da_db_onchain(user_id),
+        "lightning": leggi_transazioni_da_db_lightning(user_id),
+        "euro": leggi_transazioni_da_db(user_id),
+    }
+
+    # Restituiamo direttamente la stringa JSON invece di salvare un file
+    return json.dumps(dati, ensure_ascii=False, indent=4)
 
 
 def esporta_csv_onchain(nome_file='exports/transazioni_onchain.csv', user_id=None):

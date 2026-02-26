@@ -1,14 +1,20 @@
+from flask import request, jsonify, redirect, url_for, flash, render_template
 import os
+import io
 import json
 import sqlite3
 import binascii
 import hashlib
 import time
+import traceback
 from datetime import datetime, date
+import secrets
 
 # Flask & Estensioni
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_login import LoginManager, login_required, UserMixin, current_user, login_remembered
+from flask_wtf.csrf import CSRFProtect
+from flask import session
 
 # Crittografia & Nostr
 from coincurve import PublicKey
@@ -16,23 +22,30 @@ from coincurve._libsecp256k1 import lib, ffi
 from btclib.ecc import ssa
 from hashlib import sha256
 from dotenv import load_dotenv
-from bech32 import bech32_decode, convertbits
+from bech32 import bech32_decode, convertbits, bech32_encode
 
 # Logica di Progetto (i tuoi moduli)
+
+
 from db.db_utils import (
     DB_PATH, get_user_by_id, inizializza_db, salva_su_db, leggi_transazioni_da_db,
     elimina_transazione_da_db, modifica_transazione_db, get_transazioni_con_saldo,
     salva_su_db_lightning, leggi_transazioni_da_db_lightning, modifica_transazione_db_lightning,
     elimina_transazione_da_db_lightning, get_transazioni_con_saldo_lightning,
     leggi_transazioni_da_db_onchain, salva_su_db_onchain, leggi_transazioni_filtrate_onchain,
-    elimina_transazione_da_db_onchain, modifica_transazione_db_onchain, get_transazioni_con_saldo_onchain
+    elimina_transazione_da_db_onchain, modifica_transazione_db_onchain, get_transazioni_con_saldo_onchain,
+    ripristina_database_completo
 )
 from utils.crypto import ottieni_valore_btc_eur, euro_to_btc, _carica_storico_btc_eur
 from utils.export import (
+    genera_stringa_backup_json,
     esporta_csv, esporta_csv_per_mese, esporta_csv_lightning,
     esporta_csv_per_mese_lightning, esporta_csv_onchain, esporta_csv_per_mese_onchain
+
 )
+from models import User
 from utils.helpers import normalizza_importo
+from utils.security import decrypt_master_key, encrypt_data, decrypt_data
 
 load_dotenv()
 
@@ -55,6 +68,14 @@ app = Flask(__name__)
 # Prende la chiave dal file .env.
 # Se non la trova, usa un valore di backup (solo per sviluppo!)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'default-key-per-test')
+
+app.config["SESSION_COOKIE_SAMESITE"] = "None"
+app.config["SESSION_COOKIE_SECURE"] = True
+
+# Inizializziamo il modulo
+csrf = CSRFProtect(app)
+
+app.config['WTF_CSRF_ENABLED'] = True
 
 # --- INIZIALIZZAZIONE AUTOMATICA (Plug & Play) ---
 
@@ -106,7 +127,18 @@ def npub_to_hex(npub):
     return bytes(decoded).hex()
 
 
+def hex_to_npub(hex_str):
+    try:
+        data = bytes.fromhex(hex_str)
+        converted = convertbits(data, 8, 5)
+        return bech32_encode("npub", converted)
+    except Exception as e:
+        print(f"Errore conversione HEX->NPUB: {e}")
+        return hex_str
+
+
 @app.post("/api/verify")
+@csrf.exempt
 def verify_signature():
     body = request.json
     event = body["event"]
@@ -114,159 +146,81 @@ def verify_signature():
 
     # --- AGGIUNTA PER COMPATIBILITÀ AMBER (MOBILE) ---
     if "id" not in event:
-        # Calcoliamo l'ID al volo se Amber non l'ha inviato
         serialized_array = [0, event["pubkey"], event["created_at"],
                             event["kind"], event["tags"], event["content"]]
         serialized_str = json.dumps(
             serialized_array, separators=(',', ':'), ensure_ascii=False)
         event["id"] = sha256(serialized_str.encode('utf-8')).hexdigest()
-        print(f"💡 ID mancante (Mobile): Calcolato -> {event['id']}")
-        # --------------------------------------------------
-
-    print("=" * 60)
-    print("INIZIO VERIFICA NOSTR")
-    print("=" * 60)
-    print(f"Evento ricevuto:\n{json.dumps(event, indent=2)}")
+    # --------------------------------------------------
 
     # Verifica presenza challenge
     challenge = session.get("challenge")
     timestamp_challenge = session.get("challenge_timestamp")
 
     if not challenge:
-        print("❌ ERRORE: Nessuna challenge in sessione")
         return {"ok": False, "error": "no challenge"}, 400
 
-    # Verifica content == challenge
     if event["content"] != challenge:
-        print(f"❌ ERRORE: Content mismatch")
         return {"ok": False, "error": "content mismatch"}, 400
 
-    # Verifica timestamp (180 secondi di tolleranza)
-    if abs(event["created_at"] - timestamp_challenge) > 180:
-        print(f"❌ ERRORE: Timestamp fuori range")
-        return {"ok": False, "error": "timestamp mismatch"}, 400
-
-    # Verifica pubkey
-    if event["pubkey"] != npub_hex:
-        print(f"❌ ERRORE: Pubkey mismatch")
-        return {"ok": False, "error": "pubkey mismatch"}, 400
-
     try:
-        # ========================================
-        # CALCOLO ID EVENTO SECONDO NIP-01
-        # ========================================
+        # --- VERIFICA FIRMA ---
+        pubkey_xonly = bytes.fromhex(event["pubkey"])
+        sig_bytes = bytes.fromhex(event["sig"])
+        event_id_bytes = bytes.fromhex(event["id"])
 
-        serialized_array = [
-            0,
-            event["pubkey"],
-            event["created_at"],
-            event["kind"],
-            event["tags"],
-            event["content"]
-        ]
-
-        serialized_str = json.dumps(
-            serialized_array,
-            separators=(',', ':'),
-            ensure_ascii=False
-        )
-
-        print(f"\n📝 Stringa serializzata:")
-        print(f"   {serialized_str[:150]}...")
-
-        # Calcola SHA256
-        event_id_bytes = sha256(serialized_str.encode('utf-8')).digest()
-        calculated_id = event_id_bytes.hex()
-
-        print(f"\n🔐 Verifica ID:")
-        print(f"   Calcolato: {calculated_id}")
-        print(f"   Ricevuto : {event['id']}")
-        print(f"   Match: {'✅' if calculated_id == event['id'] else '❌'}")
-
-        # ========================================
-        # VERIFICA FIRMA SCHNORR (BIP340)
-        # ========================================
-
-        pubkey_xonly = bytes.fromhex(event["pubkey"])  # 32 bytes x-only
-        sig_bytes = bytes.fromhex(event["sig"])        # 64 bytes signature
-
-        print(f"\n🔏 Verifica firma Schnorr (BIP340)...")
-        print(f"   Pubkey x-only: {len(pubkey_xonly)} bytes")
-        print(f"   Signature: {len(sig_bytes)} bytes")
-        print(f"   Message hash: {len(event_id_bytes)} bytes")
-
-        # Crea contesto secp256k1
         ctx = lib.secp256k1_context_create(lib.SECP256K1_CONTEXT_NONE)
-
-        # Crea struttura per pubkey x-only
         xonly_pubkey = ffi.new('secp256k1_xonly_pubkey *')
 
-        # Parse della pubkey x-only (32 bytes)
-        result = lib.secp256k1_xonly_pubkey_parse(
+        parse_result = lib.secp256k1_xonly_pubkey_parse(
             ctx, xonly_pubkey, pubkey_xonly)
-
-        if result != 1:
-            print(f"   ❌ Impossibile parsare pubkey x-only")
+        if parse_result != 1:
             lib.secp256k1_context_destroy(ctx)
             return {"ok": False, "error": "invalid pubkey"}, 400
 
-        print(f"   ✓ Pubkey x-only parsata correttamente")
-
-        # Verifica firma Schnorr (BIP340)
         result = lib.secp256k1_schnorrsig_verify(
-            ctx,
-            sig_bytes,
-            event_id_bytes,
-            32,  # lunghezza messaggio (sempre 32 per SHA256)
-            xonly_pubkey
-        )
-
-        # Pulisci il contesto
+            ctx, sig_bytes, event_id_bytes, 32, xonly_pubkey)
         lib.secp256k1_context_destroy(ctx)
 
-        is_valid = (result == 1)
+        if result == 1:
+            print(f"✅ Firma verificata per: {npub_hex[:10]}...")
 
-        if is_valid:
-            print(f"   ✅ Firma Schnorr verificata!")
-            print(f"\n✅ LOGIN RIUSCITO!")
-
-            # Salva npub in sessione
-            session["npub"] = npub_hex
-
-            # IMPORTANTE: Usa Flask-Login per fare il login
+            # --- GESTIONE UTENTE NEL DATABASE ---
             from flask_login import login_user
             from db.db_utils import get_user_by_npub, create_user_from_npub
 
-            # Cerca l'utente nel DB tramite npub
+            # 1. Cerca l'utente (nel DB pulito dopo bonifica)
             user_row = get_user_by_npub(npub_hex)
 
-            # Se non esiste, crealo
+            # 2. Se non esiste, lo creiamo ora
             if not user_row:
-                print(
-                    f"   📝 Creazione nuovo utente per npub: {npub_hex[:16]}...")
-                user_id = create_user_from_npub(npub_hex)
+                real_npub = hex_to_npub(npub_hex)
+                print(f"📝 Nuovo utente rilevato, creazione in corso...")
+                create_user_from_npub(npub_hex, real_npub)
+                # Ricarica dopo creazione
                 user_row = get_user_by_npub(npub_hex)
 
-            # Crea oggetto user e fai login
-            user = SimpleUser(id=user_row[0], username=user_row[1])
-            login_user(user, remember=True)
+            # 3. Ora user_row NON può essere None. Facciamo il login.
+            if user_row:
+                # user_row[0] è l'ID, user_row[1] è lo username, user_row[3] è l'npub
+                # Passiamo tutto a SimpleUser
+                user = SimpleUser(
+                    id=user_row[0], username=user_row[1], npub=user_row[3])
+                login_user(user, remember=True)
 
-            print(f"   ✓ Login Flask completato per user_id={user_row[0]}")
-            print("=" * 60)
-            return {"ok": True}
+                print(f"🚀 Login completato con successo!")
+                return {"ok": True}
+            else:
+                return {"ok": False, "error": "Errore creazione database"}, 500
+
         else:
-            print(f"   ❌ Firma Schnorr non valida (result={result})")
-            print(f"\n❌ FIRMA NON VALIDA")
-            print("=" * 60)
+            print("❌ Firma non valida")
             return {"ok": False, "error": "invalid signature"}, 401
 
     except Exception as e:
-        print(f"\n❌ ECCEZIONE durante la verifica:")
-        print(f"   {type(e).__name__}: {str(e)}")
-        import traceback
+        print(f"❌ Errore critico: {str(e)}")
         traceback.print_exc()
-        print("=" * 60)
-        return {"ok": False, "error": f"verification failed: {str(e)}"}, 400
+        return {"ok": False, "error": str(e)}, 400
 
 
 # LOGIN: inizializzazione minimale di Flask-Login
@@ -277,9 +231,10 @@ login_manager.init_app(app)
 
 # Minimal user loader so `current_user` is available in templates
 class SimpleUser(UserMixin):
-    def __init__(self, id, username):
+    def __init__(self, id, username, npub=None):
         self.id = id
         self.username = username
+        self.npub = npub  # Aggiungiamo il campo npub
 
 
 @login_manager.user_loader
@@ -287,7 +242,9 @@ def load_user(user_id):
     row = get_user_by_id(int(user_id))
     if not row:
         return None
-    return SimpleUser(id=row[0], username=row[1])
+    # Usiamo il metodo from_db_row che abbiamo aggiornato in auth.py
+    # che ora include anche encrypted_master_key
+    return User.from_db_row(row)
 
 
 @app.route('/')
@@ -532,6 +489,188 @@ def modifica_transazione_eur(id_transazione):
         categorie_json=json.dumps(CATEGORIE)
     )
 
+
+@app.route('/backup-protetto', methods=['GET', 'POST'])
+@login_required
+@csrf.exempt
+def backup_protetto():
+    # --- FLUSSO NOSTR ---
+    if current_user.auth_type == 'nostr':
+        firma_nostr = request.args.get(
+            'signature') or request.args.get('result')
+
+        if firma_nostr and len(str(firma_nostr)) > 60:
+            # Per Nostr scarichiamo il JSON in chiaro (per ora)
+            json_data = genera_stringa_backup_json(current_user.id)
+            buffer = io.BytesIO(json_data.encode('utf-8'))
+            buffer.seek(0)
+            return send_file(
+                buffer,
+                as_attachment=True,
+                download_name=f"beesy_backup_{current_user.username}.json",
+                mimetype="application/json"
+            )
+        return render_template('backup_confirm.html')
+
+    # --- FLUSSO TRADIZIONALE ---
+    if request.method == 'POST':
+        password = request.form.get('password')
+        print(
+            f"DEBUG: Tentativo backup tradizionale per {current_user.username}")
+
+        # FORZIAMO la decriptazione via password ignorando il tipo utente
+        # Assicurati che decrypt_master_key accetti questi due parametri
+        try:
+            m_key = decrypt_master_key(current_user, password)
+        except Exception as e:
+            print(f"ERRORE CRITICO DECRIPT: {e}")
+            m_key = None
+
+        if not m_key:
+            print("DEBUG: La Master Key non è stata sbloccata.")
+            flash("Password errata! Impossibile sbloccare la Master Key.", "error")
+            return redirect(url_for('backup_protetto'))
+
+        print("✅ Master Key sbloccata con successo!")
+        json_data = genera_stringa_backup_json(current_user.id)
+        json_criptato = encrypt_data(json_data, m_key)
+
+        buffer = io.BytesIO(json_criptato.encode('utf-8'))
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f"beesy_backup_{current_user.username}.json.enc",
+            mimetype="application/octet-stream"
+        )
+    return render_template('backup_confirm.html')
+
+
+@app.route('/backup-protetto<path:extra>')
+@login_required
+def catch_amber(extra):
+    # Se Amber sputa la firma dopo l'URL, lo rimandiamo a quella pulita con la firma come parametro
+    return redirect(url_for('backup_protetto', signature=extra))
+
+
+@app.route('/ripristino-protetto', methods=['GET', 'POST'])
+@login_required
+@csrf.exempt
+def ripristino_protetto():
+    if request.method == 'POST':
+        password_o_firma = request.form.get('password')
+        file = request.files.get('backup_file')
+
+        if not file or not password_o_firma:
+            flash("File e password/firma mancanti!", "error")
+            return redirect(url_for('ripristino_protetto'))
+
+        try:
+            # 1. Leggiamo il contenuto del file
+            raw_content = file.read().decode('utf-8')
+            print(f"DEBUG: File letto, lunghezza: {len(raw_content)}")
+
+            # 2. Gestione differenziata
+            if current_user.auth_type == 'nostr':
+                print("DEBUG: Utente Nostr - Caricamento diretto JSON")
+                # Per Nostr NON decriptiamo, leggiamo il JSON direttamente
+                data = json.loads(raw_content)
+            else:
+                print("DEBUG: Utente Tradizionale - Decriptazione necessaria")
+                # Recuperiamo la master key per utenti password
+                m_key = decrypt_master_key(current_user, password_o_firma)
+                if not m_key:
+                    flash("Password errata!", "error")
+                    return redirect(url_for('ripristino_protetto'))
+
+                decrypted_json = decrypt_data(raw_content, m_key)
+                if not decrypted_json:
+                    print("DEBUG: Fallimento decrypt_data")
+                    flash(
+                        "Impossibile decriptare il file. Password o file errato.", "error")
+                    return redirect(url_for('ripristino_protetto'))
+                data = json.loads(decrypted_json)
+
+            # 3. Scrittura nel Database
+            successo = ripristina_database_completo(current_user.id, data)
+
+            if successo:
+                print("✅ RIPRISTINO: Database aggiornato con successo!")
+                flash("🔥 Cronologia ripristinata correttamente!", "success")
+                return redirect(url_for('home'))
+            else:
+                print("❌ RIPRISTINO: Errore durante la scrittura delle tabelle")
+                flash("Errore tecnico nel database.", "error")
+
+        except json.JSONDecodeError:
+            print("❌ ERRORE: Il file non è un JSON valido!")
+            flash("Il file caricato non è valido o è corrotto.", "error")
+        except Exception as e:
+            print(f"❌ ERRORE CRITICO: {str(e)}")
+            flash(f"Errore imprevisto: {str(e)}", "error")
+
+    return render_template('ripristino_protetto.html')
+
+
+# storage temporaneo in memoria
+TEMP_BACKUPS = {}  # token -> raw_content
+
+# storage temporaneo in memoria
+TEMP_BACKUPS = {}  # token -> raw_content
+
+# ATTENZIONE: Questa parte è un laboratorio aperto. 
+# Obiettivo: rendere il ripristino Nostr su mobile stabile come quello PC.
+# Contattami su GitHub se hai idee!
+
+@app.route('/carica-file-temporaneo', methods=['POST'])
+@csrf.exempt
+def carica_file_temporaneo():
+    data = request.get_json()
+    if data and 'backup_data' in data:
+        session['temp_backup_data'] = data['backup_data']
+        print(
+            f"DEBUG: File salvato in sessione ({len(data['backup_data'])} caratteri)")
+        return "OK", 200
+    return "No data", 400
+
+
+@app.route('/test_nostr_ripristino_protetto', methods=['GET', 'POST'])
+@csrf.exempt
+def test_nostr_ripristino_protetto():
+    if request.args:
+        print(f"DEBUG: Parametri ricevuti nell'URL: {request.args}")
+
+    signature = (
+        request.args.get("signature")
+        or request.args.get("event")
+        or request.args.get("result")
+    )
+
+    if signature:
+        print(
+            f"DEBUG: Amber è tornato! Signature (primi 10): {signature[:10]}...")
+        raw_content = session.get('temp_backup_data')
+
+        if not raw_content:
+            print("DEBUG: ERRORE - File non trovato in sessione!")
+            flash("Sessione scaduta o file perso. Riprova.", "error")
+            return redirect(url_for('test_nostr_ripristino_protetto'))
+
+        try:
+            data = json.loads(raw_content)
+            if ripristina_database_completo(current_user.id, data):
+                session.pop('temp_backup_data', None)
+                print("✅ RIPRISTINO MOBILE COMPLETATO!")
+                flash("🔥 Ripristino con Amber riuscito!", "success")
+                return redirect(url_for('home'))
+        except Exception as e:
+            print(f"DEBUG: Errore JSON o DB: {str(e)}")
+            flash(f"Errore: {str(e)}", "error")
+
+    return render_template('test_nostr_ripristino_protetto.html')
+
+# FINE LABORATORIO. 
 
 @app.route('/scarica-csv')
 @login_required
@@ -945,6 +1084,11 @@ def scarica_csv_per_mese_onchain():
         return send_file(nome_file, as_attachment=True, download_name=f"transazioni_{mese}_onchain.csv")
 
     return render_template('scarica_csv_per_mese_onchain.html')
+
+
+@app.route('/faq')
+def faq():
+    return render_template('faq.html')
 
 
 if __name__ == '__main__':

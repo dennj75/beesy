@@ -1,4 +1,4 @@
-# ₿eesy - Bitcoin Expense Tracker 🐝⚡
+# <strong style="color: #f39c12">₿eesy</strong> - Bitcoin Expense Tracker 🐝⚡
 
 > **"Your Node, Your Rules. Your Data, Your Privacy."**
 
@@ -8,7 +8,9 @@
 ---
 
 ## ⚠️ IMPORTANT DISCLAIMER (READ BEFORE USE)
+
 This project is an **EXPERIMENTAL EDUCATIONAL LABORATORY**.
+
 - **NOT** production-ready software.
 - **DO NOT** entrust critical financial data to this system without external backups.
 - The author is **NOT** responsible for any data loss or security vulnerabilities.
@@ -23,84 +25,100 @@ This project is an **EXPERIMENTAL EDUCATIONAL LABORATORY**.
     - Sign in with your existing Nostr identity.
     - Schnorr signature verification (BIP340).
     - No password needed.
-
-- 🔐 **Self-Sovereign:** No central server. Install it on your PC, Raspberry Pi, or Umbrel node.
 - ⚡ **Lightning Ready:** Separate management for on-chain and off-chain transactions with Satoshi precision.
 - 💱 **Historical Conversion:** Automatic BTC/EUR price retrieval via CoinGecko API.
+- 🔐 **Self-Sovereign:** No central server. Install it on your PC, Raspberry Pi, or Umbrel node.
 
-### 🔧 Auto-Configuration
-- No SQL knowledge required! ₿eesy features a **Plug & Play** system: 
-On the first run, the application automatically detects if the database is missing and creates it for you, including all necessary tables for EUR, Lightning, and On-chain transactions.
+## 🛡️ Military-Grade Backup System:
+
+- Encrypted Exports: Export your entire history into a .json.enc file.
+
+- AES-256-GCM: Traditional accounts use high-standard encryption derived from your password.
+
+- Self-Sovereign Recovery: Restore your data on any device (PC or Mobile) simply by uploading your backup file.
+
+### 🔧 Plug & Play Auto-Configuration
+
+- No SQL knowledge required! <strong style="color: #f39c12">₿eesy</strong> features a **Plug & Play** system:
+  On the first run, the application automatically detects if the database is missing and creates it for you, including all necessary tables for BTC On-chain, Lightning, and EUR transactions.
 
 ---
 
 ### 🛠️ TechStack
 
-| Component | Technology | Role |
-| :--- | :--- | :--- |
-| **Backend** | Flask (Python) | Server-side logic & API management |
-| **Database** | SQLite | Local-first, private data storage |
-| **API** | CoinGecko | Real-time & historical BTC prices |
-| **Frontend** | HTML, CSS, JS (Vanilla) | Clean, responsive user interface |
-| **Auth (Desktop)** | Flask-Login + NIP-07 | Traditional or extension-based login |
-| **Auth (Mobile)** | **Amber (Nostr Signer)** | Password-less login via Android Intents |
-| **Cryptography** | `coincurve` | BIP340/Schnorr signature verification |
+| Component          | Technology                   | Role                                                   |
+| :----------------- | :--------------------------- | :----------------------------------------------------- |
+| **Backend**        | Flask (Python)               | Server-side logic & API management                     |
+| **Security**       | AES-256-GCM                  | Industry-standard encryption for backups               |
+| **Database**       | SQLite                       | Local-first, private data storage                      |
+| **API**            | CoinGecko                    | Real-time & historical BTC prices                      |
+| **Frontend**       | HTML, CSS, JS (Vanilla)      | Clean, responsive user interface                       |
+| **Auth (Desktop)** | Flask-Login + NIP-07         | Traditional or extension-based login                   |
+| **Auth (Mobile)**  | **Amber (Nostr Signer)**     | Password-less login via Android Intents                |
+| **Cryptography**   | `coincurve` & `pycryptodome` | BIP340/Schnorr signature verification & AES encryption |
 
 ## 🚀 Quick Start (Self-Hosted)
 
 ### 1. Prerequisites
+
 - Python 3.9+
 - Active internet connection (for BTC price APIs).
 
 ### 2. Setup
+
 ```bash
-git clone [https://github.com/your-username/EE.git](https://github.com/your-username/EE.git)
-cd EE
+git clone [https://github.com/dennj75/beesy.git](https://github.com/dennj75/beesy.git)
+cd beesy
+
+Create and activate the virtual environment
 python -m venv .venv
-source .venv/bin/activate  # (Windows: .venv\Scripts\activate)
+# Su Windows:
+.venv\Scripts\activate
+# Su Linux/Mac:
+source .venv/bin/activate
+
+Install dependencies and launch
 pip install -r requirements.txt
 python app.py
 
 ```
-App will be available at http://localhost:5000.
+
+Access <strong style="color: #f39c12">₿eesy</strong> at http://localhost:5000.
 
 ## 🧪 "Nostr" & Mobile Laboratory
 
 ⚡ Nostr Authentication: The Magic of Amber
-₿eesy leverages the power of the Nostr protocol to provide a secure, password-less experience.
+<strong style="color: #f39c12">₿eesy</strong> leverages the power of the Nostr protocol to provide a secure, password-less experience.
 
 Desktop: Use any NIP-07 browser extension (like nos2x or Alby).
 
-Mobile (Amber): On Android, ₿eesy triggers an Android Intent. Amber pops up, you approve the signature, and you are logged in. Your private key never touches our code.
+Mobile (Amber): On Android, <strong style="color: #f39c12">₿eesy</strong> triggers an Android Intent. Amber pops up, you approve the signature, and you are logged in. Your private key never touches our code.
+
+## 🔏 The "Privacy-First" Laboratory
+
+🛡️ Backup & Restore (New!)
+We implemented a robust backup system to ensure you never lose your data:
+
+- Traditional Users: Your backup is encrypted using a Master Key derived from your password. Even if someone steals your backup file, they cannot read it without your Beesy password.
+- Nostr Users: Quick JSON export/import for seamless identity portability.
+  -Mobile Ready: Restore your history directly from your smartphone browser with 100% success rate on traditional accounts.
 
 ## 🛠️ Roadmap & Contributions
 
-- [ ] Multi-currency support (beyond EUR).
-- [ ] Encrypted database export backup.
-- [ ] Dashboard with advanced charts (Chart.js).
-
-Building in public 🚀 | Stay humble, stack sats ⚡
+- [x] Encrypted database export/backup. (Done! 🎉)
+- [ ] Advanced Dashboard: Real-time charts for spending habits (Chart.js).
+- [ ] Multi-currency support: Beyond EUR (USD, CHF, etc.).
+- [ ] Mobile Nostr Restore: Refined integration with Nostr Signer apps.
+      Building in public 🚀 | Stay humble, stack sats ⚡
 
 ## 🇮🇹 Versione Italiana
 
-₿eesy è un laboratorio educativo per tracciare le spese in Euro e visualizzarle in Bitcoin.
+<strong style="color: #f39c12">₿eesy</strong> è un tracker di spese "Bitcoin-first" progettato per la privacy totale.
 
-Perché usarlo?
-- Privacy Totale: I dati restano nel tuo database locale SQLite.
+Backup Cifrato: Esporta i tuoi dati in formato AES-256 sicuro.
 
-- Bitcoin-First: Gestione corretta di prelievi bancomat, transazioni On-chain e Lightning.
+Ripristino Mobile: Funzionante al 100% per account tradizionali.
 
-- Login Nostr: Sperimenta il futuro dell'autenticazione decentralizzata.
+Senza Password: Prova il login Nostr tramite estensioni browser o Amber su Android.
 
-⚠️ Disclaimer: Questo è un progetto sperimentale. Usalo a tuo rischio e mantieni sempre dei backup dei file .db.
-
-## 🛠️ Roadmap & Contributi
-- [ ] Supporto Multi-Valuta (oltre EUR).
-
-- [ ] Export Backup cifrato del database.
-
-- [ ] Dashboard con grafici avanzati (Chart.js).
-
-
-
-Stay humble, stack sats. ₿eesy!
+| <strong style="color: #f39c12">₿eesy</strong> | Building in public 🚀 | Stay humble, stack sats ⚡

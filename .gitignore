@@ -16,7 +16,8 @@ env/
 *.db
 *.sqlite
 *.sqlite3
-
+pulisci.py
+fix_db.py
 # Exports - file CSV con le tue transazioni
 exports/
 *.csv

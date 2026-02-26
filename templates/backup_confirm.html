@@ -1,0 +1,122 @@
+{% extends "base.html" %} {% block title %}backup_protetto - ₿eesy{% endblock %}
+{% block content %}
+<div class="card shadow p-4">
+  <h3>💾 Backup dei Dati</h3>
+  <p class="text-muted">Proteggi i tuoi dati prima di scaricarli.</p>
+
+  {% if current_user.auth_type == 'nostr' %}
+  <div id="nostr-backup-zone">
+    <div class="alert alert-info">
+      <i class="fas fa-key"></i> Sei loggato con <strong>Nostr</strong>. Per
+      criptare il backup, utilizzeremo una firma digitale della tua chiave.
+    </div>
+    <button
+      type="button"
+      class="btn btn-warning btn-lg w-100"
+      onclick="avviaBackupNostr()"
+    >
+      <i class="fas fa-signature"></i> Firma e Scarica Backup
+    </button>
+  </div>
+  {% else %}
+  <form action="{{ url_for('backup_protetto') }}" method="POST">
+    <div class="mb-3">
+      <label class="form-label">Inserisci la tua Password di Beesy:</label>
+      <input type="password" name="password" class="form-control" required />
+      <div class="form-text">
+        La password serve per sbloccare la tua Master Key e criptare il file.
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">
+      <i class="fas fa-download"></i> Cripta e Scarica
+    </button>
+  </form>
+  {% endif %}
+</div>
+<div class="mt-5 border-top pt-4">
+  <h4 class="text-secondary">
+    <i class="fas fa-shield-alt"></i> Guida alla Sovranità dei Dati
+  </h4>
+
+  <div class="row mt-3">
+    <div class="col-md-6">
+      <h5>🔐 Crittografia "Zero-Knowledge"</h5>
+      <p class="small text-muted">
+        Beesy utilizza un sistema dove nemmeno il server conosce la tua Master
+        Key in chiaro. Viene decriptata solo "al volo" nella memoria RAM quando
+        inserisci la password. Se il server venisse compromesso, i tuoi backup
+        resterebbero comunque illeggibili.
+      </p>
+    </div>
+    <div class="col-md-6">
+      <h5>💾 Il file .json.enc</h5>
+      <p class="small text-muted">
+        Il file scaricato contiene tutte le tue transazioni (Euro, Lightning,
+        On-chain). Conservalo in un posto sicuro (come un password manager o una
+        chiavetta USB criptata).
+      </p>
+    </div>
+  </div>
+
+  <div class="alert alert-info mt-3">
+    <strong>💡 Consiglio Pro:</strong> Verifica il tuo backup almeno una volta
+    ogni tre mesi facendo un test di ripristino (dopo aver salvato il database
+    attuale!).
+  </div>
+</div>
+<script>
+  // Controlla se siamo tornati con una firma (Desktop o Mobile redirect)
+  window.onload = function () {
+    const params = new URLSearchParams(window.location.search);
+    const firma = params.get("signature") || params.get("result");
+
+    if (firma && firma.length > 60) {
+      // Mostra un tasto per scaricare il file (evita blocchi browser mobile)
+      const zone = document.getElementById("nostr-backup-zone");
+      if (zone) {
+        zone.innerHTML = `
+            <div class="alert alert-success">✅ Firma Pronta!</div>
+            <a href="/backup-protetto?signature=${firma}" class="btn btn-success btn-lg w-100">
+              <i class="fas fa-download"></i> SCARICA ORA
+            </a>`;
+      }
+    }
+  };
+
+  async function avviaBackupNostr() {
+    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    let pubkey = "{{ current_user.username }}".toLowerCase().trim();
+    const messaggio = "Autorizzo Beesy a scaricare il mio backup protetto";
+
+    if (isMobile) {
+      // Amber Mobile
+      const event = {
+        kind: 27235,
+        content: messaggio,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [],
+        pubkey: pubkey,
+      };
+      const cb = window.location.origin + "/backup-protetto";
+      const intent = `intent:${encodeURIComponent(JSON.stringify(event))}#Intent;scheme=nostrsigner;S.type=sign_event;S.pubKey=${pubkey};S.callbackUrl=${encodeURIComponent(cb)};S.resultType=signature;end`;
+      window.location.href = intent;
+    } else {
+      // Desktop (Alby) - Questo ieri ti andava!
+      if (!window.nostr) return alert("Installa Alby!");
+      try {
+        const event = await window.nostr.signEvent({
+          kind: 27235,
+          content: messaggio,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [],
+          pubkey: pubkey,
+        });
+        if (event.sig)
+          window.location.href = "/backup-protetto?signature=" + event.sig;
+      } catch (e) {
+        alert("Errore: " + e.message);
+      }
+    }
+  }
+</script>
+{% endblock %}

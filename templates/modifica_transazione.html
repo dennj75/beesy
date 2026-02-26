@@ -1,14 +1,5 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Modifica transazione</title>
-  <link rel="icon" href="/static/img/favicon.ico" type="image/png" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-  {% include "partials/logo.html" %}
+{% extends "base.html" %} {% block title %}Modifica Transazione €- ₿eesy{% endblock %} {% block
+content %}
   <h1>✏️ Modifica Transazione</h1>
 
   <form method="post" action="{{ url_for('modifica_transazione_eur', id_transazione=transazione['id']) }}">
@@ -73,6 +64,4 @@
       popolaSottocategoria();
     });
   </script>
-</body>
-</html>
-
+  {% endblock %}
