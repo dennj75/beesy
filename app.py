@@ -5,6 +5,7 @@ import json
 import sqlite3
 import binascii
 import hashlib
+import base64
 import time
 import traceback
 from datetime import datetime, date
@@ -34,7 +35,8 @@ from db.db_utils import (
     elimina_transazione_da_db_lightning, get_transazioni_con_saldo_lightning,
     leggi_transazioni_da_db_onchain, salva_su_db_onchain, leggi_transazioni_filtrate_onchain,
     elimina_transazione_da_db_onchain, modifica_transazione_db_onchain, get_transazioni_con_saldo_onchain,
-    ripristina_database_completo
+    ripristina_database_completo, get_transazioni_con_saldo_onchain,
+    get_spese_per_categoria_filtrate, get_entrate_per_sottocategoria, get_bilancio_periodo
 )
 from utils.crypto import ottieni_valore_btc_eur, euro_to_btc, _carica_storico_btc_eur
 from utils.export import (
@@ -53,7 +55,7 @@ CATEGORIE = {
     'Entrate': ['Stipendio', 'Rimborso', 'Regalo', 'Donazioni', 'claim giochi online', 'Altro'],
     'Abitazione': ['Affitto/Mutuo', 'Bollette: Luce', 'Bollette: acqua', 'Bollette: Gas', 'Bollette: Rifiuti', 'Manutenzione', 'Spese condominiali', 'Assicurazione casa'],
     'Alimentari': ['Supermercato', 'Ristorante - Bar', 'Spesa online', 'Altro'],
-    'Trasporti': ['Carburante', 'Mezzi pubblici', 'Manutenzione auto / moto', 'Assicurazione auto', 'Taxi / Uber', 'Noleggi', 'Parcheggi / pedaggi', 'Altro'],
+    'Trasporti': ['Carburante', 'Mezzi pubblici', 'Manutenzione auto / moto', 'Assicurazione auto', 'Bollo auto', 'Taxi / Uber', 'Noleggi', 'Parcheggi / pedaggi', 'Altro'],
     'Spese Personali': ['Abbigliamento / Scarpe', 'Igiene personale', 'Parrucchiere / estetista', 'Abbonamenti personali (Netflix, Spotify, ecc)', 'Libri / Riviste'],
     'Tempo Libero & Intrattenimento': ['Cinema / Teatro / Eventi', 'Sport / Palestra', 'Viaggi / Vacanze', 'Hobby / Collezioni', 'Giochi / App a pagamento'],
     'Finanze & Banche': ['Commissioni bancarie', 'Interessi passivi', 'Prelievi / Depositi', 'Investimenti', 'Criptovalute', 'Giroconti'],
@@ -282,6 +284,27 @@ def home():
 
     saldo_totale_eur = saldo_banca + saldo_contanti
 
+    # Prepariamo i dati per il grafico
+    # Creiamo due liste, una per i nomi e una per i valori in Eur
+    labels_grafico = ['Banca (EUR)', 'Contanti (EUR)',
+                      'Lightning (EUR)', 'On-chain (EUR)']
+    valori_grafico = [
+        round(saldo_banca, 2),
+        round(saldo_contanti, 2),
+        round(saldo_eur_lightning, 2),
+        round(saldo_eur_onchain, 2)
+    ]
+    # Valori extra per il tooltip
+    extra_data = [
+        f"{saldo_btc_da_eur:.8f} BTC" if saldo_btc_da_eur else "N/A",  # Per Banca
+        # I contanti non hanno controvalore BTC
+        f"{0.0:.8f} BTC" if saldo_contanti else "N/A",
+        f"{int(saldo_totale_satoshi)} SATS".replace(
+            ",", ".") if saldo_totale_satoshi else "N/A",  # Per Lightning
+        f"{saldo_totale_btc:.8f} BTC" if saldo_totale_btc else "N/A"  # Per On-chain
+
+    ]
+
     return render_template('index.html',
                            saldo_banca=saldo_banca,
                            saldo_contanti=saldo_contanti,
@@ -290,7 +313,10 @@ def home():
                            saldo_totale_satoshi=saldo_totale_satoshi,
                            saldo_eur_lightning=saldo_eur_lightning,
                            saldo_totale_btc=saldo_totale_btc,
-                           saldo_eur_onchain=saldo_eur_onchain
+                           saldo_eur_onchain=saldo_eur_onchain,
+                           labels_grafico=labels_grafico,
+                           valori_grafico=valori_grafico,
+                           extra_data=extra_data
                            )
 
 
@@ -547,13 +573,6 @@ def backup_protetto():
     return render_template('backup_confirm.html')
 
 
-@app.route('/backup-protetto<path:extra>')
-@login_required
-def catch_amber(extra):
-    # Se Amber sputa la firma dopo l'URL, lo rimandiamo a quella pulita con la firma come parametro
-    return redirect(url_for('backup_protetto', signature=extra))
-
-
 @app.route('/ripristino-protetto', methods=['GET', 'POST'])
 @login_required
 @csrf.exempt
@@ -612,65 +631,6 @@ def ripristino_protetto():
 
     return render_template('ripristino_protetto.html')
 
-
-# storage temporaneo in memoria
-TEMP_BACKUPS = {}  # token -> raw_content
-
-# storage temporaneo in memoria
-TEMP_BACKUPS = {}  # token -> raw_content
-
-# ATTENZIONE: Questa parte è un laboratorio aperto. 
-# Obiettivo: rendere il ripristino Nostr su mobile stabile come quello PC.
-# Contattami su GitHub se hai idee!
-
-@app.route('/carica-file-temporaneo', methods=['POST'])
-@csrf.exempt
-def carica_file_temporaneo():
-    data = request.get_json()
-    if data and 'backup_data' in data:
-        session['temp_backup_data'] = data['backup_data']
-        print(
-            f"DEBUG: File salvato in sessione ({len(data['backup_data'])} caratteri)")
-        return "OK", 200
-    return "No data", 400
-
-
-@app.route('/test_nostr_ripristino_protetto', methods=['GET', 'POST'])
-@csrf.exempt
-def test_nostr_ripristino_protetto():
-    if request.args:
-        print(f"DEBUG: Parametri ricevuti nell'URL: {request.args}")
-
-    signature = (
-        request.args.get("signature")
-        or request.args.get("event")
-        or request.args.get("result")
-    )
-
-    if signature:
-        print(
-            f"DEBUG: Amber è tornato! Signature (primi 10): {signature[:10]}...")
-        raw_content = session.get('temp_backup_data')
-
-        if not raw_content:
-            print("DEBUG: ERRORE - File non trovato in sessione!")
-            flash("Sessione scaduta o file perso. Riprova.", "error")
-            return redirect(url_for('test_nostr_ripristino_protetto'))
-
-        try:
-            data = json.loads(raw_content)
-            if ripristina_database_completo(current_user.id, data):
-                session.pop('temp_backup_data', None)
-                print("✅ RIPRISTINO MOBILE COMPLETATO!")
-                flash("🔥 Ripristino con Amber riuscito!", "success")
-                return redirect(url_for('home'))
-        except Exception as e:
-            print(f"DEBUG: Errore JSON o DB: {str(e)}")
-            flash(f"Errore: {str(e)}", "error")
-
-    return render_template('test_nostr_ripristino_protetto.html')
-
-# FINE LABORATORIO. 
 
 @app.route('/scarica-csv')
 @login_required
@@ -1086,9 +1046,135 @@ def scarica_csv_per_mese_onchain():
     return render_template('scarica_csv_per_mese_onchain.html')
 
 
+@app.route('/analytics/<tipo>')
+@login_required
+def analytics(tipo):
+    mese_selezionato = request.args.get('mese')
+    anno_selezionato = request.args.get('anno')
+
+    # Se l'utente ha scelto un mese, ignoriamo l'anno (perché il mese include già l'anno es. 2026-01)
+    if mese_selezionato:
+        anno_selezionato = None
+    # -----------------------
+    # Se le stringhe sono vuote, trasformale in None
+    if not mese_selezionato:
+        mese_selezionato = None
+    if not anno_selezionato:
+        anno_selezionato = None
+
+    # Usiamo la funzione che abbiamo progettato per db_utils
+    # Dati spese (barre)
+    labels_spese, valori_spese = get_spese_per_categoria_filtrate(
+        current_user.id, tipo, mese=mese_selezionato, anno=anno_selezionato)
+
+    labels_entrate, valori_entrate = get_entrate_per_sottocategoria(current_user.id,
+                                                                    tipo,
+                                                                    mese=mese_selezionato,
+                                                                    anno=anno_selezionato)
+
+    # Definiamo un titolo carino in base al tipo
+    titoli = {
+        'EURO': 'Statistiche Euro (€)',
+        'LIGHTNING': 'Statistiche Lightning (⚡)',
+        'ONCHAIN': 'Statistiche On-chain (₿)'
+    }
+    titolo_pagina = titoli.get(tipo, "Statistiche")
+
+    tot_entrate, tot_spese = get_bilancio_periodo(
+        current_user.id, tipo, mese=mese_selezionato, anno=anno_selezionato)
+    delta = tot_entrate - tot_spese
+
+    saving_rate = 0
+    if tot_entrate > 0:
+        saving_rate = (delta / tot_entrate) * 100
+
+    return render_template('analytics.html',
+                           labels_spese=labels_spese,
+                           valori_spese=valori_spese,
+                           labels_entrate=labels_entrate,
+                           valori_entrate=valori_entrate,
+                           tipo=tipo,
+                           titolo_pagina=titolo_pagina,
+                           mese_selezionato=mese_selezionato,
+                           anno_selezionato=anno_selezionato,
+                           tot_entrate=tot_entrate,
+                           tot_spese=tot_spese,
+                           delta=delta,
+                           savings_rate=saving_rate
+                           )
+
+
 @app.route('/faq')
 def faq():
     return render_template('faq.html')
+
+
+@app.route('/backup-protetto<path:extra>')
+@login_required
+def catch_amber(extra):
+    # Se Amber sputa la firma dopo l'URL, lo rimandiamo a quella pulita con la firma come parametro
+    return redirect(url_for('backup_protetto', signature=extra))
+
+
+# storage temporaneo in memoria
+TEMP_BACKUPS = {}  # token -> raw_content
+
+# storage temporaneo in memoria
+TEMP_BACKUPS = {}  # token -> raw_content
+
+# ATTENZIONE: Questa parte è un laboratorio aperto.
+# Obiettivo: rendere il ripristino Nostr su mobile stabile come quello PC.
+# Contattami su GitHub se hai idee!
+
+
+@app.route('/carica-file-temporaneo', methods=['POST'])
+@csrf.exempt
+def carica_file_temporaneo():
+    data = request.get_json()
+    if data and 'backup_data' in data:
+        session['temp_backup_data'] = data['backup_data']
+        print(
+            f"DEBUG: File salvato in sessione ({len(data['backup_data'])} caratteri)")
+        return "OK", 200
+    return "No data", 400
+
+
+@app.route('/test_nostr_ripristino_protetto', methods=['GET', 'POST'])
+@csrf.exempt
+def test_nostr_ripristino_protetto():
+    if request.args:
+        print(f"DEBUG: Parametri ricevuti nell'URL: {request.args}")
+
+    signature = (
+        request.args.get("signature")
+        or request.args.get("event")
+        or request.args.get("result")
+    )
+
+    if signature:
+        print(
+            f"DEBUG: Amber è tornato! Signature (primi 10): {signature[:10]}...")
+        raw_content = session.get('temp_backup_data')
+
+        if not raw_content:
+            print("DEBUG: ERRORE - File non trovato in sessione!")
+            flash("Sessione scaduta o file perso. Riprova.", "error")
+            return redirect(url_for('test_nostr_ripristino_protetto'))
+
+        try:
+            data = json.loads(raw_content)
+            if ripristina_database_completo(current_user.id, data):
+                session.pop('temp_backup_data', None)
+                print("✅ RIPRISTINO MOBILE COMPLETATO!")
+                flash("🔥 Ripristino con Amber riuscito!", "success")
+                return redirect(url_for('home'))
+        except Exception as e:
+            print(f"DEBUG: Errore JSON o DB: {str(e)}")
+            flash(f"Errore: {str(e)}", "error")
+
+    return render_template('test_nostr_ripristino_protetto.html')
+
+# FINE LABORATORIO.
 
 
 if __name__ == '__main__':

@@ -1,0 +1,41 @@
+Backup_criptato_Nostr_PC Funziona
+
+Sperimentale. purtroppo non riesco a fare ripristino criptato con Nostr.
+Backup senza ripristino a che serve? Chissà se in futuro riuscirò anche con il ripristino?
+
+
+app.py
+
+import hashlib
+import base64
+
+@app.route('/backup-protetto', methods=['GET', 'POST'])
+@login_required
+@csrf.exempt
+def backup_protetto():
+    # --- FLUSSO NOSTR ---
+    if current_user.auth_type == 'nostr':
+        firma_nostr = request.args.get('signature') or request.args.get('result')
+
+        if firma_nostr and len(str(firma_nostr)) > 60:
+            # ✅ TRASFORMIAMO LA FIRMA IN UNA CHIAVE VALIDA PER FERNET
+            # Creiamo un hash SHA256 della firma
+            hash_firma = hashlib.sha256(str(firma_nostr).encode()).digest()
+            # Lo codifichiamo in Base64 come richiesto da Fernet
+            chiave_valida = base64.urlsafe_b64encode(hash_firma).decode()
+
+            json_data = genera_stringa_backup_json(current_user.id)
+            
+            # Ora usiamo la chiave_valida che è esattamente di 32 byte!
+            json_criptato = encrypt_data(json_data, chiave_valida)
+
+            buffer = io.BytesIO(json_criptato.encode('utf-8'))
+            buffer.seek(0)
+            return send_file(
+                buffer,
+                as_attachment=True,
+                download_name=f"beesy_backup_{current_user.username}.json.enc",
+                mimetype="application/octet-stream"
+            )
+        return render_template('backup_confirm.html')
+	

@@ -207,6 +207,25 @@ p a:hover {
     opacity: 1;
 }
 
+.nav-link-custom {
+    color: #eee;
+    text-decoration: none;
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    border-radius: 4px;
+    transition: 0.3s;
+}
+
+.nav-link-custom:hover {
+    background-color: #333;
+    color: #f39c12;
+}
+
+/* Evita che il contenuto finisca sotto l'header fisso */
+main {
+    min-height: 80vh;
+}
+
 /* =================================================================
    SEZIONE 4: FORM E INPUTS
    ================================================================= */
@@ -310,6 +329,7 @@ button[type="submit"]:hover,
     background-color: #2a2a2a;
 }
 
+
 /* Pulsante Nostr (Molto specifico) */
 .nostr-btn {
     /* Eredita da .btn-base */
@@ -323,6 +343,20 @@ button[type="submit"]:hover,
 }
 .nostr-btn:hover {
     background: var(--color-nostr-btn-hover);
+}
+
+@media print {
+    .tracker-button, form, .main-title, .navbar {
+        display: none !important;
+    }
+    body {
+        background-color: white !important;
+        color: black !important;
+    }
+    .card {
+        border: 1px solid #ccc !important;
+        background-color: white !important;
+    }
 }
 
 /* =================================================================
@@ -504,6 +538,32 @@ li.euro-success, li.lightning-success {
 li.euro-error, li.lightning-error {
     color: red;
     list-style-type: "❌ ";
+}
+
+/* Contenitore per lo scroll */
+.table-responsive-custom {
+    max-height: 500px; /* Altezza massima della tabella prima di mostrare lo scroll verticale */
+    overflow-y: auto;  /* Abilita scroll verticale */
+    overflow-x: auto;  /* Abilita scroll orizzontale */
+    border: 1px solid #333;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    background-color: #1a1a1a;
+}
+
+/* Blocchiamo l'intestazione in alto così non scompare mentre scrolli giù */
+.table-responsive-custom table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #333; /* Colore di sfondo dell'header */
+    z-index: 10;
+    color: #f39c12; /* Il giallo Beesy */
+}
+
+/* Per lo scroll orizzontale su mobile, assicuriamoci che la tabella non si restringa troppo */
+.table-responsive-custom table {
+    min-width: 800px; /* Forza la tabella a essere larga almeno 800px per attivare lo scroll */
+    margin-bottom: 0;
 }
 
 /* =================================================================

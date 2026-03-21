@@ -21,55 +21,120 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
   </head>
   <body>
-    <!-- HEADER GLOBALE -->
-    <header class="header-container">
-      <div class="logo-container">
-        <a href="{{ url_for('home') }}">
-          <img
-            src="{{ url_for('static', filename='img/beesy_dark_1.png') }}"
-            alt="Beesy Logo"
-            class="site-logo"
-          />
-        </a>
+    <header
+      class="header-container"
+      style="
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background-color: #1a1a1a;
+        border-bottom: 2px solid #f39c12;
+      "
+    >
+      <div
+        class="header-top"
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 20px;
+        "
+      >
+        <div class="logo-container">
+          <a href="{{ url_for('home') }}">
+            <span style="color: #f39c12; font-weight: bold">₿</span>eesy
+          </a>
+        </div>
+
+        {% if current_user.is_authenticated %}
+        <div class="user-menu" style="position: relative">
+          <button class="user-menu-btn" id="user-menu-btn" type="button">
+            👤 {% if current_user.auth_type == 'nostr' and current_user.npub %}
+            <span title="{{ current_user.npub }}">
+              {{ current_user.npub[:9] }}...{{ current_user.npub[-4:] }}
+            </span>
+            {% else %} {{ current_user.username }} {% endif %} ▾
+          </button>
+
+          <div class="user-menu-dropdown" id="user-menu-dropdown">
+            <a href="{{ url_for('backup_protetto') }}"
+              >💾 Backup Totale (JSON)</a
+            >
+            <a href="{{ url_for('ripristino_protetto') }}"
+              >♻️ Ripristino Dati</a
+            >
+            <a href="#">⚙️ Impostazioni</a>
+            <div class="dropdown-divider"></div>
+            <a href="{{ url_for('auth.logout') }}">🚪 Logout</a>
+            <div class="dropdown-divider"></div>
+            <a
+              href="{{ url_for('auth.elimina_utente', user_id=current_user.id) }}"
+              class="danger-btn delete-account-link"
+              onclick="return confirm('Sei DAVVERO sicuro?');"
+            >
+              🗑️ Elimina account
+            </a>
+          </div>
+        </div>
+        {% endif %}
       </div>
 
       {% if current_user.is_authenticated %}
-      <div class="user-menu" style="position: relative">
-        <button class="user-menu-btn" id="user-menu-btn" type="button">
-          👤 {% if current_user.auth_type == 'nostr' and current_user.npub %} {#
-          Mostra npub abbreviato: npub1k8...57qcv #}
-          <span title="{{ current_user.npub }}">
-            {{ current_user.npub[:9] }}...{{ current_user.npub[-4:] }}
-          </span>
-          {% else %} {# Mostra l'username normale (per utenti locali o se npub
-          manca) #} {{ current_user.username }} {% endif %} ▾
-        </button>
-
-        <div class="user-menu-dropdown" id="user-menu-dropdown">
-          <a href="{{ url_for('backup_protetto') }}">💾 Backup Totale (JSON)</a>
-          <a href="{{ url_for('ripristino_protetto') }}">♻️ Ripristino Dati</a>
-          <a href="#">⚙️ Impostazioni</a>
-          <div class="dropdown-divider"></div>
-          <a href="{{ url_for('auth.logout') }}">🚪 Logout</a>
-          <div class="dropdown-divider"></div>
-          <a
-            href="{{ url_for('auth.elimina_utente', user_id=current_user.id) }}"
-            class="danger-btn delete-account-link"
-            onclick="return confirm('Sei DAVVERO sicuro?');"
+      <nav
+        class="main-nav"
+        style="
+          background-color: #222;
+          padding: 5px 0;
+          border-top: 1px solid #333;
+        "
+      >
+        <div
+          style="
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+          "
+        >
+          <a href="{{ url_for('transazioni') }}" class="nav-link-custom"
+            >FT 💶 Euro</a
           >
-            🗑️ Elimina account
-          </a>
+          <a
+            href="{{ url_for('analytics', tipo='EURO') }}"
+            class="nav-link-custom"
+            >📊 Stat €</a
+          >
+          <span style="color: #444">|</span>
+          <a
+            href="{{ url_for('transazioni_lightning') }}"
+            class="nav-link-custom"
+            >FT ⚡ LN</a
+          >
+          <a
+            href="{{ url_for('analytics', tipo='LIGHTNING') }}"
+            class="nav-link-custom"
+            >📊 Stat ⚡</a
+          >
+          <span style="color: #444">|</span>
+          <a href="{{ url_for('transazioni_onchain') }}" class="nav-link-custom"
+            >FT ₿ Onchain</a
+          >
+          <a
+            href="{{ url_for('analytics', tipo='ONCHAIN') }}"
+            class="nav-link-custom"
+            >📊 Stat ₿</a
+          >
         </div>
-      </div>
+      </nav>
       {% endif %}
     </header>
+
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
     messages %} {% for category, message in messages %}
     <div class="alert alert-{{ category }}">{{ message }}</div>
     {% endfor %} {% endif %} {% endwith %}
 
-    <!-- CONTENUTO SPECIFICO DELLA PAGINA -->
-    <main>{% block content %}{% endblock %}</main>
+    <main style="padding-top: 20px">{% block content %}{% endblock %}</main>
 
     <!-- JS MENU UTENTE -->
     <script>

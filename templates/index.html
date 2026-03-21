@@ -9,10 +9,14 @@ content %}
   <div class="balance-card onchain-card">
     <a href="{{ url_for('transazioni_onchain') }}">
       <button type="button" class="tracker-button onchain-button">
-        ₿itcoin on-chain🔗
+        📄 TRACKER ₿itcoin on-chain🔗
       </button>
     </a>
-    <p class="placeholder-detail">Placeholder</p>
+    <a
+      href="{{ url_for('analytics', tipo='ONCHAIN') }}"
+      style="color: #f39c12; text-decoration: none"
+      >📊 Analisi ₿</a
+    >
     <p class="placeholder-detail">Placeholder</p>
     <hr class="separator" />
     <p class="saldo-principale">
@@ -24,10 +28,14 @@ content %}
   <div class="balance-card lightning-card">
     <a href="{{ url_for('transazioni_lightning') }}">
       <button type="button" class="tracker-button lightning-button">
-        ⚡️Lightning Network⚡️
+        📄 TRACKER Lightning Network⚡️
       </button>
     </a>
-    <p class="placeholder-detail">Placeholder</p>
+    <a
+      href="{{ url_for('analytics', tipo='LIGHTNING') }}"
+      style="color: #f39c12; text-decoration: none"
+      >📊 Analisi ⚡</a
+    >
     <p class="placeholder-detail">Placeholder</p>
     <hr class="separator" />
     <p class="saldo-principale">
@@ -47,6 +55,11 @@ content %}
     <p class="saldo-detail">
       💼 Contanti: {{ "%.2f"|format(saldo_contanti) }} €
     </p>
+    <a
+      href="{{ url_for('analytics', tipo='EURO') }}"
+      style="color: #f39c12; text-decoration: none"
+      >📊 Analisi €</a
+    >
     <hr class="separator" />
     <p class="saldo-principale">
       💰 Saldo {{ "%.2f"|format(saldo_totale_eur) }} €
@@ -62,6 +75,28 @@ content %}
     <a href="/nuova_transazione_lightning">Nuova transazione Lightning (⚡️)</a>
     <a href="/nuova_transazione">Nuova transazione Euro (€)</a>
   </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-8 mx-auto">
+      <div class="card shadow p-3 mb-5 bg-white rounded">
+        <div class="card-body">
+          <h5 class="card-title text-center">Ripartizione del tuo Capitale</h5>
+          <canvas id="chartPatrimonio"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card-body">
+  <canvas id="chartPatrimonio"></canvas>
+  <p class="text-muted text-center mt-3" style="font-size: 0.8rem">
+    <i class="fas fa-info-circle"></i> I controvalori in BTC/SATS sono calcolati
+    in base al prezzo attuale di mercato.
+  </p>
 </div>
 <hr class="main-separator" />
 <h2>💝 Supporta il progetto</h2>
@@ -109,5 +144,61 @@ content %}
     />
   </div>
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      const ctx = document.getElementById('chartPatrimonio').getContext('2d');
+      new Chart(ctx, {
+          type: 'doughnut', // Un bel grafico a "ciambella"
+          data: {
+              labels: {{ labels_grafico | tojson }},
+              datasets: [{
+                  data: {{ valori_grafico | tojson }},
+                  backgroundColor: [
+                      '#007bff', // Blu per Banca
+                      '#28a745', // Verde per Contanti
+                      '#ffc107', // Giallo/Oro per Lightning
+                      '#f39c12'   // Arancione Bitcoin per On-chain
+                  ],
+                  hoverOffset: 4,
+                  borderWidth: 2,
+                  borderColor: '#ffffff'
+              }]
+          },
+          options: {
+              responsive: true,
+              plugins: {
+                  legend: {
+                      position: 'bottom',
+                      labels: {
+                          padding: 20,
+                          font: { size: 14 }
+                      }
+                  },
+                  tooltip: {
+                      callbacks: {
+                          label: function(context) {
+                              let label = context.label || '';
+                              let valoreEur = new Intl.NumberFormat('it-IT', {
+                                style: 'currency',
+                                currency: 'EUR'
+                              }).format(context.parsed);
 
+                              // Recuperiamo il valore extra (BTC/SATS) dal nostro array Python
+                              const extraData = {{ extra_data | tojson }};
+                              let valoreExtra = extraData[context.dataIndex];
+
+                              // Creiamo un array di righe per il tooltip
+                              return [
+                                label + ": " + valoreEur,
+                                "   " + valoreExtra
+                            ];
+
+                          }
+                      }
+                  }
+              }
+          }
+      });
+  });
+</script>
 {% endblock %}

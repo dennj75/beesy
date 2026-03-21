@@ -1,0 +1,282 @@
+{% extends "base.html" %} {% block title %}{{ titolo_pagina }}{% endblock %} {%
+block content %}
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div
+      class="card text-center shadow p-3 mb-2"
+      style="background-color: #1a1a1a; border-left: 5px solid #2ecc71"
+    >
+      <h6 style="color: #888">📥 Entrate</h6>
+      <h3 style="color: #2ecc71">
+        {{ "%.2f"|format(tot_entrate) if tipo != 'ONCHAIN' else
+        "%.8f"|format(tot_entrate) }}
+      </h3>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div
+      class="card text-center shadow p-3 mb-2"
+      style="background-color: #1a1a1a; border-left: 5px solid #e74c3c"
+    >
+      <h6 style="color: #888">📤 Uscite</h6>
+      <h3 style="color: #e74c3c">
+        {{ "%.2f"|format(tot_spese) if tipo != 'ONCHAIN' else
+        "%.8f"|format(tot_spese) }}
+      </h3>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div
+      class="card text-center shadow p-3 mb-2"
+      style="background-color: #1a1a1a; border-left: 5px solid #f39c12"
+    >
+      <h6 style="color: #888">⚖️ Delta (Bilancio)</h6>
+      <h3
+        style="{% if delta >= 0 %}color: #2ecc71;{% else %}color: #e74c3c;{% endif %}"
+      >
+        {{ "%.2f"|format(delta) if tipo != 'ONCHAIN' else "%.8f"|format(delta)
+        }}
+      </h3>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-12">
+    <div
+      class="card shadow p-3"
+      style="background-color: #1a1a1a; border-top: 3px solid #3498db"
+    >
+      <div class="d-flex justify-content-between align-items-center">
+        <h6 style="color: #888; margin: 0">
+          📈 Savings Rate (Efficienza del Risparmio)
+        </h6>
+        <span style="font-weight: bold; color: #3498db; font-size: 1.2rem"
+          >{{ "%.1f"|format(savings_rate) }}%</span
+        >
+      </div>
+      <div class="progress mt-3" style="height: 10px; background-color: #333">
+        <div
+          class="progress-bar"
+          role="progressbar"
+          style="width: {{ savings_rate if savings_rate > 0 else 0 }}%; background-color: #3498db;"
+          aria-valuenow="{{ savings_rate }}"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        ></div>
+      </div>
+      <p style="font-size: 0.8rem; color: #666; margin-top: 10px">
+        {% if savings_rate >= 50 %} 🚀 Livello Leggenda! {% elif savings_rate >=
+        20 %} ✅ Ottimo lavoro! {% elif savings_rate > 0 %} ⚠️ Buono, ma
+        ottimizzabile. {% else %} 🚨 Deficit mensile. {% endif %}
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="container mt-4">
+  <h1 class="main-title text-center">{{ titolo_pagina }}</h1>
+
+  <div class="d-flex justify-content-center gap-3 mb-4">
+    {% if mese_selezionato %}
+    <div
+      class="badge p-3 shadow-sm"
+      style="
+        background-color: #1a1a1a;
+        border: 1px solid #f39c12;
+        border-radius: 10px;
+      "
+    >
+      <span style="color: #888; font-size: 0.8rem; display: block"
+        >VISTA MENSILE</span
+      >
+      <span style="color: #f39c12; font-size: 1.1rem; font-weight: bold"
+        >{{ mese_selezionato }}</span
+      >
+    </div>
+    {% elif anno_selezionato %}
+    <div
+      class="badge p-3 shadow-sm"
+      style="
+        background-color: #1a1a1a;
+        border: 1px solid #3498db;
+        border-radius: 10px;
+      "
+    >
+      <span style="color: #888; font-size: 0.8rem; display: block"
+        >VISTA ANNUALE</span
+      >
+      <span style="color: #3498db; font-size: 1.1rem; font-weight: bold"
+        >{{ anno_selezionato }}</span
+      >
+    </div>
+    {% else %}
+    <div
+      class="badge p-3 shadow-sm"
+      style="
+        background-color: #1a1a1a;
+        border: 1px solid #2ecc71;
+        border-radius: 10px;
+      "
+    >
+      <span style="color: #2ecc71; font-size: 1.1rem; font-weight: bold"
+        >📊 Totale Storico</span
+      >
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="row mb-5">
+    <div class="col-md-10 mx-auto text-center">
+      <form
+        id="filterForm"
+        method="GET"
+        action="{{ url_for('analytics', tipo=tipo) }}"
+        class="d-flex justify-content-center align-items-end gap-2 mb-4"
+      >
+        <div class="text-start">
+          <label style="color: #888; font-size: 0.7rem; margin-left: 5px"
+            >Mese specifico</label
+          >
+          <input
+            type="month"
+            name="mese"
+            class="form-control"
+            id="inputMese"
+            value="{{ mese_selezionato or '' }}"
+            onchange="document.getElementById('inputAnno').value = ''"
+            style="max-width: 180px"
+          />
+        </div>
+        <div class="text-center" style="color: #444; padding-bottom: 8px">
+          oppure
+        </div>
+        <div class="text-start">
+          <label style="color: #888; font-size: 0.7rem; margin-left: 5px"
+            >Solo Anno</label
+          >
+          <input
+            type="number"
+            name="anno"
+            class="form-control"
+            id="inputAnno"
+            value="{{ anno_selezionato or '' }}"
+            placeholder="2026"
+            onchange="document.getElementById('inputMese').value = ''"
+            style="max-width: 120px"
+          />
+        </div>
+      </form>
+
+      <div class="d-flex justify-content-center flex-wrap gap-2">
+        <button
+          type="submit"
+          form="filterForm"
+          class="tracker-button"
+          style="padding: 10px 25px; min-width: 120px"
+        >
+          🔍 Filtra
+        </button>
+        <a
+          href="{{ url_for('analytics', tipo=tipo) }}"
+          class="tracker-button"
+          style="
+            padding: 10px 25px;
+            background-color: #444;
+            text-decoration: none;
+          "
+          >🔄 Reset</a
+        >
+        <button
+          onclick="window.print()"
+          class="tracker-button"
+          style="padding: 10px 25px; background-color: #3498db"
+        >
+          📄 Esporta Report
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="text-center mb-4" style="color: #e74c3c">Analisi Uscite</h2>
+  <div
+    class="card shadow p-4 mb-5"
+    style="background-color: #1a1a1a !important; border: 1px solid #333"
+  >
+    <div class="card-body">
+      {% if labels_spese %}
+      <canvas id="chartAnalytics"></canvas>
+      {% else %}
+      <p class="text-center" style="color: #888; padding: 50px">
+        📭 Nessuna spesa registrata.
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+  <h2 class="text-center mb-4" style="color: #2ecc71">Analisi Entrate</h2>
+  <div
+    class="card shadow p-4 mb-5"
+    style="background-color: #1a1a1a !important; border: 1px solid #333"
+  >
+    <div class="card-body">
+      {% if labels_entrate %}
+      <canvas id="chartEntrate"></canvas>
+      {% else %}
+      <p class="text-center" style="color: #888; padding: 50px">
+        📭 Nessuna entrata registrata.
+      </p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      {% if labels_spese %}
+      new Chart(document.getElementById('chartAnalytics').getContext('2d'), {
+          type: 'bar',
+          data: {
+              labels: {{ labels_spese | tojson }},
+              datasets: [{
+                  label: 'Totale Speso',
+                  data: {{ valori_spese | tojson }},
+                  backgroundColor: '#f39c12',
+                  borderRadius: 5
+              }]
+          },
+          options: {
+              indexAxis: 'y',
+              responsive: true,
+              plugins: { legend: { display: false } },
+              scales: {
+                  x: { ticks: { color: '#888' }, grid: { color: '#333' } },
+                  y: { ticks: { color: '#eee' }, grid: { display: false } }
+              }
+          }
+      });
+      {% endif %}
+
+      {% if labels_entrate %}
+      new Chart(document.getElementById('chartEntrate').getContext('2d'), {
+          type: 'doughnut',
+          data: {
+              labels: {{ labels_entrate | tojson }},
+              datasets: [{
+                  data: {{ valori_entrate | tojson }},
+                  backgroundColor: ['#2ecc71', '#27ae60', '#16a085', '#1abc9c', '#3498db'],
+                  borderColor: '#1a1a1a',
+                  borderWidth: 2
+              }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom', labels: { color: '#eee' } } }
+          }
+      });
+      {% endif %}
+  });
+</script>
+{% endblock %}

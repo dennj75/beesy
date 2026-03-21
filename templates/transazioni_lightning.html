@@ -20,7 +20,7 @@ content %}
       <button type="button" class="csv-button">📥 Esporta CSV per mese</button>
     </a>
   </div>
-
+  
   <p>
     <a href="{{ url_for('nuova_transazione_lightning') }}">➕ Aggiungi una nuova transazione Lightning</a>
   </p>
@@ -36,9 +36,9 @@ content %}
       </ul>
     {% endif %}
   {% endwith %}
-
+  <div class="table-responsive-custom">
   <table border="1">
-    <tr>
+    <thead><tr>
       <th>ID</th>
       <th>Data</th>
       <th>Wallet</th>
@@ -49,8 +49,8 @@ content %}
       <th>Controvalore €</th>
       <th>Valore BTC/€</th>
       <th>Azioni</th>
-    </tr>
-    {% for t in transazioni_lightning %}
+    </thead></tr>
+    <tbody>{% for t in transazioni_lightning %}
     <tr>
       <td>{{ t["id"] }}</td>
       <td>{{ t["data"] }}</td>
@@ -76,7 +76,7 @@ content %}
       </td>
     </tr>
     {% endfor %}
+  </tbody>
   </table>
-
-  <p><a href="/">⬅️ Torna alla home</a></p>
+</div>
 {% endblock %}

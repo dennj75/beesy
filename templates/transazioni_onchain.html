@@ -36,9 +36,9 @@ content %}
       {% endif %} {% endfor %}
     </ul>
     {% endif %} {% endwith %}
-
+    <div class="table-responsive-custom">
     <table border="1">
-      <tr>
+    <thead> <tr>
         <th>ID</th>
         <th>Data</th>
         <th>Wallet</th>
@@ -52,7 +52,8 @@ content %}
         <th>Valore BTC/€</th>
         <th>Azioni</th>
       </tr>
-      {% for t in transazioni_onchain %}
+      </thead>
+      <tbody>{% for t in transazioni_onchain %}
       <tr>
         <td>{{ t["id"] }}</td>
         <td>{{ t["data"] }}</td>
@@ -94,7 +95,7 @@ content %}
         </td>
       </tr>
       {% endfor %}
-    </table>
-
-    <p><a href="/">⬅️ Torna alla home</a></p>
+    </tbody>
+  </table>
+</div>
   {% endblock %}

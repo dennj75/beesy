@@ -1,102 +1,116 @@
-{% extends "base.html" %} {% block title %}📋 Transazioni €- ₿eesy{% endblock %} {% block
-content %}
-      <h1>📋 Transazioni €</h1>      
-    <!-- Qui il saldo totale -->
-    <div class="saldi-container">
-      <p class="saldo-banca {% if saldo_banca >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}">
-        🏦 Banca: {{ "%.2f"|format(saldo_banca) }} €</p>
-      </p>
-      <p class="saldo-contanti {% if saldo_contanti >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}">
-        💼 Contanti: {{ "%.2f"|format(saldo_contanti) }} €</p>
-      <p class="saldo-totale">
-        💰 Saldo Totale: {{ "%.2f"|format(saldo_totale) }} €
-      </p>
-    </div>
-    </p>
-    <div class="csv-buttons">
-      <a href="{{ url_for('scarica_csv') }}">
-      <button type="button" class="csv-button">📥 Esporta CSV</button>
-      </a>
-      <a href="{{ url_for('scarica_csv_per_mese') }}">
-      <button type="button" class="csv-button">📥Esporta CSV per mese</button>
-      </a>
-    </div>
-    <div class="nuova-transazione">
-      <p><a href="/nuova_transazione">➕ Aggiungi una nuova transazione</a></p>
-    </div>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <ul>
-          {% for category, message in messages %}
-            {% if 'euro' in category %}
-              <li class="{{ category }}">{{ message }}</li>
-            {% endif %}
-          {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
-    
+{% extends "base.html" %} {% block title %}📋 Transazioni € - ₿eesy{% endblock
+%} {% block content %}
+<h1>📋 Transazioni €</h1>
+
+<div class="saldi-container">
+  <p
+    class="saldo-banca {% if saldo_banca >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+  >
+    🏦 Banca: {{ "%.2f"|format(saldo_banca) }} €
+  </p>
+  <p
+    class="saldo-contanti {% if saldo_contanti >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+  >
+    💼 Contanti: {{ "%.2f"|format(saldo_contanti) }} €
+  </p>
+  <p class="saldo-totale">
+    💰 Saldo Totale: {{ "%.2f"|format(saldo_totale) }} €
+  </p>
+</div>
+
+<div class="csv-buttons">
+  <a href="{{ url_for('scarica_csv') }}">
+    <button type="button" class="csv-button">📥 Esporta CSV</button>
+  </a>
+  <a href="{{ url_for('scarica_csv_per_mese') }}">
+    <button type="button" class="csv-button">📥 Esporta CSV per mese</button>
+  </a>
+</div>
+  <div class="nuova-transazione">
+    <p><a href="/nuova_transazione">➕ Aggiungi una nuova transazione</a></p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %} {% if
+  messages %}
+  <ul>
+    {% for category, message in messages %} {% if 'euro' in category %}
+    <li class="{{ category }}">{{ message }}</li>
+    {% endif %} {% endfor %}
+  </ul>
+  {% endif %} {% endwith %}
+
+  <div class="table-responsive-custom">
     <table border="1">
-      <tr>
-        <th>ID</th>
-        <th>Data</th>
-        <th>Descrizione</th>
-        <th>Categoria</th>
-        <th>Sottocategoria</th>
-        <th>Importo (€)</th>
-        <th>Controvalore BTC</th>
-        <th>Valore BTC</th>
-        <th>Conto</th>
-        <th>Azioni</th>
-      </tr>
-      {% for t in transazioni %}
-      <tr>
-        <td>{{ t.id }}</td>
-        <td>{{ t.data }}</td>
-        <td>{{ t.descrizione }}</td>
-        <td>{{ t.categoria }}</td>
-        <td>{{ t.sottocategoria }}</td>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Data</th>
+          <th>Descrizione</th>
+          <th>Categoria</th>
+          <th>Sottocategoria</th>
+          <th>Importo (€)</th>
+          <th>Controvalore BTC</th>
+          <th>Valore BTC</th>
+          <th>Conto</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transazioni %}
+        <tr>
+          <td>{{ t.id }}</td>
+          <td>{{ t.data }}</td>
+          <td>{{ t.descrizione }}</td>
+          <td>{{ t.categoria }}</td>
+          <td>{{ t.sottocategoria }}</td>
 
-        <td class="{% if t.importo >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}">
-          {{ "%.2f"|format(t.importo) }} €
-        </td>
+          <td
+            class="{% if t.importo >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+          >
+            {{ "%.2f"|format(t.importo) }} €
+          </td>
 
-        <td>
-        {% if t.controvalore_btc %}
-          {{ "%.8f"|format(t.controvalore_btc) }}
-          {% else %}
-          -
-        {% endif %}
-      </td>
+          <td>
+            {% if t.controvalore_btc %} {{ "%.8f"|format(t.controvalore_btc) }}
+            {% else %} - {% endif %}
+          </td>
 
-      <td>
-      {% if t.valore_btc_eur %}
-        {{ "%.2f"|format(t.valore_btc_eur) }}
-      {% else %}
-        -
-      {% endif %}
-      </td>
+          <td>
+            {% if t.valore_btc_eur %} {{ "%.2f"|format(t.valore_btc_eur) }} {%
+            else %} - {% endif %}
+          </td>
 
-      <td>
-        {% if t.conto.lower() == "banca" %}
-          🏦 Banca
-        {% elif t.conto.lower() == "contanti" %}
-          💶 Contanti
-        {% else %}
-          {{ t.conto }}
-        {% endif %}
-      </td>
+          <td>
+            {% if t.conto.lower() == "banca" %} 🏦 Banca {% elif t.conto.lower()
+            == "contanti" %} 💶 Contanti {% else %} {{ t.conto }} {% endif %}
+          </td>
 
-      <td>
-      <form method="post" action="{{ url_for('elimina_transazione_eur', id_transazione=t.id) }}" style="display:inline;">
-        <button type="submit" onclick="return confirm('Sei sicuro di voler eliminare questa transazione?');">🗑️ Elimina</button>
-      </form>
-
-      <a href="{{ url_for('modifica_transazione_eur', id_transazione=t.id) }}">✏️ Modifica</a>
-      </td>
-      </tr>
+          <td>
+            <form
+              method="post"
+              action="{{ url_for('elimina_transazione_eur', id_transazione=t.id) }}"
+              style="display: inline"
+            >
+              <button
+                type="submit"
+                onclick="
+                  return confirm(
+                    'Sei sicuro di voler eliminare questa transazione?',
+                  );
+                "
+              >
+                🗑️ Elimina
+              </button>
+            </form>
+            <a
+              href="{{ url_for('modifica_transazione_eur', id_transazione=t.id) }}"
+              >✏️ Modifica</a
+            >
+          </td>
+        </tr>
         {% endfor %}
+      </tbody>
     </table>
-    
-    <p><a href="/">⬅️ Torna alla home</a></p>
+  </div>
   {% endblock %}
+</div>

@@ -724,3 +724,146 @@ def ripristina_database_completo(user_id, dati_json):
         return False
     finally:
         conn.close()
+
+
+def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # 1. Identifichiamo tabella e colonne giuste
+    if tipo_conto == 'LIGHTNING':
+        tabella = "transazioni_lightning"
+        colonna_valore = "satoshi"
+        filtro_uscite = ""  # Di solito su LN/Onchain registri solo uscite, quindi nessun filtro < 0
+    elif tipo_conto == 'ONCHAIN':
+        tabella = "transazioni_onchain"
+        colonna_valore = "importo_btc"
+        filtro_uscite = ""
+    else:
+        tabella = "transazioni"
+        colonna_valore = "importo"
+        # Per l'Euro vogliamo solo le uscite vere, escludendo i saldi iniziali positivi
+        filtro_uscite = f"AND {colonna_valore} < 0"
+
+    filtro_tempo = ""
+    parametri = [user_id]
+    if mese:
+        filtro_tempo = "AND DATA LIKE ?"
+        parametri.append(F"{mese}%")  # Es. "2024-06%"
+    elif anno:
+        filtro_tempo = "AND DATA LIKE ?"
+        parametri.append(F"{anno}%")
+
+    # 2. Costruiamo la query dinamica usando {colonna_valore} OVUNQUE
+    query = f"""
+        SELECT categoria, ABS(SUM({colonna_valore})) as totale 
+        FROM {tabella} 
+        WHERE user_id=? 
+        AND categoria != 'Entrate' 
+        {filtro_tempo} 
+        {filtro_uscite}
+        GROUP BY categoria
+        ORDER BY totale DESC
+    """
+
+    cursor.execute(query, parametri)
+    righe = cursor.fetchall()
+    conn.close()
+
+    # 3. Restituiamo i dati (con 8 decimali per On-chain, 2 per gli altri)
+    labels_spese = [r[0] for r in righe]
+    valori_spese = [round(r[1], 8) if tipo_conto ==
+                    'ONCHAIN' else round(r[1], 2) for r in righe]
+
+    return labels_spese, valori_spese
+
+
+def get_entrate_per_sottocategoria(user_id, tipo_conto, mese=None, anno=None):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # 1. Identifichiamo tabella e colonne giuste
+    if tipo_conto == 'LIGHTNING':
+        tabella = "transazioni_lightning"
+        colonna_valore = "satoshi"
+    elif tipo_conto == 'ONCHAIN':
+        tabella = "transazioni_onchain"
+        colonna_valore = "importo_btc"
+    else:
+        tabella = "transazioni"
+        colonna_valore = "importo"
+
+    filtro_tempo = ""
+    parametri = [user_id]
+    if mese:
+        filtro_tempo = "AND DATA LIKE ?"
+        parametri.append(F"{mese}%")  # Es. "2024-06%"
+    elif anno:
+        filtro_tempo = "AND DATA LIKE ?"
+        parametri.append(F"{anno}%")
+
+    # Qui filtriamo solo le entrate (importo > 0) e raggruppiamo per sottocategoria
+    # Usiamo ABS() per essere sicuri di sommare valori positivi (o perchè le entrate potrebbero essere negativesegnate diversamente), ma il filtro > 0 garantisce che siano entrate
+    query = f"""
+        SELECT sottocategoria, ABS(SUM({colonna_valore})) as totale 
+        FROM {tabella} 
+        WHERE user_id=? 
+        AND categoria = 'Entrate' 
+        AND {colonna_valore} > 0
+        {filtro_tempo}
+        GROUP BY sottocategoria
+        ORDER BY totale DESC
+    """
+
+    cursor.execute(query, parametri)
+    righe = cursor.fetchall()
+    conn.close()
+    print(
+        f"DEBUG ENTRATE: Trovate {len(righe)} righe per utente {user_id} in {tipo_conto}")
+
+    # Sostituisci sottocategoria vuota con "Generale"
+    labels_entrate = [r[0] if r[0] else "Generale" for r in righe]
+    valori_entrate = [round(r[1], 8) if tipo_conto ==
+                      'ONCHAIN' else round(r[1], 2) for r in righe]
+
+    return labels_entrate, valori_entrate
+
+
+def get_bilancio_periodo(user_id, tipo_conto, mese=None, anno=None):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Scegliamo la tabella e la colonna
+    if tipo_conto == 'LIGHTNING':
+        tabella, colonna = "transazioni_lightning", "satoshi"
+    elif tipo_conto == 'ONCHAIN':
+        tabella, colonna = "transazioni_onchain", "importo_btc"
+    else:
+        tabella, colonna = "transazioni", "importo"
+
+    filtro_tempo = ""
+    parametri = [user_id]
+    if mese:
+        filtro_tempo = "AND data LIKE ?"
+        parametri.append(f"{mese}%")
+    elif anno:
+        filtro_tempo = "AND data LIKE ?"
+        parametri.append(f"{anno}%")
+
+    # 1. Calcoliamo le Entrate
+    query_entrate = f"SELECT SUM({colonna}) FROM {tabella} WHERE user_id=? AND categoria LIKE 'Entrate' {filtro_tempo}"
+    cursor.execute(query_entrate, parametri)
+    totale_entrate = cursor.fetchone()[0] or 0
+
+    # 2. Calcoliamo le Spese (tutto ciò che NON è Entrate)
+    query_spese = f"SELECT SUM({colonna}) FROM {tabella} WHERE user_id=? AND categoria NOT LIKE 'Entrate' {filtro_tempo}"
+    cursor.execute(query_spese, parametri)
+    totale_spese = cursor.fetchone()[0] or 0
+
+    conn.close()
+
+    # Restituiamo i valori assoluti per facilità di calcolo
+    return abs(totale_entrate), abs(totale_spese)
