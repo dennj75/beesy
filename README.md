@@ -2,8 +2,8 @@
 
 > **"Your Node, Your Rules. Your Data, Your Privacy."**
 
-[![GitHub license](https://img.shields.io/github/license/dennj75/bitcoin-expense-tracker?style=flat-square)](LICENSE)
-[![GitHub stars](https://imgpl.io/github/stars/dennj75/bitcoin-expense-tracker?style=flat-square)](https://github.com/dennj75/bitcoin-expense-tracker/stargazers)
+[![GitHub license](https://img.shields.io/github/license/dennj75/beesy?style=flat-square)](LICENSE)
+[![GitHub stars](https://imgpl.io/github/stars/dennj75/beesy?style=flat-square)](https://github.com/dennj75/beesy/stargazers)
 
 ---
 
@@ -28,6 +28,8 @@ This project is an **EXPERIMENTAL EDUCATIONAL LABORATORY**.
 - ⚡ **Lightning Ready:** Separate management for on-chain and off-chain transactions with Satoshi precision.
 - 💱 **Historical Conversion:** Automatic BTC/EUR price retrieval via CoinGecko API.
 - 🔐 **Self-Sovereign:** No central server. Install it on your PC, Raspberry Pi, or Umbrel node.
+- 📊 **Advanced Analytics:** Real-time visual dashboards for spending and income habits powered by **Chart.js**.
+- 📉 **Savings Rate Tracker:** Automatic calculation of your financial efficiency (Saving vs Spending) to help you reach **FIRE** or economic independence.
 
 ## 🛡️ Military-Grade Backup System:
 
@@ -49,6 +51,8 @@ This project is an **EXPERIMENTAL EDUCATIONAL LABORATORY**.
 | Component          | Technology                   | Role                                                   |
 | :----------------- | :--------------------------- | :----------------------------------------------------- |
 | **Backend**        | Flask (Python)               | Server-side logic & API management                     |
+| **Frontend**       | HTML, CSS, JS (Vanilla)      | Clean, responsive user interface                       |
+| **Data Viz**       | **Chart.js**                 | Interactive bar and doughnut charts for analytics      |
 | **Security**       | AES-256-GCM                  | Industry-standard encryption for backups               |
 | **Database**       | SQLite                       | Local-first, private data storage                      |
 | **API**            | CoinGecko                    | Real-time & historical BTC prices                      |
@@ -106,19 +110,36 @@ We implemented a robust backup system to ensure you never lose your data:
 ## 🛠️ Roadmap & Contributions
 
 - [x] Encrypted database export/backup. (Done! 🎉)
-- [ ] Advanced Dashboard: Real-time charts for spending habits (Chart.js).
+- [x] Advanced Dashboard: Real-time charts for spending habits (Chart.js). 📊
+- [x] PDF Reporting system (Browser-based export). 📄
 - [ ] Multi-currency support: Beyond EUR (USD, CHF, etc.).
+- [ ] Detailed transaction history view within the Analytics page.
 - [ ] Mobile Nostr Restore: Refined integration with Nostr Signer apps.
-      Building in public 🚀 | Stay humble, stack sats ⚡
+      
+## 💜 Connect on Nostr
+
+Se vuoi seguire lo sviluppo o metterti in contatto in modo decentralizzato:
+
+- **Developer (@Dennj75):** [dennj75@nostr.red](https://primal.net/p/npub1lejpu7ms5j6y7srv32ndxw4m9j5vp7tgdjpsxw32h3r2y7zpqtdsdumyk0) 
+  - `npub1lejpu7ms5j6y7srv32ndxw4m9j5vp7tgdjpsxw32h3r2y7zpqtdsdumyk0`
+- **Beesy Project:** [beesy@nostrcheck.me](https://primal.net/p/npub1k8dfux202k788vm955rn4wrckvavuxxr3202wlpsa2h97d4tlkrsp57qcv)
+  - `npub1k8dfux202k788vm955rn4wrckvavuxxr3202wlpsa2h97d4tlkrsp57qcv`
+
+---
 
 ## 🇮🇹 Versione Italiana
 
 <strong style="color: #f39c12">₿eesy</strong> è un tracker di spese "Bitcoin-first" progettato per la privacy totale.
+<strong style="color: #f39c12">₿eesy</strong> è un tracker di spese "Bitcoin-first" progettato per la privacy totale.
 
-Backup Cifrato: Esporta i tuoi dati in formato AES-256 sicuro.
+- **Analytics Avanzate:** Grafici interattivi per monitorare entrate, uscite e tasso di risparmio.
+- **Backup Cifrato:** Esporta i tuoi dati in formato AES-256 sicuro.
+- **Senza Password:** Prova il login Nostr tramite estensioni browser o Amber su Android.
 
-Ripristino Mobile: Funzionante al 100% per account tradizionali.
+- **Ripristino Mobile:** Funzionante al 100% per account tradizionali.
 
-Senza Password: Prova il login Nostr tramite estensioni browser o Amber su Android.
+- **Senza Password:** Prova il login Nostr tramite estensioni browser o Amber su Android.
+
+---
 
 | <strong style="color: #f39c12">₿eesy</strong> | Building in public 🚀 | Stay humble, stack sats ⚡
