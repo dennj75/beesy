@@ -1,0 +1,35 @@
+{% extends "base.html" %} {% block title %}Importa csv - ₿eesy{% endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="card bg-dark text-white border-warning">
+    <div class="card-body text-center">
+      <h2 class="text-warning">📥 Importa Estratto Conto</h2>
+      <p>Seleziona il tuo file .csv esportato dalla banca.</p>
+      <hr class="border-secondary" />
+
+      <form
+        action="{{ url_for('importa_csv') }}"
+        method="post"
+        enctype="multipart/form-data"
+      >
+        <div class="mb-3">
+          <input
+            class="form-control bg-dark text-white border-secondary"
+            type="file"
+            name="file_csv"
+            accept=".csv"
+            required
+          />
+        </div>
+        <button type="submit" class="btn btn-warning w-100">
+          🔍 Analizza Movimenti
+        </button>
+      </form>
+
+      <div class="mt-3 small text-muted">
+        <i class="bi bi-shield-lock"></i> Privacy: Il file verrà cancellato dal
+        server immediatamente dopo l'analisi.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

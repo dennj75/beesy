@@ -4,17 +4,23 @@
 
 <div class="saldi-container">
   <p
-    class="saldo-banca {% if saldo_banca >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+    class="saldo-banca {% if banca >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
   >
-    🏦 Banca: {{ "%.2f"|format(saldo_banca) }} €
+    🏦 Banca: {{ "%.2f"|format(banca) }} €
   </p>
   <p
-    class="saldo-contanti {% if saldo_contanti >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+    class="saldo-contanti {% if contanti >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
   >
-    💼 Contanti: {{ "%.2f"|format(saldo_contanti) }} €
+    💼 Contanti: {{ "%.2f"|format(contanti) }} €
+  </p>
+  <p class="saldo-investimenti" style="color: #3498db;">
+    📈 Investimenti: {{ "%.2f"|format(saldo_investimenti) }} €
+  </p>
+  <p class="saldo-pensione" style="color: #9b59b6;">
+    👴 Pensione: {{ "%.2f"|format(saldo_pensione) }} €
   </p>
   <p class="saldo-totale">
-    💰 Saldo Totale: {{ "%.2f"|format(saldo_totale) }} €
+    💰 Saldo Totale: {{ "%.2f"|format(saldo_totale_eur) }} €
   </p>
 </div>
 
@@ -35,7 +41,7 @@
   <ul>
     {% for category, message in messages %} {% if 'euro' in category %}
     <li class="{{ category }}">{{ message }}</li>
-    {% endif %} {% endfor %}
+    {% endif %} {% endfor %}  
   </ul>
   {% endif %} {% endwith %}
 
@@ -52,6 +58,7 @@
           <th>Controvalore BTC</th>
           <th>Valore BTC</th>
           <th>Conto</th>
+          <th>Note</th>
           <th>Azioni</th>
         </tr>
       </thead>
@@ -79,12 +86,21 @@
             {% if t.valore_btc_eur %} {{ "%.2f"|format(t.valore_btc_eur) }} {%
             else %} - {% endif %}
           </td>
-
+         
           <td>
-            {% if t.conto.lower() == "banca" %} 🏦 Banca {% elif t.conto.lower()
-            == "contanti" %} 💶 Contanti {% else %} {{ t.conto }} {% endif %}
-          </td>
-
+    {% if t.conto.lower() == "banca" %} 
+        🏦 Banca 
+    {% elif t.conto.lower() == "contanti" %} 
+        💶 Contanti 
+    {% elif t.conto.lower() == "investimenti" %} 
+        📈 Investimenti 
+    {% elif t.conto.lower() == "pensione" %} 
+        👴 Pensione 
+    {% else %} 
+        {{ t.conto }} 
+    {% endif %}
+</td>
+           <td>{{ t.note }}</td>
           <td>
             <form
               method="post"

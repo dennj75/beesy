@@ -1,3 +1,4 @@
+from db.db_utils import get_db_connection
 from flask import request, jsonify, redirect, url_for, flash, render_template
 import os
 import io
@@ -36,36 +37,84 @@ from db.db_utils import (
     leggi_transazioni_da_db_onchain, salva_su_db_onchain, leggi_transazioni_filtrate_onchain,
     elimina_transazione_da_db_onchain, modifica_transazione_db_onchain, get_transazioni_con_saldo_onchain,
     ripristina_database_completo, get_transazioni_con_saldo_onchain,
-    get_spese_per_categoria_filtrate, get_entrate_per_sottocategoria, get_bilancio_periodo
+    get_spese_per_categoria_filtrate, get_entrate_per_sottocategoria, get_bilancio_periodo, crea_tabella_prezzi_btc, crea_tabella_mapping
 )
-from utils.crypto import ottieni_valore_btc_eur, euro_to_btc, _carica_storico_btc_eur
+from utils.crypto import ottieni_valore_btc_eur, euro_to_btc, _carica_storico_btc_eur, aggiorna_prezzo_bitcoin
 from utils.export import (
-    genera_stringa_backup_json,
+    genera_stringa_backup_json, ripristina_database_completo,
     esporta_csv, esporta_csv_per_mese, esporta_csv_lightning,
     esporta_csv_per_mese_lightning, esporta_csv_onchain, esporta_csv_per_mese_onchain
-
 )
+from utils.import_manager import anteprima_importazione_csv
+
 from models import User
 from utils.helpers import normalizza_importo
 from utils.security import decrypt_master_key, encrypt_data, decrypt_data
 
+from werkzeug.utils import secure_filename
+
 load_dotenv()
 
 CATEGORIE = {
-    'Entrate': ['Stipendio', 'Rimborso', 'Regalo', 'Donazioni', 'claim giochi online', 'Altro'],
-    'Abitazione': ['Affitto/Mutuo', 'Bollette: Luce', 'Bollette: acqua', 'Bollette: Gas', 'Bollette: Rifiuti', 'Manutenzione', 'Spese condominiali', 'Assicurazione casa'],
-    'Alimentari': ['Supermercato', 'Ristorante - Bar', 'Spesa online', 'Altro'],
-    'Trasporti': ['Carburante', 'Mezzi pubblici', 'Manutenzione auto / moto', 'Assicurazione auto', 'Bollo auto', 'Taxi / Uber', 'Noleggi', 'Parcheggi / pedaggi', 'Altro'],
-    'Spese Personali': ['Abbigliamento / Scarpe', 'Igiene personale', 'Parrucchiere / estetista', 'Abbonamenti personali (Netflix, Spotify, ecc)', 'Libri / Riviste'],
-    'Tempo Libero & Intrattenimento': ['Cinema / Teatro / Eventi', 'Sport / Palestra', 'Viaggi / Vacanze', 'Hobby / Collezioni', 'Giochi / App a pagamento'],
-    'Finanze & Banche': ['Commissioni bancarie', 'Interessi passivi', 'Prelievi / Depositi', 'Investimenti', 'Criptovalute', 'Giroconti'],
-    'Lavoro & Studio': ['Spese di ufficio / coworking', 'Formazione / Corsi', 'Libri / Materiali didattici', 'Trasporti lavoro / studio', 'Pasti lavoro'],
-    'Famiglia & Bambini': ['Spese scolastiche', 'Abbigliamento bambino', 'Salute bambino', 'Giocattoli', 'Baby sitter / Asilo', 'Altro'],
-    'Salute': ['Farmacia', 'Visita medica', 'Altro']
+    'Entrate': [
+        'Cedole O Dividendi', 'Stipendio', 'Rimborso', 'Regalo', 'Donazioni',
+        'Claim giochi online', 'Plusvalenze Investimenti', 'Altro'
+    ],
+    'Abitazione': [
+        'Affitto/Mutuo', 'Bollette: Luce', 'Bollette: acqua',
+        'Bollette: Gas', 'Bollette: Rifiuti', 'Manutenzione',
+        'Spese condominiali', 'Assicurazione casa', 'IMU'
+    ],
+    'Alimentari': [
+        'Supermercato', 'Ristorante - Bar', 'Spesa online', 'Altro'
+    ],
+    'Trasporti': [
+        'Carburante', 'Mezzi pubblici', 'Manutenzione auto / moto',
+        'Assicurazione auto', 'Bollo auto', 'Taxi / Uber',
+        'Noleggi', 'Parcheggi / pedaggi', 'Altro'
+    ],
+    'Spese Personali': [
+        'Abbigliamento / Scarpe', 'Igiene personale', 'Parrucchiere / estetista',
+        'Abbonamenti (Netflix, Spotify, ecc)', 'Libri / Riviste'
+    ],
+    'Tempo Libero': [
+        'Cinema / Teatro / Eventi', 'Sport / Palestra', 'Viaggi / Vacanze',
+        'Hobby / Collezioni', 'Giochi / App'
+    ],
+    'Patrimonio & Finanze': [
+        'Commissioni bancarie', 'Interessi passivi', 'Imposte di bollo / IVAFE',
+        'Acquisto Titoli/Fondi (Giroconto)', 'Versamento Pensione (Giroconto)',
+        'Investimento Crypto', 'Prelievo Contante'
+    ],
+    'Tasse & Stato': [
+        'IRPEF (Saldo/Acconto)', 'Capital Gain (Tassazione)', 'Multe', 'Altro'
+    ],
+    'Lavoro & Studio': [
+        'Ufficio / Coworking', 'Formazione / Corsi', 'Materiali didattici',
+        'Trasporti lavoro', 'Pasti lavoro'
+    ],
+    'Famiglia': [
+        'Spese scolastiche', 'Abbigliamento bambino', 'Salute bambino',
+        'Giocattoli', 'Baby sitter / Asilo', 'Regali fatti', 'Altro'
+    ],
+    'Salute': [
+        'Farmacia', 'Visita medica', 'Assicurazione Sanitaria', 'Altro'
+    ],
+    'Imprevisti': [
+        'Riparazioni urgenti', 'Emergenze', 'Sostituzione tech'
+    ]
 }
 
 
 app = Flask(__name__)
+
+
+@app.after_request
+def add_header(response):
+    # Questo comando dice a ngrok di saltare la pagina di avviso
+    response.headers['ngrok-skip-browser-warning'] = 'true'
+    return response
+
 
 # Prende la chiave dal file .env.
 # Se non la trova, usa un valore di backup (solo per sviluppo!)
@@ -248,75 +297,104 @@ def load_user(user_id):
     # che ora include anche encrypted_master_key
     return User.from_db_row(row)
 
+    crea_tabella_prezzi_btc()
+
 
 @app.route('/')
 @login_required
 def home():
+    aggiorna_prezzo_bitcoin()
     if not current_user.is_authenticated:
         return redirect(url_for('auth.login'))
-    dati, saldo_totale_eur, saldo_banca, saldo_contanti, saldo_btc_da_eur = get_transazioni_con_saldo(
+
+    # 1. Recupero dati dai vari wallet
+    dati, banca, contanti, s_inv, s_pen, saldo_totale_eur, btc_da_eur = get_transazioni_con_saldo(
         current_user.id)
     dati_lightning, saldo_totale_satoshi, saldo_eur_lightning = get_transazioni_con_saldo_lightning(
         current_user.id)
     dati_onchain, saldo_totale_btc = get_transazioni_con_saldo_onchain(
         current_user.id)
 
-    # Calcola controvalore BTC per il tracker EUR
-    saldo_btc_da_eur = sum(float(t["controvalore_btc"])
-                           for t in dati if t["controvalore_btc"] is not None)
-
-    # Calcola controvalore EUR per on-chain
-    saldo_eur_onchain = sum(float(t['controvalore_eur'])
-                            for t in dati_onchain if t['controvalore_eur'] is not None)
-
-    conn = sqlite3.connect(DB_PATH)
+    # 2. RECUPERO PREZZO BTC (SPOSTATO QUI PER EVITARE L'ERRORE)
+    conn = get_db_connection()
     cursor = conn.cursor()
-
     cursor.execute(
-        "SELECT SUM(importo) FROM transazioni WHERE user_id=? AND conto='BANCA'", (current_user.id,))
-    saldo_banca = cursor.fetchone()[0] or 0
+        "SELECT prezzo_eur FROM prezzi_btc ORDER BY data DESC LIMIT 1")
+    prezzo_record = cursor.fetchone()
+    prezzo_attuale_btc = prezzo_record[0] if prezzo_record else 0
+    # Teniamo la connessione aperta un attimo per i calcoli successivi se serve, o chiudiamola dopo.
 
-    cursor.execute(
-        "SELECT SUM(importo) FROM transazioni WHERE user_id=? AND conto='CONTANTI'", (current_user.id,))
-    saldo_contanti = cursor.fetchone()[0] or 0
+    # 3. Calcoli incrociati e Dashboard
+    saldo_eur_onchain = sum(float(t['controvalore_eur'])
+                            for t in dati_onchain if t.get('controvalore_eur') is not None)
+
+    liquidita_totale = banca + contanti
+    patrimonio_investito = s_inv + s_pen
+
+    # Valore attuale dei wallet crypto
+    valore_attuale_onchain = saldo_totale_btc * prezzo_attuale_btc
+    valore_attuale_lightning_eur = (
+        saldo_totale_satoshi / 100000000) * prezzo_attuale_btc
+
+    # Patrimonio totale (Fiat + Valore attuale Crypto)
+    net_worth_totale = saldo_totale_eur + \
+        valore_attuale_lightning_eur + valore_attuale_onchain
+
+    # 4. CALCOLO CONTROVALORE DINAMICO (Ora prezzo_attuale_btc esiste!)
+    if prezzo_attuale_btc > 0:
+        controvalore_btc_reale = saldo_totale_eur / prezzo_attuale_btc
+    else:
+        controvalore_btc_reale = 0.0
+
+    # 5. Prepariamo i dati per il grafico e extra_data
+    labels_grafico = [
+        'Disponibilità (Banca/Contanti)', 'Investimenti/Pensione', 'Lightning', 'On-chain']
+    valori_grafico = [
+        round(liquidita_totale, 2),
+        round(patrimonio_investito, 2),
+        round(valore_attuale_lightning_eur, 2),
+        round(valore_attuale_onchain, 2)
+    ]
+
+    extra_data = [
+        f"{controvalore_btc_reale:.8f} BTC" if controvalore_btc_reale else "N/A",
+        "N/A",
+        f"{int(saldo_totale_satoshi)} SATS" if saldo_totale_satoshi else "N/A",
+        f"{saldo_totale_btc:.8f} BTC" if saldo_totale_btc else "N/A"
+    ]
+
+    # --- LOGICA RENDIMENTO (USIAMO IL PREZZO GIÀ PRESO) ---
+    rendimento_onchain = valore_attuale_onchain - saldo_eur_onchain
+    percentuale_onchain = (
+        rendimento_onchain / saldo_eur_onchain * 100) if saldo_eur_onchain > 0 else 0
+
+    rendimento_lightning = valore_attuale_lightning_eur - saldo_eur_lightning
+    percentuale_lightning = (
+        rendimento_lightning / saldo_eur_lightning * 100) if saldo_eur_lightning > 0 else 0
 
     conn.close()
 
-    saldo_totale_eur = saldo_banca + saldo_contanti
-
-    # Prepariamo i dati per il grafico
-    # Creiamo due liste, una per i nomi e una per i valori in Eur
-    labels_grafico = ['Banca (EUR)', 'Contanti (EUR)',
-                      'Lightning (EUR)', 'On-chain (EUR)']
-    valori_grafico = [
-        round(saldo_banca, 2),
-        round(saldo_contanti, 2),
-        round(saldo_eur_lightning, 2),
-        round(saldo_eur_onchain, 2)
-    ]
-    # Valori extra per il tooltip
-    extra_data = [
-        f"{saldo_btc_da_eur:.8f} BTC" if saldo_btc_da_eur else "N/A",  # Per Banca
-        # I contanti non hanno controvalore BTC
-        f"{0.0:.8f} BTC" if saldo_contanti else "N/A",
-        f"{int(saldo_totale_satoshi)} SATS".replace(
-            ",", ".") if saldo_totale_satoshi else "N/A",  # Per Lightning
-        f"{saldo_totale_btc:.8f} BTC" if saldo_totale_btc else "N/A"  # Per On-chain
-
-    ]
-
     return render_template('index.html',
-                           saldo_banca=saldo_banca,
-                           saldo_contanti=saldo_contanti,
+                           banca=banca,
+                           contanti=contanti,
+                           s_inv=s_inv,
+                           s_pen=s_pen,
+                           liquidita_totale=liquidita_totale,
+                           patrimonio_investito=patrimonio_investito,
                            saldo_totale_eur=saldo_totale_eur,
-                           saldo_btc_da_eur=saldo_btc_da_eur,
+                           saldo_btc_da_eur=controvalore_btc_reale,
                            saldo_totale_satoshi=saldo_totale_satoshi,
                            saldo_eur_lightning=saldo_eur_lightning,
                            saldo_totale_btc=saldo_totale_btc,
                            saldo_eur_onchain=saldo_eur_onchain,
+                           net_worth_totale=net_worth_totale,
                            labels_grafico=labels_grafico,
                            valori_grafico=valori_grafico,
-                           extra_data=extra_data
+                           extra_data=extra_data,
+                           rendimento_onchain=rendimento_onchain,
+                           percentuale_onchain=percentuale_onchain,
+                           rendimento_lightning=rendimento_lightning,
+                           percentuale_lightning=percentuale_lightning
                            )
 
 
@@ -325,37 +403,19 @@ def home():
 def transazioni():
     user_id = current_user.id
 
-    # Ora qui ricevi già i dizionari
-    dati, saldo_totale, saldo_banca, saldo_contanti, saldo_btc_da_eur = get_transazioni_con_saldo(
+    # Recuperiamo TUTTO in un colpo solo dalla funzione che abbiamo appena sistemato
+    dati, banca, contanti, invest, pen, saldo_totale_eur, btc_eur = get_transazioni_con_saldo(
         user_id)
-
-    # Calcolo saldo BANCA / CONTANTI
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT SUM(importo) FROM transazioni WHERE user_id=? AND conto='BANCA'",
-        (user_id,)
-    )
-    saldo_banca = cursor.fetchone()[0] or 0
-
-    cursor.execute(
-        "SELECT SUM(importo) FROM transazioni WHERE user_id=? AND conto='CONTANTI'",
-        (user_id,)
-    )
-    saldo_contanti = cursor.fetchone()[0] or 0
-
-    conn.close()
-
-    saldo_totale_eur = saldo_banca + saldo_contanti
 
     return render_template(
         'transazioni.html',
         transazioni=dati,
-        saldo_totale=saldo_totale,
-        saldo_banca=saldo_banca,
-        saldo_contanti=saldo_contanti,
-        saldo_totale_eur=saldo_totale_eur
+        banca=banca,
+        contanti=contanti,
+        saldo_investimenti=invest,
+        saldo_pensione=pen,
+        saldo_totale_eur=saldo_totale_eur,
+        saldo_btc_da_eur=btc_eur  # Non dimentichiamoci i BTC!
     )
 
 
@@ -368,6 +428,7 @@ def nuova_transazione():
         categoria = request.form['categoria']
         sottocategoria = request.form.get('sottocategoria', '')
         conto = request.form['conto']
+        note = request.form.get('note', '')
 
         try:
             importo_normalizzato = float(
@@ -383,7 +444,7 @@ def nuova_transazione():
         # Salviamo sia valore controvalore (btc) che BTC (€/BTC)
             registra_transazione_conto(
                 current_user.id, data, descrizione, categoria, sottocategoria, importo, controvalore_btc=controvalore_btc,
-                valore_btc_eur=valore_btc_eur, conto=conto)
+                valore_btc_eur=valore_btc_eur, conto=conto, note=note)
 
             return redirect(url_for('transazioni'))
         except ValueError:
@@ -423,7 +484,7 @@ def elimina_transazione_eur(id_transazione):
 @app.route('/modifica-transazione/<int:id_transazione>', methods=['GET', 'POST'])
 @login_required
 def modifica_transazione_eur(id_transazione):
-    # Leggi la transazione
+    # 1. Recupero la transazione per assicurarmi che esista
     transazioni = leggi_transazioni_da_db(current_user.id)
     t = next((tr for tr in transazioni if tr["id"] == id_transazione), None)
 
@@ -431,81 +492,85 @@ def modifica_transazione_eur(id_transazione):
         flash("Transazione non trovata", "error")
         return redirect(url_for('transazioni'))
 
+    # --- SE L'UTENTE PREME SALVA (POST) ---
     if request.method == 'POST':
         data = request.form['data']
         descrizione = request.form['descrizione']
         categoria = request.form['categoria']
         sottocategoria = request.form['sottocategoria']
-        conto = request.form['conto']
+        conto = request.form['conto'].strip().upper()
+        note = request.form.get('note', '')
         importo_normalizzato = normalizza_importo(request.form['importo'])
 
+        if "INVESTIMENTI" in conto:
+            conto = "INVESTIMENTI"
+        if "PENSIONE" in conto:
+            conto = "PENSIONE"
         if importo_normalizzato is None:
             flash("Importo non valido", "error")
             return redirect(url_for('modifica_transazione_eur', id_transazione=id_transazione))
 
         importo = float(importo_normalizzato)
+        vecchio_importo = t['importo']
+        vecchia_data = t['data']
 
-        # Aggiorna i campi base
-        campi_da_modificare = {
-            'data': data,
-            'descrizione': descrizione,
-            'categoria': categoria,
-            'sottocategoria': sottocategoria,
-            'importo': importo,
-            'conto': conto
-        }
+        # --- UNICA CONNESSIONE PER TUTTO ---
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
 
-        for campo, valore in campi_da_modificare.items():
-            modifica_transazione_db(
-                id_transazione, campo, valore, current_user.id)
-
-        # --- Ricalcolo BTC ---------------------
-        from datetime import datetime, date
-
-        data_dt = datetime.strptime(data, "%Y-%m-%d").date()
-        oggi = date.today()
-
-        if data_dt > oggi:
-            # Data futura → NON chiamare CoinGecko
-            flash("⚠️ La data è futura: mantengo i valori BTC già presenti.", "info")
-
-        else:
+        try:
+            # 1. Calcolo BTC (facciamolo prima di salvare)
             valore_btc_eur = ottieni_valore_btc_eur(data)
+            controvalore_btc = euro_to_btc(
+                importo, valore_btc_eur) if valore_btc_eur else 0.0
 
-            if valore_btc_eur is not None:
-                controvalore_btc = euro_to_btc(importo, valore_btc_eur)
-                modifica_transazione_db(
-                    id_transazione, 'valore_btc_eur', valore_btc_eur, current_user.id)
-                modifica_transazione_db(
-                    id_transazione, 'controvalore_btc', controvalore_btc, current_user.id)
-            else:
-                flash(
-                    "⚠️ Impossibile ottenere il valore BTC per la data selezionata.", "error")
+            # 2. Aggiornamento massivo della transazione PRINCIPALE
+            cursor.execute("""
+                UPDATE transazioni 
+                SET data=?, descrizione=?, categoria=?, sottocategoria=?, 
+                    importo=?, conto=?, note=?, valore_btc_eur=?, controvalore_btc=?
+                WHERE id=? AND user_id=?
+            """, (data, descrizione, categoria, sottocategoria,
+                  importo, conto, note, valore_btc_eur, controvalore_btc,
+                  id_transazione, current_user.id))
 
-        # Aggiorna tabella
-        dati, saldo_totale, saldo_banca, saldo_contanti, saldo_btc_da_eur = get_transazioni_con_saldo(
-            current_user.id)
+            # 3. LOGICA GEMELLA
+            importo_da_cercare = -vecchio_importo
+            cursor.execute("""
+                SELECT id FROM transazioni 
+                WHERE user_id=? AND data=? AND abs(importo - ?) < 0.01 AND id != ?
+            """, (current_user.id, vecchia_data, importo_da_cercare, id_transazione))
 
-        return render_template(
-            'transazioni.html',
-            transazioni=dati,
-            saldo_totale=saldo_totale,
-            saldo_banca=saldo_banca,
-            saldo_contanti=saldo_contanti
-        )
+            gemella_row = cursor.fetchone()
 
-    # ----- GET -----
+            if gemella_row:
+                id_gemella = gemella_row[0]
+                # Aggiorniamo la gemella con l'importo OPPOSTO e i nuovi dati btc
+                cursor.execute("""
+                    UPDATE transazioni 
+                    SET data=?, descrizione=?, importo=?, note=?, 
+                        valore_btc_eur=?, controvalore_btc=?
+                    WHERE id=? AND user_id=?
+                """, (data, descrizione, -importo, note,
+                      valore_btc_eur, -controvalore_btc, id_gemella, current_user.id))
+                flash("Aggiornata anche la transazione gemella!", "info")
+
+            conn.commit()
+            flash("Transazione modificata con successo!", "success")
+
+        except Exception as e:
+            conn.rollback()
+            flash(f"Errore durante l'aggiornamento: {e}", "error")
+        finally:
+            conn.close()
+
+        return redirect(url_for('transazioni'))
+
+    # --- SE L'UTENTE ENTRA NELLA PAGINA (GET) ---
     transazione_dict = {
-        "id": t["id"],
-        "data": t["data"],
-        "descrizione": t["descrizione"],
-        "categoria": t["categoria"],
-        "sottocategoria": t["sottocategoria"],
-        "importo": t["importo"],
-        "controvalore_btc": t.get("controvalore_btc"),
-        "valore_btc_eur": t.get("valore_btc_eur"),
-        "conto": t["conto"],
-        "user_id": current_user.id
+        "id": t["id"], "data": t["data"], "descrizione": t["descrizione"],
+        "categoria": t["categoria"], "sottocategoria": t["sottocategoria"],
+        "importo": t["importo"], "conto": t["conto"], "note": t.get("note", "")
     }
 
     return render_template(
@@ -513,6 +578,7 @@ def modifica_transazione_eur(id_transazione):
         transazione=transazione_dict,
         categorie=list(CATEGORIE.keys()),
         categorie_json=json.dumps(CATEGORIE)
+
     )
 
 
@@ -520,6 +586,9 @@ def modifica_transazione_eur(id_transazione):
 @login_required
 @csrf.exempt
 def backup_protetto():
+    # Generiamo il timestamp una volta sola per entrambi i flussi
+    data_str = datetime.now().strftime("%Y%m%d_%H%M")
+
     # --- FLUSSO NOSTR ---
     if current_user.auth_type == 'nostr':
         firma_nostr = request.args.get(
@@ -530,10 +599,13 @@ def backup_protetto():
             json_data = genera_stringa_backup_json(current_user.id)
             buffer = io.BytesIO(json_data.encode('utf-8'))
             buffer.seek(0)
+
+            # Nome file uniforme anche per Nostr
+            nome_file_nostr = f"beesy_backup_{current_user.username}_{data_str}.json"
             return send_file(
                 buffer,
                 as_attachment=True,
-                download_name=f"beesy_backup_{current_user.username}.json",
+                download_name=nome_file_nostr,
                 mimetype="application/json"
             )
         return render_template('backup_confirm.html')
@@ -564,10 +636,13 @@ def backup_protetto():
         buffer = io.BytesIO(json_criptato.encode('utf-8'))
         buffer.seek(0)
 
+        # Nome file uniforme con estensione .enc per i file criptati
+        nome_file_enc = f"beesy_backup_{current_user.username}_{data_str}.json.enc"
+
         return send_file(
             buffer,
             as_attachment=True,
-            download_name=f"beesy_backup_{current_user.username}.json.enc",
+            download_name=nome_file_enc,
             mimetype="application/octet-stream"
         )
     return render_template('backup_confirm.html')
@@ -579,6 +654,9 @@ def backup_protetto():
 def ripristino_protetto():
     if request.method == 'POST':
         password_o_firma = request.form.get('password')
+        # AGGIUNGI QUESTO SOLO PER TEST:
+        print(
+            f"DEBUG: Password ricevuta lunga {len(password_o_firma)} caratteri")
         file = request.files.get('backup_file')
 
         if not file or not password_o_firma:
@@ -593,23 +671,28 @@ def ripristino_protetto():
             # 2. Gestione differenziata
             if current_user.auth_type == 'nostr':
                 print("DEBUG: Utente Nostr - Caricamento diretto JSON")
-                # Per Nostr NON decriptiamo, leggiamo il JSON direttamente
                 data = json.loads(raw_content)
             else:
-                print("DEBUG: Utente Tradizionale - Decriptazione necessaria")
-                # Recuperiamo la master key per utenti password
-                m_key = decrypt_master_key(current_user, password_o_firma)
-                if not m_key:
-                    flash("Password errata!", "error")
-                    return redirect(url_for('ripristino_protetto'))
+                print(
+                    "DEBUG: Utente Tradizionale - Controllo se il file è in chiaro o criptato")
+                try:
+                    # PROVA A LEGGERE DIRETTAMENTE (Se è il backup in chiaro di debug)
+                    data = json.loads(raw_content)
+                    print("DEBUG: File in chiaro rilevato, procedo senza decriptazione")
+                except json.JSONDecodeError:
+                    # SE FALLISCE, ALLORA PROVA A DECRIPTARLO (Procedura normale)
+                    print("DEBUG: File criptato rilevato, avvio decriptazione")
+                    m_key = decrypt_master_key(current_user, password_o_firma)
+                    if not m_key:
+                        flash("Password errata!", "error")
+                        return redirect(url_for('ripristino_protetto'))
 
-                decrypted_json = decrypt_data(raw_content, m_key)
-                if not decrypted_json:
-                    print("DEBUG: Fallimento decrypt_data")
-                    flash(
-                        "Impossibile decriptare il file. Password o file errato.", "error")
-                    return redirect(url_for('ripristino_protetto'))
-                data = json.loads(decrypted_json)
+                    decrypted_json = decrypt_data(raw_content, m_key)
+                    if not decrypted_json:
+                        print("DEBUG: Fallimento decrypt_data")
+                        flash("Impossibile decriptare il file.", "error")
+                        return redirect(url_for('ripristino_protetto'))
+                    data = json.loads(decrypted_json)
 
             # 3. Scrittura nel Database
             successo = ripristina_database_completo(current_user.id, data)
@@ -658,55 +741,69 @@ def scarica_csv_per_mese():
     return render_template('scarica_csv_per_mese.html')
 
 
-def registra_transazione_conto(user_id, data, descrizione, categoria, sottocategoria, importo, conto, controvalore_btc=None, valore_btc_eur=None):
+def registra_transazione_conto(user_id, data, descrizione, categoria, sottocategoria, importo, conto, controvalore_btc=None, valore_btc_eur=None, note=''):
     """
     Gestisce automaticamente i trasferimenti BANCA ↔ CONTANTI.
-    Ora accetta e passa i valori BTC.
+    Aggiornato con i nuovi nomi delle categorie.
     """
+    # --- CASO 1: INVESTIMENTI (PAC o Versamenti grossi) ---
+    if sottocategoria == "Acquisto Titoli/Fondi (Giroconto)":
+        # 1. Togliamo i soldi dalla BANCA (Uscita reale)
+        salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
+                    importo, controvalore_btc, valore_btc_eur, conto="BANCA", note=note)
+        # 2. Li aggiungiamo al conto INVESTIMENTI (Aumento del fondo)
+        salva_su_db(user_id, data, f"Caricamento: {descrizione}", categoria, sottocategoria, abs(
+            importo), None, None, conto="INVESTIMENTI", note="Giroconto automatico")
+        return
 
-    # PRELIEVO (importo negativo dalla banca)
-    if categoria == "Finanze & Banche" and sottocategoria == "Prelievi / Depositi" and importo < 0:
-        # 1. Togli dalla banca
+    # --- CASO 2: PENSIONE COMPLEMENTARE ---
+    if sottocategoria == "Versamento Pensione (Giroconto)":
+        # 1. Uscita dalla BANCA
+        salva_su_db(user_id, data, descrizione, categoria,
+                    sottocategoria, importo, None, None, conto="BANCA", note=note)
+        # 2. Entrata nel conto PENSIONE
+        salva_su_db(user_id, data, f"Versamento: {descrizione}", categoria, sottocategoria, abs(
+            importo), None, None, conto="PENSIONE", note="Giroconto automatico")
+        return
+
+    # 3. PRELIEVO (Soldi che escono dalla BANCA per andare nei CONTANTI)
+    # Usiamo i nuovi nomi: "Patrimonio & Finanze" e "Prelievo Contante"
+    if categoria == "Patrimonio & Finanze" and sottocategoria == "Prelievo Contante" and importo < 0:
+        # Nota: Qui potresti voler concatenare la nota dell'utente a quella automatica
+        nota_giroconto = f"{note} (Giroconto)".strip()
+        # Togli dalla banca (segna la spesa reale)
         salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
-                    # Passa i valori BTC originali per la transazione madre (banca)
                     controvalore_btc, valore_btc_eur, conto="BANCA")
 
-        # 2. Aggiungi ai contanti (la transazione di trasferimento è in EUR, quindi i campi BTC rimangono a None)
+        # Aggiungi ai contanti (giroconto interno)
         salva_su_db(user_id, data,
-                    "Trasferimento da banca a contanti",
-                    "Finanze & Banche",
+                    "Giroconto: Prelievo da banca",
+                    "Patrimonio & Finanze",
                     "Trasferimento",
                     abs(importo),
-                    # I trasferimenti interni (contrari) non devono avere valori BTC
                     None, None,
                     conto="CONTANTI")
         return
 
-    # DEPOSITO (importo positivo nei contanti → banca)
-    if categoria == "Finanze & Banche" and sottocategoria == "Prelievi / Depositi" and importo > 0:
-        # 1. Aggiungi alla banca
+    # 2. DEPOSITO (Soldi contanti che versi in BANCA)
+    if categoria == "Patrimonio & Finanze" and sottocategoria == "Prelievo Contante" and importo > 0:
+        # Aggiungi alla banca
         salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
-                    # Passa i valori BTC originali per la transazione madre (banca)
                     controvalore_btc, valore_btc_eur, conto="BANCA")
 
-        # 2. Togli dai contanti
+        # Togli dai contanti
         salva_su_db(user_id, data,
-                    "Trasferimento da contanti a banca",
-                    "Finanze & Banche",
+                    "Giroconto: Versamento in banca",
+                    "Patrimonio & Finanze",
                     "Trasferimento",
                     -abs(importo),
-                    # I trasferimenti interni (contrari) non devono avere valori BTC
                     None, None,
                     conto="CONTANTI")
         return
 
-    # Altre transazioni normali
-    # BANCA di default a meno che non arrivi conto="CONTANTI" dal form
-    salva_su_db(user_id, data, descrizione, categoria,
-                sottocategoria, importo,
-                # ✅ Passa i valori BTC calcolati
-                controvalore_btc, valore_btc_eur,
-                conto=conto)
+    # Se non è un prelievo/deposito, salva normalmente sul conto selezionato
+    salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
+                controvalore_btc, valore_btc_eur, conto=conto, note=note)
 
 
 @app.route('/transazioni_lightning')
@@ -1049,44 +1146,94 @@ def scarica_csv_per_mese_onchain():
 @app.route('/analytics/<tipo>')
 @login_required
 def analytics(tipo):
+    # Assicurati che l'import sia corretto
+    from db.db_utils import get_db_connection
+
     mese_selezionato = request.args.get('mese')
     anno_selezionato = request.args.get('anno')
 
-    # Se l'utente ha scelto un mese, ignoriamo l'anno (perché il mese include già l'anno es. 2026-01)
     if mese_selezionato:
         anno_selezionato = None
-    # -----------------------
-    # Se le stringhe sono vuote, trasformale in None
     if not mese_selezionato:
         mese_selezionato = None
     if not anno_selezionato:
         anno_selezionato = None
 
-    # Usiamo la funzione che abbiamo progettato per db_utils
-    # Dati spese (barre)
+    # 1. Recupero dati grafici e bilancio
     labels_spese, valori_spese = get_spese_per_categoria_filtrate(
         current_user.id, tipo, mese=mese_selezionato, anno=anno_selezionato)
 
-    labels_entrate, valori_entrate = get_entrate_per_sottocategoria(current_user.id,
-                                                                    tipo,
-                                                                    mese=mese_selezionato,
-                                                                    anno=anno_selezionato)
+    labels_entrate, valori_entrate = get_entrate_per_sottocategoria(
+        current_user.id, tipo, mese=mese_selezionato, anno=anno_selezionato)
 
-    # Definiamo un titolo carino in base al tipo
+    tot_entrate, tot_spese = get_bilancio_periodo(
+        current_user.id, tipo, mese=mese_selezionato, anno=anno_selezionato)
+
+    delta = tot_entrate - tot_spese
+    saving_rate = (delta / tot_entrate * 100) if tot_entrate > 0 else 0
+
+    # --- INIZIO LOGICA RENDIMENTO UNIFICATA (BTC & SATS) ---
+    rendimento = 0
+    percentuale = 0
+    valore_attuale_eur = 0
+    saldo_asset = 0
+    costo_storico_eur = 0
+
+    if tipo in ['ONCHAIN', 'LIGHTNING']:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # 1. Prendiamo l'ultimo prezzo BTC (serve per entrambi)
+        cursor.execute(
+            "SELECT prezzo_eur FROM prezzi_btc ORDER BY data DESC LIMIT 1")
+        prezzo_record = cursor.fetchone()
+        prezzo_attuale_btc = prezzo_record[0] if prezzo_record else 0
+
+        if tipo == 'ONCHAIN':
+            from db.db_utils import get_transazioni_con_saldo_onchain
+            _, saldo_asset = get_transazioni_con_saldo_onchain(current_user.id)
+
+            cursor.execute(
+                "SELECT SUM(controvalore_eur) FROM transazioni_onchain WHERE user_id = ?", (current_user.id,))
+            res = cursor.fetchone()
+            costo_storico_eur = res[0] if res[0] else 0
+            valore_attuale_eur = saldo_asset * prezzo_attuale_btc
+
+        elif tipo == 'LIGHTNING':
+            from db.db_utils import get_transazioni_con_saldo_lightning
+            _, saldo_asset, _ = get_transazioni_con_saldo_lightning(
+                current_user.id)  # saldo_asset qui sono SATS
+
+            cursor.execute(
+                "SELECT SUM(controvalore_eur) FROM transazioni_lightning WHERE user_id = ?", (current_user.id,))
+            res = cursor.fetchone()
+            costo_storico_eur = res[0] if res[0] else 0
+            # Traduciamo i sats in valore EUR
+            valore_attuale_eur = (saldo_asset / 100000000) * prezzo_attuale_btc
+
+        # Calcoli finali comuni
+        rendimento = valore_attuale_eur - costo_storico_eur
+        if costo_storico_eur > 0:
+            percentuale = (rendimento / costo_storico_eur) * 100
+
+        conn.close()
+    # --- RECUPERO ASSET TRADIZIONALI ---
+    investimenti_fiat = []
+    if tipo == 'EURO':
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM assets_watch WHERE user_id = ?", (current_user.id,))
+        investimenti_fiat = cursor.fetchall()
+        conn.close()
+    # --- FINE LOGICA RENDIMENTO ---
+
     titoli = {
         'EURO': 'Statistiche Euro (€)',
         'LIGHTNING': 'Statistiche Lightning (⚡)',
         'ONCHAIN': 'Statistiche On-chain (₿)'
     }
-    titolo_pagina = titoli.get(tipo, "Statistiche")
-
-    tot_entrate, tot_spese = get_bilancio_periodo(
-        current_user.id, tipo, mese=mese_selezionato, anno=anno_selezionato)
-    delta = tot_entrate - tot_spese
-
-    saving_rate = 0
-    if tot_entrate > 0:
-        saving_rate = (delta / tot_entrate) * 100
 
     return render_template('analytics.html',
                            labels_spese=labels_spese,
@@ -1094,14 +1241,41 @@ def analytics(tipo):
                            labels_entrate=labels_entrate,
                            valori_entrate=valori_entrate,
                            tipo=tipo,
-                           titolo_pagina=titolo_pagina,
+                           titolo_pagina=titoli.get(tipo, "Statistiche"),
                            mese_selezionato=mese_selezionato,
                            anno_selezionato=anno_selezionato,
                            tot_entrate=tot_entrate,
                            tot_spese=tot_spese,
                            delta=delta,
-                           savings_rate=saving_rate
+                           savings_rate=saving_rate,
+                           # Passiamo i nuovi dati al template
+                           rendimento=rendimento,
+                           percentuale=percentuale,
+                           valore_attuale_eur=valore_attuale_eur,
+                           costo_storico_eur=costo_storico_eur,
+                           investimenti_fiat=investimenti_fiat
+
                            )
+
+
+@app.route('/add_asset', methods=['POST'])
+@login_required
+def add_asset():
+    nome = request.form.get('nome_asset')
+    investito = request.form.get('capitale_investito')
+    attuale = request.form.get('valore_attuale')
+
+    if nome and investito and attuale:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO assets_watch (user_id, nome_asset, capitale_investito, valore_attuale)
+            VALUES (?, ?, ?, ?)
+        ''', (current_user.id, nome, float(investito), float(attuale)))
+        conn.commit()
+        conn.close()
+
+    return redirect(url_for('analytics', tipo='EURO'))
 
 
 @app.route('/faq')
@@ -1114,6 +1288,113 @@ def faq():
 def catch_amber(extra):
     # Se Amber sputa la firma dopo l'URL, lo rimandiamo a quella pulita con la firma come parametro
     return redirect(url_for('backup_protetto', signature=extra))
+
+
+# Cartella temporanea per il caricamento
+UPLOAD_FOLDER = 'temp_uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+
+@app.route('/importa_csv', methods=['GET', 'POST'])
+@login_required
+def importa_csv():
+    if request.method == 'POST':
+        if 'file_csv' not in request.files:
+            flash("Nessun file selezionato", "danger")
+            return redirect(request.url)
+
+        file = request.files['file_csv']
+        if file.filename == '':
+            return redirect(request.url)
+
+        if file and file.filename.endswith('.csv'):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(filepath)
+
+            try:
+                # Chiamiamo il nostro "Cervello"
+                dati_anteprima = anteprima_importazione_csv(
+                    filepath, current_user.id)
+
+                # 🔥 SICUREZZA: Cancelliamo il file subito dopo la lettura
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    print(
+                        f"🗑️ File temporaneo {filename} eliminato per privacy.")
+
+                # Nota: passiamo 'transazioni' e 'tutte_categorie' al template
+                return render_template('importa_anteprima.html',
+                                       transazioni=dati_anteprima,
+                                       tutte_categorie=CATEGORIE)
+
+            except Exception as e:
+                flash(f"Errore durante l'analisi del file: {e}", "danger")
+                return redirect(request.url)
+
+    return render_template('importa_csv.html')
+
+
+@app.route('/conferma_importazione', methods=['POST'])
+@login_required
+def conferma_importazione():
+    try:
+        form_data = request.form
+        indici = [k.split('_')[1]
+                  for k in form_data.keys() if k.startswith('data_')]
+
+        count = 0
+        for i in indici:
+            data = form_data.get(f'data_{i}')
+            desc = form_data.get(f'desc_{i}')
+            importo = float(form_data.get(f'importo_{i}'))
+            categoria = form_data.get(f'cat_{i}')
+            sottocategoria = form_data.get(f'sub_{i}')
+
+            # Recuperiamo il valore BTC calcolato nell'anteprima
+            controvalore_btc = float(form_data.get(f'btc_{i}'))
+
+            # Calcoliamo il prezzo spot (valore di 1 BTC quel giorno)
+            valore_spot = abs(
+                importo / controvalore_btc) if controvalore_btc != 0 else 0
+
+            # 🔥 IL MOMENTO MAGICO: Chiamiamo il "Vigile Urbano"
+            # Questa funzione da sola farà:
+            # - Il salvataggio normale
+            # - OPPURE lo sdoppiamento se vede "Prelievo Contante"
+            registra_transazione_conto(
+                user_id=current_user.id,
+                data=data,
+                descrizione=desc,
+                categoria=categoria,
+                sottocategoria=sottocategoria,
+                importo=importo,
+                conto="BANCA",  # Origine sempre banca per il CSV
+                controvalore_btc=controvalore_btc,
+                valore_btc_eur=valore_spot
+            )
+
+            # 3. APPRENDIMENTO (Questo lo teniamo qui perché riguarda l'importazione)
+            if 'ricorda_mapping' in form_data:
+                parola_chiave = desc.split()[0].upper()
+                if len(parola_chiave) > 3:
+                    # Usiamo una connessione rapida per il mapping
+                    with sqlite3.connect('database.db') as conn:
+                        conn.execute('''
+                            INSERT OR REPLACE INTO mapping_categorie (parola_chiave, categoria, sottocategoria)
+                            VALUES (?, ?, ?)
+                        ''', (parola_chiave, categoria, sottocategoria))
+
+            count += 1
+
+        flash(
+            f"✅ Ottimo Den! Abbiamo importato {count} movimenti con successo.", "success")
+        return redirect(url_for('home'))
+
+    except Exception as e:
+        flash(f"❌ Errore durante il salvataggio: {e}", "danger")
+        return redirect(url_for('importa_csv'))
 
 
 # storage temporaneo in memoria

@@ -2,7 +2,7 @@
 content %}
 
     <h1>➕ Nuova transazione €</h1>
-    <form method="post" action="{{ url_for('nuova_transazione') }}">
+    <form method="post" action="{{ url_for('nuova_transazione') }}" onsubmit="document.querySelector('select[name=\'conto\']').disabled = false;">
       <label for="data">📅 Data (YYYY-MM-DD):</label>
       <input
         type="date"
@@ -66,7 +66,15 @@ content %}
       <select name="conto" id="conto" required>
         <option value="BANCA">🏦 Banca</option>
         <option value="CONTANTI">💶 Contanti</option>
+        <option value="INVESTIMENTI">📈 Investimenti</option>
+	      <option value="PENSIONE">👴 Pensione</option>
       </select>
+      <br /><br />
+      <div class="mb-3">
+    <label class="form-label" style="color: #888;">Note (opzionale)</label>
+    <textarea name="note" class="form-control" rows="2" 
+              style="background-color: #222; border-color: #444; color: #eee;">{{ transazione.note if transazione.note else '' }}</textarea>
+</div>
       <br /><br />
       <button type="submit">✅ Aggiungi</button>
     </form>
@@ -97,8 +105,33 @@ content %}
       opt.text = "-- Nessuna sottocategoria --";
       sottoSel.appendChild(opt);
     }
+    applicaBlindatura();
   }
 
   document.addEventListener("DOMContentLoaded", () => popolaSottocategoria());
+  // Funzione per blindare conti e segni
+function applicaBlindatura() {
+    const sottocategoria = document.getElementById("sottocategoria").value;
+    const contoSelect = document.querySelector("select[name='conto']");
+    const importoInput = document.querySelector("input[name='importo']");
+
+    // Reset degli stati: sblocchiamo tutto prima di applicare i nuovi vincoli
+    contoSelect.disabled = false;
+    
+    if (sottocategoria === "Versamento Pensione (Giroconto)") {
+        contoSelect.value = "PENSIONE";
+        contoSelect.disabled = true;
+    } else if (sottocategoria === "Acquisto Titoli/Fondi (Giroconto)") {
+        contoSelect.value = "INVESTIMENTI";
+        contoSelect.disabled = true;
+    } else if (sottocategoria === "Prelievo Contante") {
+        contoSelect.value = "CONTANTI";
+        contoSelect.disabled = true;
+    }
+}
+
+// Aggiungiamo l'ascoltatore al cambio sottocategoria
+document.getElementById("sottocategoria").addEventListener("change", applicaBlindatura);
+
 </script>
 {% endblock %}

@@ -3,8 +3,35 @@
 import csv
 import json
 import os
+import sqlite3
+import sys
 from db.db_utils import leggi_transazioni_da_db, leggi_transazioni_filtrate, leggi_transazioni_da_db_lightning, leggi_transazioni_filtrate_lightning, leggi_transazioni_filtrate_onchain, leggi_transazioni_da_db_onchain
 from datetime import datetime
+# Questo serve a Python per trovare 'config.py' anche se siamo dentro 'utils/'
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BASE_DIR not in sys.path:
+    sys.path.append(BASE_DIR)
+
+try:
+    from config import DB_PATH
+except ImportError:
+    # Se proprio non lo trova, puntiamo al file direttamente nella root
+    DB_PATH = os.path.join(BASE_DIR, 'database.db')
+
+BACKUP_DIR = os.path.join(BASE_DIR, 'backups')
+if not os.path.exists(BACKUP_DIR):
+    os.makedirs(BACKUP_DIR)
+
+
+def leggi_tabella_per_utente(nome_tabella, user_id):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute(
+        f"SELECT * FROM {nome_tabella} WHERE user_id = ?", (user_id,))
+    righe = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return righe
 
 
 def genera_stringa_backup_json(user_id=None):
@@ -13,15 +40,103 @@ def genera_stringa_backup_json(user_id=None):
         "metadata": {
             "user_id": user_id,
             "data_backup": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "versione_beesy": "1.0"
+            "versione_beesy": "1.1"
         },
         "onchain": leggi_transazioni_da_db_onchain(user_id),
         "lightning": leggi_transazioni_da_db_lightning(user_id),
         "euro": leggi_transazioni_da_db(user_id),
+        "assets_watch": leggi_tabella_per_utente("assets_watch", user_id),
+        "mapping_categorie": leggi_tabella_per_utente("mapping_categorie", user_id)
     }
 
     # Restituiamo direttamente la stringa JSON invece di salvare un file
     return json.dumps(dati, ensure_ascii=False, indent=4)
+
+
+def ripristina_database_completo(user_id, data):
+    # NOTA: Qui NON rimettere "from config import DB_PATH", usiamo quella sopra!
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    try:
+        # 1. PULIZIA TOTALE (Sempre per user_id!)
+        tabelle_da_pulire = ["transazioni", "transazioni_onchain",
+                             "transazioni_lightning", "assets_watch", "mapping_categorie"]
+        for tab in tabelle_da_pulire:
+            cursor.execute(f"DELETE FROM {tab} WHERE user_id = ?", (user_id,))
+
+        # Import EURO
+        if "euro" in data:
+            for t in data["euro"]:
+                cursor.execute('''
+                    INSERT INTO transazioni (data, descrizione, categoria, sottocategoria, importo, controvalore_btc, valore_btc_eur, conto, note, user_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (t['data'], t['descrizione'], t['categoria'], t['sottocategoria'], t['importo'], t.get('controvalore_btc'), t.get('valore_btc_eur'), t.get('conto', 'BANCA'), t.get('note', ''), user_id))
+
+        # Import ONCHAIN (Wallet dinamico)
+        if "onchain" in data:
+            for o in data["onchain"]:
+                cursor.execute('''
+                    INSERT INTO transazioni_onchain (data, wallet, descrizione, categoria, sottocategoria, transactionID, importo_btc, fee, controvalore_eur, valore_btc_eur, user_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (o['data'], o.get('wallet', 'Default'), o['descrizione'], o['categoria'], o['sottocategoria'], o.get('transactionID', ''), o['importo_btc'], o.get('fee', 0), o.get('controvalore_eur', 0), o.get('valore_btc_eur', 0), user_id))
+
+        # Import LIGHTNING (Wallet dinamico)
+        if "lightning" in data:
+            for l in data["lightning"]:
+                cursor.execute('''
+                    INSERT INTO transazioni_lightning (data, wallet, descrizione, categoria, sottocategoria, satoshi, controvalore_eur, valore_btc_eur, user_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (l['data'], l.get('wallet', 'Default'), l['descrizione'], l['categoria'], l['sottocategoria'], l['satoshi'], l.get('controvalore_eur', 0), l.get('valore_btc_eur', 0), user_id))
+        # Import ASSETS WATCH
+        # 3. IMPORT ASSETS WATCH
+        if "assets_watch" in data:
+            for a in data["assets_watch"]:
+                cursor.execute('''
+                    INSERT INTO assets_watch (
+                        user_id, 
+                        nome_asset, 
+                        tipo_asset, 
+                        capitale_investito, 
+                        valore_attuale, 
+                        data_aggiornamento
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    user_id,  # Usiamo l'ID dell'utente che sta facendo il ripristino
+                    a['nome_asset'],
+                    a['tipo_asset'],
+                    a['capitale_investito'],
+                    a['valore_attuale'],
+                    a['data_aggiornamento']
+                ))
+
+        # 4. IMPORT MAPPING CATEGORIE
+        if "mapping_categorie" in data:
+            for m in data["mapping_categorie"]:
+                cursor.execute('''
+                    INSERT INTO mapping_categorie (
+                        parola_chiave, 
+                        categoria, 
+                        sottocategoria, 
+                        user_id
+                    )
+                    VALUES (?, ?, ?, ?)
+                ''', (
+                    m['parola_chiave'],
+                    m['categoria'],
+                    m['sottocategoria'],
+                    user_id  # Usiamo l'ID dell'utente loggato
+                ))
+
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"ERRORE DURANTE IL RIPRISTINO: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
 
 
 def esporta_csv_onchain(nome_file='exports/transazioni_onchain.csv', user_id=None):
@@ -265,7 +380,7 @@ def esporta_csv(nome_file='exports/transazioni.csv', user_id=None):
     transazioni = leggi_transazioni_da_db(user_id)
     with open(nome_file, mode='w', newline='', encoding='utf-8') as file_csv:
         intestazioni = ['id', 'data', 'descrizione', 'categoria',
-                        'sottocategoria', 'importo', 'controvalore_btc', 'valore_btc_eur', 'conto']
+                        'sottocategoria', 'importo', 'controvalore_btc', 'valore_btc_eur', 'conto', 'note']
         writer = csv.DictWriter(file_csv, fieldnames=intestazioni)
         writer.writeheader()
 
@@ -292,7 +407,8 @@ def esporta_csv(nome_file='exports/transazioni.csv', user_id=None):
 
                 'controvalore_btc': f'{controvalore_btc:.8f}' if controvalore_btc is not None else '',
                 'valore_btc_eur': f'{valore_btc_eur:.2f}' if valore_btc_eur is not None else '',
-                'conto': transazione["conto"]
+                'conto': transazione["conto"],
+                'note': transazione.get("note", '')
             })
 
             # Non serve più float(), importo è già un FLOAT
@@ -308,7 +424,8 @@ def esporta_csv(nome_file='exports/transazioni.csv', user_id=None):
             'importo': f'{saldo:.2f}',
             'controvalore_btc': '',
             'valore_btc_eur': '',
-            'conto': ''
+            'conto': '',
+            'note': ''
         })
 
     print(f"\n✅ File '{nome_file}' esportato correttamente con il saldo.")
@@ -329,12 +446,12 @@ def esporta_csv_per_mese(mese, user_id=None):
         cartella_export, f'transazioni_{mese}.csv')
     with open(nome_file, mode='w', newline='', encoding='utf-8') as file_csv:
         intestazioni = ['id', 'data', 'descrizione', 'categoria',
-                        'sottocategoria', 'importo', 'controvalore_btc', 'valore_btc_eur']
+                        'sottocategoria', 'importo', 'controvalore_btc', 'valore_btc_eur', 'conto', 'note']
         writer = csv.DictWriter(file_csv, fieldnames=intestazioni)
         writer.writeheader()
 
         saldo = 0.0
-        for id_db, data, descrizione, categoria, sottocategoia, importo, controvalore_btc, valore_btc_eur in transazioni:
+        for id_db, data, descrizione, categoria, sottocategoia, importo, controvalore_btc, valore_btc_eur, conto, note in transazioni:
             writer.writerow({
                 'id': id_db,
                 'data': data,
@@ -343,7 +460,9 @@ def esporta_csv_per_mese(mese, user_id=None):
                 'sottocategoria': sottocategoia,
                 'importo': f'{importo:.2f}',
                 'controvalore_btc': f'{controvalore_btc:.8f}' if controvalore_btc else '',
-                'valore_btc_eur': f'{valore_btc_eur:.2f}' if valore_btc_eur else ''
+                'valore_btc_eur': f'{valore_btc_eur:.2f}' if valore_btc_eur else '',
+                'conto': conto,
+                'note': note
             })
             saldo += importo
 
@@ -355,7 +474,9 @@ def esporta_csv_per_mese(mese, user_id=None):
             'sottocategoria': '',
             'importo': f'{saldo:.2f}',
             'controvalore_btc': '',
-            'valore_btc_eur': ''
+            'valore_btc_eur': '',
+            'conto': '',
+            'note': ''
         })
 
     print(f"\n✅ File '{nome_file}' esportato correttamente con il saldo.")

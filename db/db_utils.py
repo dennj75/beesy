@@ -1,9 +1,22 @@
-# db_utils.py
+# db/db_utils.py
 
 import sqlite3
 import os
 
 DB_PATH = 'database.db'
+
+COLONNE_TRANSAZIONI = [
+    "id", "data", "descrizione", "categoria", "sottocategoria",
+    "importo", "controvalore_btc", "valore_btc_eur", "conto", "user_id", "note"
+]
+
+
+def get_db_connection():
+    # 'database.db' deve essere il nome esatto del tuo file
+    db_path = 'database.db'
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 def verifica_ownership_transazione(id_transazione, user_id, tabella):
@@ -23,10 +36,11 @@ def verifica_ownership_transazione(id_transazione, user_id, tabella):
 
 
 def inizializza_db():
-    # Crea il DB se non esiste e crea le tabelle mancanti.
-    # ATTENZIONE: non cancellare automaticamente il DB esistente per evitare perdita dati.
     conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA foreign_keys = ON;")
     cursor = conn.cursor()
+
+    # 1. Creazione tabella con TUTTE le colonne aggiornate
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS transazioni (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,21 +51,27 @@ def inizializza_db():
             importo REAL NOT NULL,
             controvalore_btc REAL,
             valore_btc_eur REAL,
-            conto TEXT DEFAULT 'BANCA'
+            conto TEXT DEFAULT 'BANCA',
+            user_id INTEGER DEFAULT 1,
+            note TEXT DEFAULT '',  -- <--- AGGIUNTA QUI!
+            FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
 
-    try:
-        cursor.execute(
-            'ALTER TABLE transazioni ADD COLUMN user_id INTEGER DEFAULT 1')
-    except sqlite3.OperationalError:
-        pass
+    # 2. "Paracadute" per i database vecchi
+    # Se il database esiste già ma mancano le colonne, le aggiungiamo qui
+    colonne_extra = [
+        ('user_id', 'INTEGER DEFAULT 1'),
+        ('conto', "TEXT DEFAULT 'BANCA'"),
+        ('note', "TEXT DEFAULT ''")
+    ]
 
-    try:
-        cursor.execute(
-            "ALTER TABLE transazioni ADD COLUMN conto TEXT DEFAULT 'BANCA'")
-    except sqlite3.OperationalError:
-        pass
+    for nome_col, tipo in colonne_extra:
+        try:
+            cursor.execute(
+                f'ALTER TABLE transazioni ADD COLUMN {nome_col} {tipo}')
+        except sqlite3.OperationalError:
+            pass  # La colonna esiste già, tutto ok!
 
     # Tabella per Lightning Network
     cursor.execute('''
@@ -64,7 +84,9 @@ def inizializza_db():
             sottocategoria TEXT,
             satoshi INTEGER,
             controvalore_eur REAL NOT NULL,
-            valore_btc_eur REAL NOT NULL
+            valore_btc_eur REAL NOT NULL,
+            user_id INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
     try:
@@ -86,7 +108,9 @@ def inizializza_db():
             importo_btc REAL NOT NULL,
             fee REAL NOT NULL,
             controvalore_eur REAL NOT NULL,
-            valore_btc_eur REAL NOT NULL
+            valore_btc_eur REAL NOT NULL,
+            user_id INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users (id)
         )  
     ''')
     try:
@@ -94,50 +118,62 @@ def inizializza_db():
             'ALTER TABLE transazioni_onchain ADD COLUMN user_id INTEGER DEFAULT 1')
     except sqlite3.OperationalError:
         pass
-    conn.commit()
-    conn.close()
 
-    # Tabella per utenti (auth)
-    conn_users = sqlite3.connect(DB_PATH)
-
-    cursor_users = conn_users.cursor()
-    cursor_users.execute('''
+    # Tabella per utenti (auth) - USO LO STESSO CURSORE DI PRIMA
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             email TEXT UNIQUE,
             password_hash TEXT NOT NULL
+            FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
-    try:
-        cursor_users.execute('ALTER TABLE users ADD COLUMN npub TEXT')
-    except sqlite3.OperationalError:
-        pass  # La colonna esiste già
 
-    # 1. Colonna per la Master Key criptata
-    try:
-        cursor_users.execute(
-            'ALTER TABLE users ADD COLUMN encrypted_master_key TEXT')
-    except sqlite3.OperationalError:
-        pass  # La colonna esiste già
+    # Aggiunta colonne extra per utenti
+    colonne_users = [
+        ('npub', 'TEXT'),
+        ('encrypted_master_key', 'TEXT'),
+        ('pubkey', 'TEXT'),
+        ('auth_type', "TEXT DEFAULT 'local'")
+    ]
 
-    # 2. Colonna per l'identità tecnica (Hex)
-    try:
-        cursor_users.execute('ALTER TABLE users ADD COLUMN pubkey TEXT')
-        print("✅ Colonna pubkey aggiunta")
-    except sqlite3.OperationalError:
-        pass  # La colonna esiste già
+    for nome_col, tipo in colonne_users:
+        try:
+            cursor.execute(f'ALTER TABLE users ADD COLUMN {nome_col} {tipo}')
+        except sqlite3.OperationalError:
+            pass
 
-    # Colonna per capire il tipo di login ('local' o 'nostr')
-    try:
-        cursor_users.execute(
-            "ALTER TABLE users ADD COLUMN auth_type TEXT DEFAULT 'local'")
-        print("✅ Colonna auth_type aggiunta")
-    except sqlite3.OperationalError:
-        pass  # La colonna esiste già
+    # Tabella per tenere d'occhio gli asset (es. fondi pensione, azioni, ETF)
+    cursor.execute('''        
+        CREATE TABLE IF NOT EXISTS assets_watch(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            nome_asset TEXT NOT NULL,       -- Es: "Fondo Pensione", "Poste Italiane"
+            tipo_asset TEXT DEFAULT 'FIAT', -- Per distinguerli dalle crypto
+            capitale_investito REAL,        -- Quanto hai messo il 31/03
+            valore_attuale REAL,            -- Il valore aggiornato oggi
+            data_aggiornamento DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    ''')
 
-    conn_users.commit()
-    conn_users.close()
+    # Tabella per il "cervello" delle categorie
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS mapping_categorie (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            parola_chiave TEXT NOT NULL,
+            categoria TEXT,
+            sottocategoria TEXT,
+            user_id INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )        
+    ''')
+
+    # ALLA FINE DI TUTTO: Un solo commit e una sola chiusura
+    conn.commit()
+    conn.close()
+    print("🐝 Beesy: Database inizializzato e pronto!")
 
 
 def salva_su_db_onchain(user_id, data, wallet, descrizione, categoria, sottocategoria, transactionID, importo_btc, fee, controvalore_eur, valore_btc_eur):
@@ -272,20 +308,52 @@ def leggi_transazioni_filtrate_onchain(filtro_data, user_id):
 # --- SPOSTA QUESTE NEI TUOI UTILS ---
 
 def get_transazioni_con_saldo(user_id):
-    """Recupera transazioni Fiat e calcola i saldi (Banca, Contanti, Totale, BTC)."""
-    transazioni = leggi_transazioni_da_db(user_id)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
 
-    saldo_banca = sum(t['importo']
-                      for t in transazioni if t['conto'].upper() == 'BANCA')
-    saldo_contanti = sum(t['importo']
-                         for t in transazioni if t['conto'].upper() == 'CONTANTI')
-    saldo_totale = saldo_banca + saldo_contanti
+    # Leggiamo TUTTE le transazioni EUR (Banca, Contanti, Investimenti, Pensione)
+    # Assicurati che la query non escluda i nuovi conti!
+    cursor.execute("""
+        SELECT * FROM transazioni 
+        WHERE user_id = ? 
+        AND UPPER(conto) IN ('BANCA', 'CONTANTI', 'INVESTIMENTI', 'PENSIONE')
+        ORDER BY data DESC, id DESC
+    """, (user_id,))
 
-    # Calcola il controvalore BTC accumulato dalle spese EUR
-    saldo_btc_da_eur = sum(float(t["controvalore_btc"]) for t in transazioni
-                           if t.get("controvalore_btc") is not None)
+    rows = cursor.fetchall()
+    transazioni = [dict(row) for row in rows]
 
-    return transazioni, saldo_totale, saldo_banca, saldo_contanti, saldo_btc_da_eur
+    # Inizializziamo i saldi
+    banca = 0.0
+    contanti = 0.0
+    saldo_investimenti = 0.0
+    saldo_pensione = 0.0
+    saldo_btc_da_eur = 0.0
+
+    for t in transazioni:
+        importo = t['importo'] or 0.0
+        conto = t['conto'].upper() if t['conto'] else ""
+
+        # Sommiamo nei cassetti giusti
+        if conto == 'BANCA':
+            banca += importo
+        elif conto == 'CONTANTI':
+            contanti += importo
+        elif conto == 'INVESTIMENTI':
+            saldo_investimenti += importo
+        elif conto == 'PENSIONE':
+            saldo_pensione += importo
+
+        if t.get('controvalore_btc'):
+            saldo_btc_da_eur += float(t['controvalore_btc'])
+
+    saldo_totale_eur = banca + contanti + \
+        saldo_investimenti + saldo_pensione
+
+    conn.close()
+
+    return transazioni, banca, contanti, saldo_investimenti, saldo_pensione, saldo_totale_eur, saldo_btc_da_eur
 
 
 def get_transazioni_con_saldo_lightning(user_id):
@@ -412,7 +480,7 @@ def leggi_transazioni_filtrate_lightning(filtro_data, user_id):
 
 
 def salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
-                importo, controvalore_btc, valore_btc_eur, conto):
+                importo, controvalore_btc, valore_btc_eur, conto='BANCA', note=''):
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -427,9 +495,11 @@ def salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
             importo,
             controvalore_btc,
             valore_btc_eur,
-            conto
+            conto,
+            note
+                
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         user_id,
         data,
@@ -439,7 +509,8 @@ def salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
         float(importo),
         controvalore_btc,
         valore_btc_eur,
-        conto
+        conto,
+        note
     ))
 
     conn.commit()
@@ -452,7 +523,7 @@ def leggi_transazioni_da_db(user_id):
     cursor.execute(
         '''SELECT 
             id, data, descrizione, categoria, sottocategoria, importo,
-            controvalore_btc, valore_btc_eur, conto
+            controvalore_btc, valore_btc_eur, conto, note
         FROM transazioni 
         WHERE user_id = ? 
         ORDER BY data ASC''',
@@ -475,7 +546,9 @@ def leggi_transazioni_da_db(user_id):
             "importo": importo,  # <-- Sintassi corretta Chiave: Valore
             "controvalore_btc": controvalore_btc,
             "valore_btc_eur": valore_btc_eur,
-            "conto": r[8]
+            "conto": r[8],
+            "note": r[9]
+
         })
     return transazioni
 
@@ -494,7 +567,7 @@ def elimina_transazione_da_db(id_transazione, user_id):
 
 def modifica_transazione_db(id_transazione, campo, nuovo_valore, user_id):
     campi_consentiti = {'data', 'descrizione', 'categoria', 'sottocategoria',
-                        'importo', 'controvalore_btc', 'valore_btc_eur', 'conto'}
+                        'importo', 'controvalore_btc', 'valore_btc_eur', 'conto', 'note'}
     if campo not in campi_consentiti:
         raise ValueError("Campo non valido")
     conn = sqlite3.connect(DB_PATH)
@@ -523,7 +596,7 @@ def leggi_transazioni_filtrate(filtro_data, user_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     query = '''
-        SELECT id, data, descrizione, categoria, sottocategoria, importo, controvalore_btc, valore_btc_eur
+        SELECT id, data, descrizione, categoria, sottocategoria, importo, controvalore_btc, valore_btc_eur, conto, note 
         FROM transazioni
         WHERE user_id = ? AND data LIKE ?
         ORDER BY data ASC
@@ -689,10 +762,23 @@ def ripristina_database_completo(user_id, dati_json):
 
         for t in transazioni_euro:
             cursor.execute('''
-                INSERT INTO transazioni (data, descrizione, categoria, sottocategoria, importo, controvalore_btc, valore_btc_eur, conto, user_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (t['data'], t['descrizione'], t['categoria'], t['sottocategoria'], t['importo'], t.get('controvalore_btc', 0), t.get('valore_btc_eur', 0), t.get('conto', 'BANCA'), user_id))
-
+                INSERT INTO transazioni (
+                    data, descrizione, categoria, sottocategoria, 
+                    importo, controvalore_btc, valore_btc_eur, conto, note, user_id
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                t['data'],
+                t['descrizione'],
+                t['categoria'],
+                t['sottocategoria'],
+                t['importo'],
+                t.get('controvalore_btc', 0),
+                t.get('valore_btc_eur', 0),
+                t.get('conto', 'BANCA'),
+                t.get('note', ''),  # <--- Recupera la nota o mette vuoto
+                user_id
+            ))
         # 3. Inserimento Lightning
         transazioni_ln = dati_json.get('lightning', [])
         print(
@@ -867,3 +953,48 @@ def get_bilancio_periodo(user_id, tipo_conto, mese=None, anno=None):
 
     # Restituiamo i valori assoluti per facilità di calcolo
     return abs(totale_entrate), abs(totale_spese)
+
+
+def crea_tabella_prezzi_btc():
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS prezzi_btc (
+            data TEXT PRIMARY KEY,
+            prezzo_eur REAL NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+    print("✅ Tabella prezzi_btc RE-INIZIALIZZATA con successo.")
+
+
+def crea_tabella_mapping():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS mapping_categorie (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            parola_chiave TEXT NOT NULL UNIQUE,
+            categoria TEXT NOT NULL,
+            sottocategoria TEXT NOT NULL
+        )
+    ''')
+    # Aggiungiamo qualche esempio iniziale per testare
+    esempi = [
+        ('VODAFONE', 'Spese Personali', 'Abbonamenti (Netflix, Spotify, ecc)'),
+        ('SEVEN PUB', 'Alimentari', 'Ristorante - Bar'),
+        ('STIPENDIO', 'Entrate', 'Stipendio'),
+        ('ENI', 'Trasporti', 'Carburante'),
+        ('ALI', 'Alimentari', 'Supermercato')
+    ]
+    cursor.executemany('''
+        INSERT OR IGNORE INTO mapping_categorie (parola_chiave, categoria, sottocategoria)
+        VALUES (?, ?, ?)
+    ''', esempi)
+
+    conn.commit()
+    conn.close()
+    print("🧠 Tabella Mapping pronta con i primi esempi!")

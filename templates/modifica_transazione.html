@@ -2,7 +2,9 @@
 content %}
   <h1>✏️ Modifica Transazione</h1>
 
-  <form method="post" action="{{ url_for('modifica_transazione_eur', id_transazione=transazione['id']) }}">
+  <form method="post" 
+      action="{{ url_for('modifica_transazione_eur', id_transazione=transazione['id']) }}" 
+      onsubmit="document.querySelector('select[name=\'conto\']').disabled = false;">
     <label>Data:</label>
     <input type="date" name="data" value="{{ transazione['data'] }}" required><br><br>
 
@@ -25,43 +27,72 @@ content %}
 
     <label>Conto:</label>
     <select name="conto" required>
-      <option value="BANCA" {% if transazione['conto'] == "BANCA" %}selected{% endif %}>🏦 BANCA</option>
-      <option value="CONTANTI" {% if transazione['conto'] == "CONTANTI" %}selected{% endif %}>💶 CONTANTI</option>
-    </select><br><br>
+      <option value="BANCA" {% if transazione['conto'] == "BANCA" %}selected{% endif %}>🏦 Banca</option>
+      <option value="CONTANTI" {% if transazione['conto'] == "CONTANTI" %}selected{% endif %}>💶 Contanti</option>
+      <option value="INVESTIMENTI" {% if transazione['conto'] == "INVESTIMENTI" %}selected{% endif %}>📈 Investimenti</option>
+      <option value="PENSIONE" {% if transazione['conto'] == "PENSIONE" %}selected{% endif %}>👴 Pensione</option>
 
+    </select><br><br>
+    <div class="mb-3">
+    <label class="form-label" style="color: #888;">Note (opzionale)</label>
+    <textarea name="note" class="form-control" rows="2" 
+              style="background-color: #222; border-color: #444; color: #eee;">{{ transazione.note if transazione.note else '' }}</textarea>
+</div>
     <button type="submit">✅ Salva Modifiche</button>
   </form>
 
-  <p><a href="{{ url_for('transazioni') }}">⬅️ Torna alle transazioni</a></p>
-
-  <script>
+<script>
     const categorie = {{ categorie_json | safe }};
     const categoriaAttuale = "{{ transazione['categoria'] }}";
     const sottocategoriaAttuale = "{{ transazione['sottocategoria'] }}";
 
     function popolaSottocategoria() {
-      const categoriaSel = document.getElementById("categoria").value;
-      const sottoSel = document.getElementById("sottocategoria");
-      sottoSel.innerHTML = "";
+        const categoriaSel = document.getElementById("categoria").value;
+        const sottoSel = document.getElementById("sottocategoria");
+        sottoSel.innerHTML = "";
 
-      if (categorie[categoriaSel]) {
-        categorie[categoriaSel].forEach(sotto => {
-          const opt = document.createElement("option");
-          opt.value = sotto;
-          opt.text = sotto;
-          if (sotto === sottocategoriaAttuale) opt.selected = true;
-          sottoSel.appendChild(opt);
-        });
-      } else {
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.text = "-- Nessuna sottocategoria --";
-        sottoSel.appendChild(opt);
-      }
+        if (categorie[categoriaSel]) {
+            categorie[categoriaSel].forEach(sotto => {
+                const opt = document.createElement("option");
+                opt.value = sotto;
+                opt.text = sotto;
+                if (sotto === sottocategoriaAttuale) opt.selected = true;
+                sottoSel.appendChild(opt);
+            });
+        } else {
+            const opt = document.createElement("option");
+            opt.value = "";
+            opt.text = "-- Nessuna sottocategoria --";
+            sottoSel.appendChild(opt);
+        }
+        // FONDAMENTALE: chiama la blindatura qui!
+        applicaBlindatura();
+    }
+
+    function applicaBlindatura() {
+        const sottocategoria = document.getElementById("sottocategoria").value;
+        const contoSelect = document.querySelector("select[name='conto']");
+        
+        if (!contoSelect) return; // Sicurezza se il campo non esiste
+
+        contoSelect.disabled = false;
+        
+        if (sottocategoria === "Versamento Pensione (Giroconto)") {
+            contoSelect.value = "PENSIONE";
+            contoSelect.disabled = true;
+        } else if (sottocategoria === "Acquisto Titoli/Fondi (Giroconto)") {
+            contoSelect.value = "INVESTIMENTI";
+            contoSelect.disabled = true;
+        } else if (sottocategoria === "Prelievo Contante") {
+            contoSelect.value = "CONTANTI";
+            contoSelect.disabled = true;
+        }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      popolaSottocategoria();
+        popolaSottocategoria();
+        // L'ascoltatore va messo qui
+        document.getElementById("sottocategoria").addEventListener("change", applicaBlindatura);
     });
-  </script>
+</script>
   {% endblock %}

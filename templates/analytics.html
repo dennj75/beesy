@@ -279,4 +279,68 @@ block content %}
       {% endif %}
   });
 </script>
-{% endblock %}
+<h2 class="text-center mb-4" style="color: #3498db">
+  Performance Investimenti
+  </h2>
+  <div  
+    class="card shadow p-4 mb-5"
+    style="background-color: #1a1a1a; border: 1px solid #333"
+  >
+    <div class="table-responsive">
+      <table class="table table-dark table-hover">
+        <thead>
+          <tr>
+            <th>Asset</th>
+            <th>Costo Storico (Carico)</th>
+            <th>Valore Attuale</th>
+            <th>Rendimento</th>
+          </tr>
+        </thead>
+        <tbody>
+  
+  {% if tipo == 'EURO' %}
+  <div class="card shadow p-4 mb-4" style="background-color: #1a1a1a; border: 1px solid #3498db">
+    <h4 style="color: #3498db">➕ Aggiungi Nuovo Investimento</h4>
+    <form action="{{ url_for('add_asset') }}" method="POST" class="row g-3">
+        <div class="col-md-4">
+            <input type="text" name="nome_asset" class="form-control bg-dark text-white" placeholder="Nome (es. Buono Postale)" required>
+        </div>
+        <div class="col-md-3">
+            <input type="number" step="0.01" name="capitale_investito" class="form-control bg-dark text-white" placeholder="Capitale Investito €" required>
+        </div>
+        <div class="col-md-3">
+            <input type="number" step="0.01" name="valore_attuale" class="form-control bg-dark text-white" placeholder="Valore Attuale €" required>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Salva</button>
+        </div>
+    </form>
+</div>
+    {% for asset in investimenti_fiat %}
+    <tr>
+      <td>{{ asset['nome_asset'] }}</td>
+      <td>{{ "%.2f"|format(asset['capitale_investito']) }} €</td>
+      <td>{{ "%.2f"|format(asset['valore_attuale']) }} €</td>
+      {% set rend = asset['valore_attuale'] - asset['capitale_investito'] %}
+      {% set perc = (rend / asset['capitale_investito'] * 100) if asset['capitale_investito'] > 0 else 0 %}
+      <td style="color: {% if rend >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}">
+        {{ "%+.2f"|format(rend) }} € ({{ "%+.1f"|format(perc) }}%)
+      </td>
+    </tr>
+    {% endfor %}
+  {% else %}
+    <tr>
+      <td>{{ 'Bitcoin On-chain' if tipo == 'ONCHAIN' else 'Lightning (Sats)' }}</td>
+      <td>{{ "%.2f"|format(costo_storico_eur) }} €</td>
+      <td>{{ "%.2f"|format(valore_attuale_eur) }} €</td>
+      <td style="color: {% if rendimento >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}">
+        {{ "%+.2f"|format(rendimento) }} € ({{ "%+.1f"|format(percentuale) }}%)
+      </td>
+    </tr>
+  {% endif %}
+</tbody>
+      </table>
+    </div>
+  </div>
+  {% endblock %}
+</h2>

@@ -4,7 +4,51 @@ content %}
 <p class="description">
   Qui puoi monitorare le tue entrate e uscite finanziarie.
 </p>
+<div
+  class="card shadow-sm mb-4"
+  style="
+    border-left: 5px solid #2ecc71;
+    background-color: #1e1e1e !important; /* Colore scuro per card */
+    color: #ecf0f1 !important; /* Testo chiaro per card */
+    margin-top: 20px;
+  "
+>
+  <div class="card-body">
+    <h5 class="text-uppercase text-muted small fw-bold mb-3">
+      Riepilogo Patrimonio Totale (Fiat + Crypto)
+    </h5>
 
+    <div class="row align-items-center text-center text-md-start">
+      <div class="col-md-4 border-end border-dark">
+        <span class="text-muted">Liquidità Spendibile:</span>
+        <h3 class="fw-bold text-white mb-1">
+          {{ "%.2f"|format(liquidita_totale) }} €
+        </h3>
+        <small class="text-muted">
+          🏦 {{ "%.2f"|format(banca) }}€ | 💼 {{ "%.2f"|format(contanti) }}€
+        </small>
+      </div>
+
+      <div class="col-md-4 border-end border-dark">
+        <span class="text-muted">Risparmi & Futuro:</span>
+        <h3 class="fw-bold text-info mb-1">
+          {{ "%.2f"|format(patrimonio_investito) }} €
+        </h3>
+        <small class="text-muted">
+          📈 Titoli: {{ "%.2f"|format(s_inv) }}€ | 👴 Pensione: {{
+          "%.2f"|format(s_pen) }}€
+        </small>
+      </div>
+
+      <div class="col-md-4">
+        <span class="text-muted">Net Worth Totale (EUR):</span>
+        <h2 class="fw-bold text-success">
+          {{ "%.2f"|format(net_worth_totale) }} €
+        </h2>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="balances-grid">
   <div class="balance-card onchain-card">
     <a href="{{ url_for('transazioni_onchain') }}">
@@ -17,7 +61,12 @@ content %}
       style="color: #f39c12; text-decoration: none"
       >📊 Analisi ₿</a
     >
-    <p class="placeholder-detail">Placeholder</p>
+    <p
+      style="font-size: 0.9rem; margin-top: 10px; color: {% if rendimento_onchain >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}"
+    >
+      📈 Rendimento: {{ "%+.2f"|format(rendimento_onchain) }}€ ({{
+      "%+.1f"|format(percentuale_onchain) }}%)
+    </p>
     <hr class="separator" />
     <p class="saldo-principale">
       💰 Saldo {{ "%.8f"|format(saldo_totale_btc) }} BTC
@@ -36,7 +85,12 @@ content %}
       style="color: #f39c12; text-decoration: none"
       >📊 Analisi ⚡</a
     >
-    <p class="placeholder-detail">Placeholder</p>
+    <p
+      style="font-size: 0.9rem; margin-top: 10px; color: {% if rendimento_lightning >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}"
+    >
+      📈 Rendimento: {{ "%+.2f"|format(rendimento_lightning) }}€ ({{
+      "%+.1f"|format(percentuale_lightning) }}%)
+    </p>
     <hr class="separator" />
     <p class="saldo-principale">
       💰 Saldo {{ "{:,}".format(saldo_totale_satoshi|int).replace(",",".") }}
@@ -51,10 +105,10 @@ content %}
         📄 TRACKER €
       </button>
     </a>
-    <p class="saldo-detail">🏦 Banca: {{ "%.2f"|format(saldo_banca) }} €</p>
-    <p class="saldo-detail">
-      💼 Contanti: {{ "%.2f"|format(saldo_contanti) }} €
-    </p>
+    <p class="saldo-detail">🏦 Banca: {{ "%.2f"|format(banca) }} €</p>
+    <p class="saldo-detail">💼 Contanti: {{ "%.2f"|format(contanti) }} €</p>
+    <p class="saldo-detail">📈 Investimenti: {{ "%.2f"|format(s_inv) }} €</p>
+    <p class="saldo-detail">👴 Pensione: {{ "%.2f"|format(s_pen) }} €</p>
     <a
       href="{{ url_for('analytics', tipo='EURO') }}"
       style="color: #f39c12; text-decoration: none"
@@ -65,6 +119,15 @@ content %}
       💰 Saldo {{ "%.2f"|format(saldo_totale_eur) }} €
     </p>
     <p class="saldo-secondario">{{ "%.8f"|format(saldo_btc_da_eur) }} BTC</p>
+    <div style="margin-top: 10px">
+      <a
+        href="{{ url_for('importa_csv') }}"
+        class="btn btn-sm btn-outline-warning"
+        style="text-decoration: none; font-size: 0.8rem"
+      >
+        📥 Importa CSV Banca
+      </a>
+    </div>
   </div>
 </div>
 <div class="dropdown">
@@ -74,6 +137,10 @@ content %}
 
     <a href="/nuova_transazione_lightning">Nuova transazione Lightning (⚡️)</a>
     <a href="/nuova_transazione">Nuova transazione Euro (€)</a>
+    <hr style="margin: 5px 0; border-color: #444" />
+    <a href="{{ url_for('importa_csv') }}" style="color: #ffc107"
+      >📥 Importa file CSV (Banca)</a
+    >
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

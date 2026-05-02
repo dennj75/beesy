@@ -1,0 +1,112 @@
+{% extends "base.html" %}{% block title %}Importa Anteprima - ₿eesy{% endblock%}
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2 class="text-warning mb-4">🔍 Anteprima Importazione</h2>
+    
+    <form action="{{ url_for('conferma_importazione') }}" method="post">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle border-secondary">
+                <thead class="table-warning text-dark">
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrizione</th>
+                        <th>Importo (€)</th>
+                        <th>Controvalore BTC</th>
+                        <th>Categoria</th>
+                        <th>Sottocategoria</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transazioni %}
+                    <tr>
+                        <td>{{ t.data }}<input type="hidden" name="data_{{ loop.index }}" value="{{ t.data }}"></td>
+                        <td class="small">{{ t.descrizione }}<input type="hidden" name="desc_{{ loop.index }}" value="{{ t.descrizione }}"></td>
+                        <td class="{{ 'text-success' if t.importo > 0 else 'text-danger' }} fw-bold">
+                            {{ t.importo }} €
+                            <input type="hidden" name="importo_{{ loop.index }}" value="{{ t.importo }}">
+                        </td>
+                        <td class="text-info small">{{ t.btc_equiv }}<input type="hidden" name="btc_{{ loop.index }}" value="{{ t.btc_equiv }}"></td>
+                        
+                        <td>
+    <select name="cat_{{ loop.index }}" 
+            id="cat_{{ loop.index }}" 
+            onchange="aggiornaSottocategorie('{{ loop.index }}')" 
+            class="form-select form-select-sm bg-dark text-white border-secondary">
+        {% for cat in tutte_categorie.keys() %}
+            <option value="{{ cat }}" {{ 'selected' if cat == t.categoria }}>{{ cat }}</option>
+        {% endfor %}
+    </select>
+</td>
+
+<td>
+    <select name="sub_{{ loop.index }}" 
+            id="sub_{{ loop.index }}" 
+            class="form-select form-select-sm bg-dark text-white border-secondary">
+        <option value="{{ t.sottocategoria }}">{{ t.sottocategoria }}</option>
+    </select>
+</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="card bg-dark border-warning p-3 mt-3">
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="ricorda_mapping" id="ricorda_mapping" checked>
+                <label class="form-check-label text-white" for="ricorda_mapping">
+                    🧠 Ricorda queste associazioni per i prossimi caricamenti
+                </label>
+            </div>
+            <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold">
+                💾 Conferma e Salva tutto nel Database
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Passiamo il dizionario delle categorie da Python a JS
+    const categorieMapping = {{ tutte_categorie | tojson | safe }};
+
+    function aggiornaSottocategorie(idRiga) {
+        const catSel = document.getElementById("cat_" + idRiga);
+        const subSel = document.getElementById("sub_" + idRiga);
+        const categoriaSelezionata = catSel.value;
+        
+        // Salviamo la sottocategoria attuale (se presente) per non perderla al primo caricamento
+        const sottocategoriaPrecedente = subSel.value;
+
+        // Puliamo il menu delle sottocategorie
+        subSel.innerHTML = "";
+
+        if (categorieMapping[categoriaSelezionata]) {
+            categorieMapping[categoriaSelezionata].forEach(sotto => {
+                const opt = document.createElement("option");
+                opt.value = sotto;
+                opt.text = sotto;
+                // Se la sottocategoria coincide con quella che Beesy aveva indovinato, selezionala
+                if (sotto === sottocategoriaPrecedente) {
+                    opt.selected = true;
+                }
+                subSel.appendChild(opt);
+            });
+        } else {
+            const opt = document.createElement("option");
+            opt.value = "Altro";
+            opt.text = "Altro";
+            subSel.appendChild(opt);
+        }
+    }
+
+    // Al caricamento della pagina, eseguiamo la funzione per ogni riga
+    document.addEventListener("DOMContentLoaded", function() {
+        // Cerchiamo tutti i select che iniziano per "cat_"
+        const tuttiSeleziona = document.querySelectorAll('select[id^="cat_"]');
+        tuttiSeleziona.forEach(select => {
+            const idRiga = select.id.split('_')[1];
+            aggiornaSottocategorie(idRiga);
+        });
+    });
+</script>
+{% endblock %}

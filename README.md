@@ -18,54 +18,40 @@ This project is an **EXPERIMENTAL EDUCATIONAL LABORATORY**.
 
 ---
 
-## 🌟 Unique Features
-
-- 📱 **Nostr Mobile Auth:** Experimental login via **Amber (Nostr Signer)** on smartphones using the `intent` protocol.
-- 🖥 **Nostr PC Login** - Decentralized authentication using NIP-07 (ALBY, nos2x extension):
-    - Sign in with your existing Nostr identity.
-    - Schnorr signature verification (BIP340).
-    - No password needed.
-- ⚡ **Lightning Ready:** Separate management for on-chain and off-chain transactions with Satoshi precision.
-- 💱 **Historical Conversion:** Automatic BTC/EUR price retrieval via CoinGecko API.
-- 🔐 **Self-Sovereign:** No central server. Install it on your PC, Raspberry Pi, or Umbrel node.
-- 📊 **Advanced Analytics:** Real-time visual dashboards for spending and income habits powered by **Chart.js**.
-- 📉 **Savings Rate Tracker:** Automatic calculation of your financial efficiency (Saving vs Spending) to help you reach **FIRE** or economic independence.
-
-## 🛡️ Military-Grade Backup System:
-
-- Encrypted Exports: Export your entire history into a .json.enc file.
-
-- AES-256-GCM: Traditional accounts use high-standard encryption derived from your password.
-
-- Self-Sovereign Recovery: Restore your data on any device (PC or Mobile) simply by uploading your backup file.
-
-### 🔧 Plug & Play Auto-Configuration
-
-- No SQL knowledge required! <strong style="color: #f39c12">₿eesy</strong> features a **Plug & Play** system:
-  On the first run, the application automatically detects if the database is missing and creates it for you, including all necessary tables for BTC On-chain, Lightning, and EUR transactions.
+## 🌟 Key Features
+- 📊 **Advanced Analytics [NEW - APRIL 2026]:** Integrated professional dashboards powered by Chart.js. Track your income, expenses, and savings efficiency with real-time visual feedback.
+- **📱 Mobile Success & Portability:** Full mobile compatibility tested via ngrok. 100% success rate on mobile database restoration, allowing you to manage your finances on the go without a central server.
+- **🔑 Nostr Native Auth:** 
+  - **Desktop:** Password-less login via NIP-07 extensions (Alby, nos2x).
+  - **Mobile:** Experimental login via Amber (Nostr Signer) on Android using the intent protocol.
+- ⚡ **Lightning & On-Chain:** Separate management for Satoshi-precision transactions.
+- **🛡️ Military-Grade Backup System:** Encrypted exports using AES-256-GCM. Your data is protected by a Master Key derived from your password.
 
 ---
 
+## 📸 Screenshots
+| Dashboard | Analytics |
+| :---: | :---: |
+| ![Dashboard](/static/img/Dashboard_20260502.png) | ![Analytics](static/img/Chart_20260502.png) |
+
 ### 🛠️ TechStack
 
-| Component          | Technology                   | Role                                                   |
-| :----------------- | :--------------------------- | :----------------------------------------------------- |
-| **Backend**        | Flask (Python)               | Server-side logic & API management                     |
-| **Frontend**       | HTML, CSS, JS (Vanilla)      | Clean, responsive user interface                       |
-| **Data Viz**       | **Chart.js**                 | Interactive bar and doughnut charts for analytics      |
-| **Security**       | AES-256-GCM                  | Industry-standard encryption for backups               |
-| **Database**       | SQLite                       | Local-first, private data storage                      |
-| **API**            | CoinGecko                    | Real-time & historical BTC prices                      |
-| **Frontend**       | HTML, CSS, JS (Vanilla)      | Clean, responsive user interface                       |
-| **Auth (Desktop)** | Flask-Login + NIP-07         | Traditional or extension-based login                   |
-| **Auth (Mobile)**  | **Amber (Nostr Signer)**     | Password-less login via Android Intents                |
-| **Cryptography**   | `coincurve` & `pycryptodome` | BIP340/Schnorr signature verification & AES encryption |
+| Component | Technology | Role |
+| :--- | :--- | :--- |
+| **Backend** | Flask (Python) | Server-side logic & API management |
+| **Data Viz** | **Chart.js** | Interactive bar and doughnut charts |
+| **Database** | SQLite | Local-first, private data storage |
+| **Security** | AES-256-GCM | Industry-standard encryption for backups |
+| **Auth** | Nostr (Amber/NIP-07) | Decentralized, password-less authentication |
+| **Dev Method** | **Vibe Coding** | Building with passion and real-time iteration |
 
+---
 ## 🚀 Quick Start (Self-Hosted)
 
 ### 1. Prerequisites
 
 - Python 3.9+
+- [Visual Studio Code (VSC)](https://code.visualstudio.com/) recommended.
 - Active internet connection (for BTC price APIs).
 
 ### 2. Setup
@@ -100,7 +86,7 @@ Mobile (Amber): On Android, <strong style="color: #f39c12">₿eesy</strong> trig
 
 ## 🔏 The "Privacy-First" Laboratory
 
-🛡️ Backup & Restore (New!)
+🛡️ Backup & Restore
 We implemented a robust backup system to ensure you never lose your data:
 
 - Traditional Users: Your backup is encrypted using a Master Key derived from your password. Even if someone steals your backup file, they cannot read it without your Beesy password.
@@ -109,16 +95,29 @@ We implemented a robust backup system to ensure you never lose your data:
 
 ## 🛠️ Roadmap & Contributions
 
-- [x] Encrypted database export/backup. (Done! 🎉)
-- [x] Advanced Dashboard: Real-time charts for spending habits (Chart.js). 📊
-- [x] PDF Reporting system (Browser-based export). 📄
-- [ ] Multi-currency support: Beyond EUR (USD, CHF, etc.).
-- [ ] Detailed transaction history view within the Analytics page.
-- [ ] Mobile Nostr Restore: Refined integration with Nostr Signer apps.
-      
+
+- [x] **Encrypted Backup & Restore:** Fully functional on PC and Mobile.
+- [x] **Advanced Analytics:** Real-time visual dashboards (Chart.js).
+- [x] **Plug & Play DB:** Automatic database and table creation on first run.
+- [ ] **Multi-currency support:** Beyond EUR (USD, CHF, etc.).
+- [ ] **Multi-language Support (i18n):** Translating the interface into English to reach the global Bitcoin community. 🌍
+- [ ] **Detailed History:** Transaction drill-down within the Analytics page.
+- [ ] **Docker Support:** One-click deployment for Umbrel/Raspberry Pi.
+
+---
+
+## 👨‍💻 Behind the Code: A "Vibe Coding" Story
+
+This project is a labor of love by a **self-taught developer**. 
+- **Learning by doing:** ₿eesy is my first major project shared on GitHub.
+- **Bitcoin in my heart:** I built this because Bitcoin is a fundamental part of my journey.
+- **Vibe Coding:** I believe in building software that feels right, iterating quickly, and learning through the "vibe" of the development process.
+
+---
+
 ## 💜 Connect on Nostr
 
-Se vuoi seguire lo sviluppo o metterti in contatto in modo decentralizzato:
+If you want to follow the development or get in touch in a decentralized way:
 
 - **Developer (@Dennj75):** [dennj75@nostr.red](https://primal.net/p/npub1lejpu7ms5j6y7srv32ndxw4m9j5vp7tgdjpsxw32h3r2y7zpqtdsdumyk0) 
   - `npub1lejpu7ms5j6y7srv32ndxw4m9j5vp7tgdjpsxw32h3r2y7zpqtdsdumyk0`
@@ -132,7 +131,7 @@ Se vuoi seguire lo sviluppo o metterti in contatto in modo decentralizzato:
 <strong style="color: #f39c12">₿eesy</strong> è un tracker di spese "Bitcoin-first" progettato per la privacy totale.
 <strong style="color: #f39c12">₿eesy</strong> è un tracker di spese "Bitcoin-first" progettato per la privacy totale.
 
-- **Analytics Avanzate:** Grafici interattivi per monitorare entrate, uscite e tasso di risparmio.
+- **Analytics Avanzate:** Grafici interattivi (in tempo reale per Bitcoin Onchain e Lightning) per monitorare entrate, uscite e tasso di risparmio.
 - **Backup Cifrato:** Esporta i tuoi dati in formato AES-256 sicuro.
 - **Senza Password:** Prova il login Nostr tramite estensioni browser o Amber su Android.
 
