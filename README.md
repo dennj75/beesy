@@ -19,9 +19,10 @@ This project is an **EXPERIMENTAL EDUCATIONAL LABORATORY**.
 ---
 
 ## 🌟 Key Features
+
 - 📊 **Advanced Analytics [NEW - APRIL 2026]:** Integrated professional dashboards powered by Chart.js. Track your income, expenses, and savings efficiency with real-time visual feedback.
 - **📱 Mobile Success & Portability:** Full mobile compatibility tested via ngrok. 100% success rate on mobile database restoration, allowing you to manage your finances on the go without a central server.
-- **🔑 Nostr Native Auth:** 
+- **🔑 Nostr Native Auth:**
   - **Desktop:** Password-less login via NIP-07 extensions (Alby, nos2x).
   - **Mobile:** Experimental login via Amber (Nostr Signer) on Android using the intent protocol.
 - ⚡ **Lightning & On-Chain:** Separate management for Satoshi-precision transactions.
@@ -30,22 +31,24 @@ This project is an **EXPERIMENTAL EDUCATIONAL LABORATORY**.
 ---
 
 ## 📸 Screenshots
-| Dashboard | Analytics |
-| :---: | :---: |
+
+|                    Dashboard                     |                  Analytics                  |
+| :----------------------------------------------: | :-----------------------------------------: |
 | ![Dashboard](/static/img/Dashboard_20260502.png) | ![Analytics](static/img/Chart_20260502.png) |
 
 ### 🛠️ TechStack
 
-| Component | Technology | Role |
-| :--- | :--- | :--- |
-| **Backend** | Flask (Python) | Server-side logic & API management |
-| **Data Viz** | **Chart.js** | Interactive bar and doughnut charts |
-| **Database** | SQLite | Local-first, private data storage |
-| **Security** | AES-256-GCM | Industry-standard encryption for backups |
-| **Auth** | Nostr (Amber/NIP-07) | Decentralized, password-less authentication |
-| **Dev Method** | **Vibe Coding** | Building with passion and real-time iteration |
+| Component      | Technology           | Role                                          |
+| :------------- | :------------------- | :-------------------------------------------- |
+| **Backend**    | Flask (Python)       | Server-side logic & API management            |
+| **Data Viz**   | **Chart.js**         | Interactive bar and doughnut charts           |
+| **Database**   | SQLite               | Local-first, private data storage             |
+| **Security**   | AES-256-GCM          | Industry-standard encryption for backups      |
+| **Auth**       | Nostr (Amber/NIP-07) | Decentralized, password-less authentication   |
+| **Dev Method** | **Vibe Coding**      | Building with passion and real-time iteration |
 
 ---
+
 ## 🚀 Quick Start (Self-Hosted)
 
 ### 1. Prerequisites
@@ -56,24 +59,43 @@ This project is an **EXPERIMENTAL EDUCATIONAL LABORATORY**.
 
 ### 2. Setup
 
+Clone the project:
+
 ```bash
-git clone [https://github.com/dennj75/beesy.git](https://github.com/dennj75/beesy.git)
+git clone https://github.com/dennj75/beesy.git
 cd beesy
 
-Create and activate the virtual environment
+If you just downloaded Beesy, follow these steps in your terminal:
+
+1. Create a virtual environment (first time only)
 python -m venv .venv
-# Su Windows:
+# Windows
+py -m venv .venv
+
+2. Activate the virtual environment
+# Windows
 .venv\Scripts\activate
-# Su Linux/Mac:
+# Linux / macOS
 source .venv/bin/activate
 
-Install dependencies and launch
+3. Install dependencies
 pip install -r requirements.txt
+
+4. Run the application
 python app.py
 
-```
+Open your browser and go to:
 
-Access <strong style="color: #f39c12">₿eesy</strong> at http://localhost:5000.
+👉 http://localhost:5000
+
+💡 Common Problems (Troubleshooting)
+
+ModuleNotFoundError
+
+If you receive this error, it means some dependencies are missing.
+Make sure you have installed them with:
+pip install -r requirements.txt
+
 
 ## 🧪 "Nostr" & Mobile Laboratory
 
@@ -108,7 +130,7 @@ We implemented a robust backup system to ensure you never lose your data:
 
 ## 👨‍💻 Behind the Code: A "Vibe Coding" Story
 
-This project is a labor of love by a **self-taught developer**. 
+This project is a labor of love by a **self-taught developer**.
 - **Learning by doing:** ₿eesy is my first major project shared on GitHub.
 - **Bitcoin in my heart:** I built this because Bitcoin is a fundamental part of my journey.
 - **Vibe Coding:** I believe in building software that feels right, iterating quickly, and learning through the "vibe" of the development process.
@@ -119,7 +141,7 @@ This project is a labor of love by a **self-taught developer**.
 
 If you want to follow the development or get in touch in a decentralized way:
 
-- **Developer (@Dennj75):** [dennj75@nostr.red](https://primal.net/p/npub1lejpu7ms5j6y7srv32ndxw4m9j5vp7tgdjpsxw32h3r2y7zpqtdsdumyk0) 
+- **Developer (@Dennj75):** [dennj75@nostr.red](https://primal.net/p/npub1lejpu7ms5j6y7srv32ndxw4m9j5vp7tgdjpsxw32h3r2y7zpqtdsdumyk0)
   - `npub1lejpu7ms5j6y7srv32ndxw4m9j5vp7tgdjpsxw32h3r2y7zpqtdsdumyk0`
 - **Beesy Project:** [beesy@nostrcheck.me](https://primal.net/p/npub1k8dfux202k788vm955rn4wrckvavuxxr3202wlpsa2h97d4tlkrsp57qcv)
   - `npub1k8dfux202k788vm955rn4wrckvavuxxr3202wlpsa2h97d4tlkrsp57qcv`
@@ -142,3 +164,4 @@ If you want to follow the development or get in touch in a decentralized way:
 ---
 
 | <strong style="color: #f39c12">₿eesy</strong> | Building in public 🚀 | Stay humble, stack sats ⚡
+```

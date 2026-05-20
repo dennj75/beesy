@@ -6,19 +6,19 @@ content %}
   <form method="post" action="{{ url_for('modifica_transazione_web_lightning', id_transazione=transazione_lightning["id"]) }}">
     
     <label for="data">📅 Data:</label>
-    <input type="date" id="data" name="data" value="{{ transazione_lightning[1] }}" required /><br /><br />
+    <input type="date" id="data" name="data" value="{{ transazione_lightning['data'] }}" required /><br /><br />
 
     <label for="wallet">👛 Wallet:</label>
-    <input type="text" id="wallet" name="wallet" value="{{ transazione_lightning[2] }}" required /><br /><br />
+    <input type="text" id="wallet" name="wallet" value="{{ transazione_lightning['wallet'] }}" required /><br /><br />
 
     <label for="descrizione">📝 Descrizione:</label>
-    <input type="text" id="descrizione" name="descrizione" value="{{ transazione_lightning[3] }}" required /><br /><br />
+    <input type="text" id="descrizione" name="descrizione" value="{{ transazione_lightning['descrizione'] }}" required /><br /><br />
 
     <label for="categoria">📂 Categoria:</label>
     <select name="categoria" id="categoria" onchange="popolaSottocategoria()" required>
       <option value="">-- Seleziona Categoria --</option>
       {% for cat in categorie %}
-        <option value="{{ cat }}" {% if transazione_lightning[4] == cat %}selected{% endif %}>{{ cat }}</option>
+        <option value="{{ cat }}" {% if transazione_lightning['categoria'] == cat %}selected{% endif %}>{{ cat }}</option>
       {% endfor %}
     </select><br /><br />
 
@@ -26,7 +26,7 @@ content %}
     <select name="sottocategoria" id="sottocategoria" required></select><br /><br />
 
     <label for="satoshi">⚡️ Importo (satoshi):</label>
-    <input type="number" id="satoshi" name="satoshi" min="-1000000" max="1000000" value="{{ transazione_lightning[6] }}" required /><br /><br />
+    <input type="number" id="satoshi" name="satoshi" min="-1000000" max="1000000" value="{{ transazione_lightning['satoshi'] }}" required /><br /><br />
 
     <button type="submit">✅ Salva Modifiche</button>
   </form>
@@ -34,8 +34,8 @@ content %}
   <p><a href="/transazioni_lightning">⬅️ Torna alle transazioni Lightning</a></p>
  <script>
     const categorie = {{ categorie_json | safe }};
-    const categoriaAttuale = "{{ transazione_lightning[4] }}";
-    const sottocategoriaAttuale = "{{ transazione_lightning[5] }}";
+    const categoriaAttuale = "{{ transazione_lightning['categoria'] }}";
+    const sottocategoriaAttuale = "{{ transazione_lightning['sottocategoria'] }}";
 
     function popolaSottocategoria() {
       const categoriaSelezionata = document.getElementById("categoria").value;

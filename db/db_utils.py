@@ -126,7 +126,7 @@ def inizializza_db():
             username TEXT UNIQUE NOT NULL,
             email TEXT UNIQUE,
             password_hash TEXT NOT NULL
-            FOREIGN KEY (user_id) REFERENCES users (id)
+            
         )
     ''')
 
@@ -187,30 +187,6 @@ def salva_su_db_onchain(user_id, data, wallet, descrizione, categoria, sottocate
     conn.close()
 
 
-def leggi_transazioni_da_db_onchain(user_id):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-    SELECT id, data, wallet, descrizione, categoria, sottocategoria,
-           transactionID, importo_btc, fee, controvalore_eur, valore_btc_eur
-    FROM transazioni_onchain WHERE user_id = ? ORDER BY data ASC
-    ''', (user_id,))
-    # Ottieni i nomi delle colonne (intestazioni)
-    colonne = [desc[0] for desc in cursor.description]
-
-    righe = cursor.fetchall()
-    conn.close()
-    # 💡 CONVERSIONE TUPLE -> DIZIONARI
-    # Crea una lista di dizionari, dove le chiavi sono i nomi delle colonne
-    dati_onchain = []
-    for riga in righe:
-        # zip combina le colonne con i valori della riga
-        dizionario_transazione = dict(zip(colonne, riga))
-        dati_onchain.append(dizionario_transazione)
-
-    return dati_onchain  # Ora restituisce una lista di dizionari
-
-
 def elimina_transazione_da_db_onchain(id_transazione, user_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -251,7 +227,7 @@ def leggi_transazioni_da_db_onchain(user_id):
     cursor.execute('''
     SELECT id, data, wallet, descrizione, categoria, sottocategoria,
            transactionID, importo_btc, fee, controvalore_eur, valore_btc_eur
-    FROM transazioni_onchain WHERE user_id = ? ORDER BY data ASC
+    FROM transazioni_onchain WHERE user_id = ? ORDER BY data DESC
     ''', (user_id,))
 
     # Ottiene i nomi delle colonne (intestazioni)
@@ -398,7 +374,7 @@ def leggi_transazioni_da_db_lightning(user_id):
                satoshi, controvalore_eur, valore_btc_eur
         FROM transazioni_lightning
         WHERE user_id = ?
-        ORDER BY data ASC
+        ORDER BY data DESC
     """, (user_id,))
 
     righe = cursor.fetchall()
@@ -459,7 +435,8 @@ def leggi_transazioni_filtrate_lightning(filtro_data, user_id):
         SELECT id, data, wallet, descrizione, categoria, sottocategoria, satoshi, controvalore_eur, valore_btc_eur
         FROM transazioni_lightning
         WHERE user_id = ? AND data LIKE ?
-        ORDER BY data ASC
+        ORDER BY data DESC
+        
     '''
     cursor.execute(query, (user_id, filtro_data + '%'))
     righe = cursor.fetchall()
