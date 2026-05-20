@@ -99,24 +99,26 @@ pip install -r requirements.txt
 
 ## 🧪 "Nostr" & Mobile Laboratory
 
-⚡ Nostr Authentication: The Magic of Amber
+⚡ **Nostr Authentication: The Magic of Amber**
 <strong style="color: #f39c12">₿eesy</strong> leverages the power of the Nostr protocol to provide a secure, password-less experience.
 
-Desktop: Use any NIP-07 browser extension (like nos2x or Alby).
+- **Desktop:** Use any NIP-07 browser extension (like nos2x or Alby).
+- **Mobile (Amber):** On Android, <strong style="color: #f39c12">₿eesy</strong> triggers an Android Intent. Amber pops up, you approve the signature, and you are logged in. Your private key never touches our code.
 
-Mobile (Amber): On Android, <strong style="color: #f39c12">₿eesy</strong> triggers an Android Intent. Amber pops up, you approve the signature, and you are logged in. Your private key never touches our code.
+---
 
 ## 🔏 The "Privacy-First" Laboratory
 
-🛡️ Backup & Restore
+🛡️ **Backup & Restore**
 We implemented a robust backup system to ensure you never lose your data:
 
-- Traditional Users: Your backup is encrypted using a Master Key derived from your password. Even if someone steals your backup file, they cannot read it without your Beesy password.
-- Nostr Users: Quick JSON export/import for seamless identity portability.
-  -Mobile Ready: Restore your history directly from your smartphone browser with 100% success rate on traditional accounts.
+- **Traditional Users:** Your backup is encrypted using a Master Key derived from your password. Even if someone steals your backup file, they cannot read it without your Beesy password.
+- **Nostr Users:** Quick JSON export/import for seamless identity portability.
+- **Mobile Ready:** Restore your history directly from your smartphone browser with 100% success rate on traditional accounts.
+
+---
 
 ## 🛠️ Roadmap & Contributions
-
 
 - [x] **Encrypted Backup & Restore:** Fully functional on PC and Mobile.
 - [x] **Advanced Analytics:** Real-time visual dashboards (Chart.js).
@@ -151,17 +153,11 @@ If you want to follow the development or get in touch in a decentralized way:
 ## 🇮🇹 Versione Italiana
 
 <strong style="color: #f39c12">₿eesy</strong> è un tracker di spese "Bitcoin-first" progettato per la privacy totale.
-<strong style="color: #f39c12">₿eesy</strong> è un tracker di spese "Bitcoin-first" progettato per la privacy totale.
 
 - **Analytics Avanzate:** Grafici interattivi (in tempo reale per Bitcoin Onchain e Lightning) per monitorare entrate, uscite e tasso di risparmio.
 - **Backup Cifrato:** Esporta i tuoi dati in formato AES-256 sicuro.
 - **Senza Password:** Prova il login Nostr tramite estensioni browser o Amber su Android.
-
 - **Ripristino Mobile:** Funzionante al 100% per account tradizionali.
 
-- **Senza Password:** Prova il login Nostr tramite estensioni browser o Amber su Android.
-
----
-
-| <strong style="color: #f39c12">₿eesy</strong> | Building in public 🚀 | Stay humble, stack sats ⚡
 ```
+| <strong style="color: #f39c12">₿eesy</strong> | Building in public 🚀 | Stay humble, stack sats ⚡
