@@ -96,6 +96,7 @@ If you receive this error, it means some dependencies are missing.
 Make sure you have installed them with:
 pip install -r requirements.txt
 
+```
 
 ## 🧪 "Nostr" & Mobile Laboratory
 
