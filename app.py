@@ -108,6 +108,14 @@ CATEGORIE = {
 
 app = Flask(__name__)
 
+VERSIONE_APP = "0.1.1"  # Modificherai SOLO questa stringa quando avanzi di versione!
+
+
+@app.context_processor
+def inject_version():
+    """Rende la versione dell'app disponibile in ogni template HTML"""
+    return dict(versione_beesy=VERSIONE_APP)
+
 
 @app.after_request
 def add_header(response):
