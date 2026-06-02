@@ -35,106 +35,61 @@ def leggi_tabella_per_utente(nome_tabella, user_id):
 
 
 def genera_stringa_backup_json(user_id=None):
-    # Recuperiamo tutti i dati usando le funzioni esistenti
-    dati = {
-        "metadata": {
-            "user_id": user_id,
-            "data_backup": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "versione_beesy": "1.1"
-        },
-        "onchain": leggi_transazioni_da_db_onchain(user_id),
-        "lightning": leggi_transazioni_da_db_lightning(user_id),
-        "euro": leggi_transazioni_da_db(user_id),
-        "assets_watch": leggi_tabella_per_utente("assets_watch", user_id),
-        "mapping_categorie": leggi_tabella_per_utente("mapping_categorie", user_id)
-    }
-
-    # Restituiamo direttamente la stringa JSON invece di salvare un file
-    return json.dumps(dati, ensure_ascii=False, indent=4)
-
-
-def ripristina_database_completo(user_id, data):
-    # NOTA: Qui NON rimettere "from config import DB_PATH", usiamo quella sopra!
+    """Estrae tutti i dati dell'utente dal DB e genera la stringa JSON per il backup."""
     conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     try:
-        # 1. PULIZIA TOTALE (Sempre per user_id!)
-        tabelle_da_pulire = ["transazioni", "transazioni_onchain",
-                             "transazioni_lightning", "assets_watch", "mapping_categorie"]
-        for tab in tabelle_da_pulire:
-            cursor.execute(f"DELETE FROM {tab} WHERE user_id = ?", (user_id,))
+        # Eseguiamo query dirette per essere sicuri al 100% di dove viene messo il "user_id"
+        euro_data = cursor.execute(
+            "SELECT * FROM transazioni WHERE user_id = ?", (user_id,)).fetchall()
+        onchain_data = cursor.execute(
+            "SELECT * FROM transazioni_onchain WHERE user_id = ?", (user_id,)).fetchall()
+        lightning_data = cursor.execute(
+            "SELECT * FROM transazioni_lightning WHERE user_id = ?", (user_id,)).fetchall()
+        assets_watch_data = cursor.execute(
+            "SELECT * FROM assets_watch WHERE user_id = ?", (user_id,)).fetchall()
 
-        # Import EURO
-        if "euro" in data:
-            for t in data["euro"]:
-                cursor.execute('''
-                    INSERT INTO transazioni (data, descrizione, categoria, sottocategoria, importo, controvalore_btc, valore_btc_eur, conto, note, user_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (t['data'], t['descrizione'], t['categoria'], t['sottocategoria'], t['importo'], t.get('controvalore_btc'), t.get('valore_btc_eur'), t.get('conto', 'BANCA'), t.get('note', ''), user_id))
+        # Gestiamo assets_history e mapping_categorie con controllo preventivo se non esistessero colonne user_id
+        try:
+            assets_history_data = cursor.execute(
+                "SELECT * FROM assets_history WHERE user_id = ?", (user_id,)).fetchall()
+        except Exception:
+            assets_history_data = cursor.execute(
+                "SELECT * FROM assets_history").fetchall()
 
-        # Import ONCHAIN (Wallet dinamico)
-        if "onchain" in data:
-            for o in data["onchain"]:
-                cursor.execute('''
-                    INSERT INTO transazioni_onchain (data, wallet, descrizione, categoria, sottocategoria, transactionID, importo_btc, fee, controvalore_eur, valore_btc_eur, user_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (o['data'], o.get('wallet', 'Default'), o['descrizione'], o['categoria'], o['sottocategoria'], o.get('transactionID', ''), o['importo_btc'], o.get('fee', 0), o.get('controvalore_eur', 0), o.get('valore_btc_eur', 0), user_id))
+        try:
+            mapping_data = cursor.execute(
+                "SELECT * FROM mapping_categorie WHERE user_id = ?", (user_id,)).fetchall()
+        except Exception:
+            mapping_data = cursor.execute(
+                "SELECT * FROM mapping_categorie").fetchall()
 
-        # Import LIGHTNING (Wallet dinamico)
-        if "lightning" in data:
-            for l in data["lightning"]:
-                cursor.execute('''
-                    INSERT INTO transazioni_lightning (data, wallet, descrizione, categoria, sottocategoria, satoshi, controvalore_eur, valore_btc_eur, user_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (l['data'], l.get('wallet', 'Default'), l['descrizione'], l['categoria'], l['sottocategoria'], l['satoshi'], l.get('controvalore_eur', 0), l.get('valore_btc_eur', 0), user_id))
-        # Import ASSETS WATCH
-        # 3. IMPORT ASSETS WATCH
-        if "assets_watch" in data:
-            for a in data["assets_watch"]:
-                cursor.execute('''
-                    INSERT INTO assets_watch (
-                        user_id, 
-                        nome_asset, 
-                        tipo_asset, 
-                        capitale_investito, 
-                        valore_attuale, 
-                        data_aggiornamento
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (
-                    user_id,  # Usiamo l'ID dell'utente che sta facendo il ripristino
-                    a['nome_asset'],
-                    a['tipo_asset'],
-                    a['capitale_investito'],
-                    a['valore_attuale'],
-                    a['data_aggiornamento']
-                ))
+        # Tabella GLOBALE: Qui user_id NON DEVE ESSERCI
+        prezzi_btc_data = cursor.execute("SELECT * FROM prezzi_btc").fetchall()
 
-        # 4. IMPORT MAPPING CATEGORIE
-        if "mapping_categorie" in data:
-            for m in data["mapping_categorie"]:
-                cursor.execute('''
-                    INSERT INTO mapping_categorie (
-                        parola_chiave, 
-                        categoria, 
-                        sottocategoria, 
-                        user_id
-                    )
-                    VALUES (?, ?, ?, ?)
-                ''', (
-                    m['parola_chiave'],
-                    m['categoria'],
-                    m['sottocategoria'],
-                    user_id  # Usiamo l'ID dell'utente loggato
-                ))
+        dati = {
+            "metadata": {
+                "user_id": user_id,
+                "data_backup": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "versione_beesy": "1.2"
+            },
+            "euro": [dict(r) for r in euro_data],
+            "onchain": [dict(r) for r in onchain_data],
+            "lightning": [dict(r) for r in lightning_data],
+            "assets_watch": [dict(r) for r in assets_watch_data],
+            "assets_history": [dict(r) for r in assets_history_data],
+            "mapping_categorie": [dict(r) for r in mapping_data],
+            "prezzi_btc": [dict(r) for r in prezzi_btc_data]
+        }
 
-        conn.commit()
-        return True
+        print("✅ JSON BACKUP GENERATO CON SUCCESSO SENZA ERRORI!")
+        return json.dumps(dati, ensure_ascii=False, indent=4)
+
     except Exception as e:
-        print(f"ERRORE DURANTE IL RIPRISTINO: {e}")
-        conn.rollback()
-        return False
+        print(f"❌ ERRORE GENERAZIONE JSON BACKUP: {e}")
+        return "{}"
     finally:
         conn.close()
 

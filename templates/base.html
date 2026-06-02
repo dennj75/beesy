@@ -15,11 +15,13 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
     />
+
     <link rel="manifest" href="/static/manifest.json" />
     <meta name="theme-color" content="#f39c12" />
     <link rel="apple-touch-icon" href="/static/img/beesy_icon_512.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
   </head>
+
   <body>
     <header
       class="header-container"
@@ -44,8 +46,25 @@
           <a href="{{ url_for('home') }}">
             <span style="color: #f39c12; font-weight: bold">₿</span>eesy
           </a>
+          {% if is_dev_mode %}
+          <span
+            class="animate-pulse"
+            style="
+              background-color: #f39c12;
+              color: #1a1a1a;
+              font-weight: bold;
+              font-size: 0.65rem;
+              padding: 3px 8px;
+              margin-left: 2px;
+              border-radius: 4px;
+              white-space: nowrap;
+              letter-spacing: 0.5px;
+            "
+          >
+            ⚠️ DEV MODE
+          </span>
+          {% endif %}
         </div>
-
         {% if current_user.is_authenticated %}
         <div class="user-menu" style="position: relative">
           <button class="user-menu-btn" id="user-menu-btn" type="button">

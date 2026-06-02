@@ -3,20 +3,34 @@
 import sqlite3
 import os
 
-DB_PATH = 'database.db'
+
+# 1. Troviamo la cartella principale del progetto (EE)
+# Visto che db_utils.py è dentro la cartella 'db', saliamo di un livello per trovare la radice
+BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+
+# 2. Controlliamo se esiste il file .dev_mode nella cartella principale
+# Se siamo in sviluppo ('development') o c'è il file .dev_mode, usa il DB di test
+if os.environ.get('FLASK_ENV') == 'development' or os.path.exists(os.path.join(BASE_DIR, '.dev_mode')):
+    DB_NAME = 'database_dev.db'
+else:
+    DB_NAME = 'database.db'
+
+# 3. Creiamo il percorso globale ASSOLUTO che si aspettano le tue altre funzioni
+DB_PATH = os.path.join(BASE_DIR, DB_NAME)
+
+
+# 4. Ecco la tua funzione di connessione, pulita e universale
+def get_db_connection():
+    # Usa il DB_PATH globale che abbiamo calcolato sopra
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 
 COLONNE_TRANSAZIONI = [
     "id", "data", "descrizione", "categoria", "sottocategoria",
     "importo", "controvalore_btc", "valore_btc_eur", "conto", "user_id", "note"
 ]
-
-
-def get_db_connection():
-    # 'database.db' deve essere il nome esatto del tuo file
-    db_path = 'database.db'
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 
 def verifica_ownership_transazione(id_transazione, user_id, tabella):
@@ -155,6 +169,17 @@ def inizializza_db():
             valore_attuale REAL,            -- Il valore aggiornato oggi
             data_aggiornamento DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    ''')
+
+    # Tabella per tenere la storia dei valori degli asset (per grafici e analisi)
+    cursor.execute('''        
+        CREATE TABLE IF NOT EXISTS assets_history(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            asset_id INTEGER,
+            valore_rilevato REAL NOT NULL,
+            data_rilevazione DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(asset_id) REFERENCES assets_watch(id) ON DELETE CASCADE
         )
     ''')
 
@@ -718,69 +743,182 @@ def delete_user(user_id):
 
 
 def ripristina_database_completo(user_id, dati_json):
-    """Svuota le tabelle dell'utente e inserisce i dati dal backup con debug migliorato."""
+    """Svuota le tabelle dell'utente e inserisce i dati dal backup gestendo in modo sicuro la pulizia."""
     import sqlite3
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     try:
-        # 1. Pulizia (Solo per l'utente specifico!)
-        cursor.execute("DELETE FROM transazioni WHERE user_id = ?", (user_id,))
-        cursor.execute(
-            "DELETE FROM transazioni_lightning WHERE user_id = ?", (user_id,))
-        cursor.execute(
-            "DELETE FROM transazioni_onchain WHERE user_id = ?", (user_id,))
+        # 1. PULIZIA TOTALE TABELLE UTENTE (Con protezione se manca la colonna user_id)
+        tabelle_utente = [
+            "transazioni", "transazioni_onchain", "transazioni_lightning",
+            "assets_watch", "assets_history", "mapping_categorie"
+        ]
+        print(
+            f"DEBUG RIPRISTINO: Avvio pulizia tabelle personali per utente {user_id}...")
 
-        # 2. Inserimento Euro (Proviamo sia 'euro' che 'transazioni' per compatibilità)
+        for tab in tabelle_utente:
+            try:
+                # Prova a cancellare filtrando per utente
+                cursor.execute(
+                    f"DELETE FROM {tab} WHERE user_id = ?", (user_id,))
+            except sqlite3.OperationalError as e:
+                if "no such column: user_id" in str(e):
+                    print(
+                        f"⚠️ Nota: La tabella '{tab}' non ha user_id. Eseguo svuotamento globale per sicurezza.")
+                    cursor.execute(f"DELETE FROM {tab}")
+                else:
+                    raise e
+
+        # 1b. PULIZIA TABELLA GLOBALE PREZZI
+        if 'prezzi_btc' in dati_json and dati_json['prezzi_btc']:
+            print("DEBUG RIPRISTINO: Svuoto tabella globale prezzi_btc...")
+            cursor.execute("DELETE FROM prezzi_btc")
+
+        # 2. IMPORT TRANSAZIONI EURO
         transazioni_euro = dati_json.get(
             'euro') or dati_json.get('transazioni') or []
         print(
-            f"DEBUG RIPRISTINO: Trovate {len(transazioni_euro)} transazioni Euro")
-
+            f"DEBUG RIPRISTINO: Inserimento {len(transazioni_euro)} transazioni Euro")
         for t in transazioni_euro:
             cursor.execute('''
                 INSERT INTO transazioni (
-                    data, descrizione, categoria, sottocategoria, 
-                    importo, controvalore_btc, valore_btc_eur, conto, note, user_id
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    data, descrizione, categoria, sottocategoria, importo, 
+                    controvalore_btc, valore_btc_eur, conto, note, user_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                t['data'],
-                t['descrizione'],
-                t['categoria'],
-                t['sottocategoria'],
-                t['importo'],
-                t.get('controvalore_btc', 0),
-                t.get('valore_btc_eur', 0),
-                t.get('conto', 'BANCA'),
-                t.get('note', ''),  # <--- Recupera la nota o mette vuoto
-                user_id
+                t['data'], t['descrizione'], t['categoria'], t['sottocategoria'], t['importo'],
+                t.get('controvalore_btc', 0), t.get('valore_btc_eur', 0), t.get(
+                    'conto', 'BANCA'), t.get('note', ''), user_id
             ))
-        # 3. Inserimento Lightning
-        transazioni_ln = dati_json.get('lightning', [])
-        print(
-            f"DEBUG RIPRISTINO: Trovate {len(transazioni_ln)} transazioni Lightning")
 
-        for t in transazioni_ln:
-            cursor.execute('''
-                INSERT INTO transazioni_lightning (data, wallet, descrizione, categoria, sottocategoria, satoshi, controvalore_eur, valore_btc_eur, user_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (t['data'], t['wallet'], t['descrizione'], t['categoria'], t['sottocategoria'], t['satoshi'], t.get('controvalore_eur', 0), t.get('valore_btc_eur', 0), user_id))
-
-        # 4. Inserimento On-chain
+        # 3. IMPORT ONCHAIN
         transazioni_on = dati_json.get('onchain', [])
         print(
-            f"DEBUG RIPRISTINO: Trovate {len(transazioni_on)} transazioni Onchain")
-
-        for t in transazioni_on:
+            f"DEBUG RIPRISTINO: Inserimento {len(transazioni_on)} transazioni Onchain")
+        for o in transazioni_on:
             cursor.execute('''
-                INSERT INTO transazioni_onchain (data, wallet, descrizione, categoria, sottocategoria, transactionID, importo_btc, fee, controvalore_eur, valore_btc_eur, user_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (t['data'], t['wallet'], t['descrizione'], t['categoria'], t['sottocategoria'], t.get('transactionID', ''), t['importo_btc'], t.get('fee', 0), t.get('controvalore_eur', 0), t.get('valore_btc_eur', 0), user_id))
+                INSERT INTO transazioni_onchain (
+                    data, wallet, descrizione, categoria, sottocategoria, 
+                    transactionID, importo_btc, fee, controvalore_eur, valore_btc_eur, user_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                o['data'], o.get(
+                    'wallet', 'Default'), o['descrizione'], o['categoria'], o['sottocategoria'],
+                o.get('transactionID', ''), o['importo_btc'], o.get('fee', 0), o.get(
+                    'controvalore_eur', 0), o.get('valore_btc_eur', 0), user_id
+            ))
+
+        # 4. IMPORT LIGHTNING
+        transazioni_ln = dati_json.get('lightning', [])
+        print(
+            f"DEBUG RIPRISTINO: Inserimento {len(transazioni_ln)} transazioni Lightning")
+        for l in transazioni_ln:
+            cursor.execute('''
+                INSERT INTO transazioni_lightning (
+                    data, wallet, descrizione, categoria, sottocategoria, 
+                    satoshi, controvalore_eur, valore_btc_eur, user_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                l['data'], l.get(
+                    'wallet', 'Default'), l['descrizione'], l['categoria'], l['sottocategoria'],
+                l['satoshi'], l.get('controvalore_eur', 0), l.get(
+                    'valore_btc_eur', 0), user_id
+            ))
+
+        # Funzione di supporto interna per scoprire i veri nomi delle colonne di una tabella
+        def ottieni_colonne(tabella):
+            try:
+                cursor.execute(f"PRAGMA table_info({tabella})")
+                return [info[1] for info in cursor.fetchall()]
+            except Exception:
+                return []
+
+        # 5. IMPORT ASSETS WATCH (Investimenti Euro)
+        assets_watch = dati_json.get('assets_watch', [])
+        print(f"DEBUG RIPRISTINO: Inserimento {len(assets_watch)} asset Fiat")
+        colonne_watch = ottieni_colonne("assets_watch")
+        if colonne_watch:
+            col_nome = "nome_asset" if "nome_asset" in colonne_watch else (
+                "asset" if "asset" in colonne_watch else None)
+            for a in assets_watch:
+                if col_nome:
+                    val_nome = a.get('nome_asset') or a.get(
+                        'asset') or a.get('nome', 'Asset')
+                    cursor.execute(f'''
+                        INSERT INTO assets_watch (
+                            user_id, {col_nome}, tipo_asset, capitale_investito, valore_attuale, data_aggiornamento
+                        ) VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (
+                        user_id, val_nome, a.get('tipo_asset', '📍'), a.get(
+                            'capitale_investito', 0), a.get('valore_attuale', 0), a.get('data_aggiornamento')
+                    ))
+
+        # 6. IMPORT ASSETS HISTORY (Rilevazioni Storiche)
+        assets_hist = dati_json.get('assets_history', [])
+        print(
+            f"DEBUG RIPRISTINO: Inserimento {len(assets_hist)} rilevazioni storiche")
+        colonne_hist = ottieni_colonne("assets_history")
+
+        if colonne_hist:
+            # Capisce al volo se la colonna si chiama nome_asset o asset
+            col_nome_h = "nome_asset" if "nome_asset" in colonne_hist else (
+                "asset" if "asset" in colonne_hist else None)
+            has_user_id = "user_id" in colonne_hist
+
+            for h in assets_hist:
+                val_nome_h = h.get('nome_asset') or h.get(
+                    'asset') or h.get('nome', 'Asset')
+                val_rilevato = h.get('valore_rilevato') or h.get('valore', 0)
+                data_rilev = h.get('data_rilevazione') or h.get('data')
+
+                if col_nome_h:
+                    if has_user_id:
+                        cursor.execute(f'''
+                            INSERT INTO assets_history ({col_nome_h}, valore_rilevato, data_rilevazione, user_id) 
+                            VALUES (?, ?, ?, ?)
+                        ''', (val_nome_h, val_rilevato, data_rilev, user_id))
+                    else:
+                        cursor.execute(f'''
+                            INSERT INTO assets_history ({col_nome_h}, valore_rilevato, data_rilevazione) 
+                            VALUES (?, ?, ?)
+                        ''', (val_nome_h, val_rilevato, data_rilev))
+
+        # 7. IMPORT MAPPING CATEGORIE
+        mapping_cat = dati_json.get('mapping_categorie', [])
+        print(
+            f"DEBUG RIPRISTINO: Inserimento {len(mapping_cat)} regole di mapping")
+        colonne_map = ottieni_colonne("mapping_categorie")
+        if colonne_map:
+            has_user_id_map = "user_id" in colonne_map
+            for m in mapping_cat:
+                parola = m.get('parola_chiave') or m.get('chiave', 'Default')
+                cat = m.get('categoria', 'Varie')
+                subcat = m.get('sottocategoria', 'Generica')
+                if has_user_id_map:
+                    cursor.execute('''
+                        INSERT INTO mapping_categorie (parola_chiave, categoria, sottocategoria, user_id) 
+                        VALUES (?, ?, ?, ?)
+                    ''', (parola, cat, subcat, user_id))
+                else:
+                    cursor.execute('''
+                        INSERT INTO mapping_categorie (parola_chiave, categoria, sottocategoria) 
+                        VALUES (?, ?, ?)
+                    ''', (parola, cat, subcat))
+
+        # 8. IMPORT PREZZI BTC (Tabella Globale)
+        prezzi_btc = dati_json.get('prezzi_btc', [])
+        print(
+            f"DEBUG RIPRISTINO: Importazione di {len(prezzi_btc)} record di prezzi BTC")
+        for p in prezzi_btc:
+            cursor.execute('''
+                INSERT OR IGNORE INTO prezzi_btc (data, prezzo_eur) VALUES (?, ?)
+            ''', (p.get('data'), p.get('prezzo_eur') or p.get('prezzo', 0)))
 
         conn.commit()
-        print("✅ RIPRISTINO DB: Operazione completata con successo!")
+        print("✅ RIPRISTINO DB: Operazione completata con successo su tutte le tabelle!")
         return True
+
     except Exception as e:
         conn.rollback()
         print(f"❌ ERRORE CRITICO RIPRISTINO DB: {e}")

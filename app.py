@@ -41,7 +41,7 @@ from db.db_utils import (
 )
 from utils.crypto import ottieni_valore_btc_eur, euro_to_btc, _carica_storico_btc_eur, aggiorna_prezzo_bitcoin
 from utils.export import (
-    genera_stringa_backup_json, ripristina_database_completo,
+    genera_stringa_backup_json,
     esporta_csv, esporta_csv_per_mese, esporta_csv_lightning,
     esporta_csv_per_mese_lightning, esporta_csv_onchain, esporta_csv_per_mese_onchain
 )
@@ -526,8 +526,8 @@ def modifica_transazione_eur(id_transazione):
 
             # 2. Aggiornamento massivo della transazione PRINCIPALE
             cursor.execute("""
-                UPDATE transazioni 
-                SET data=?, descrizione=?, categoria=?, sottocategoria=?, 
+                UPDATE transazioni
+                SET data=?, descrizione=?, categoria=?, sottocategoria=?,
                     importo=?, conto=?, note=?, valore_btc_eur=?, controvalore_btc=?
                 WHERE id=? AND user_id=?
             """, (data, descrizione, categoria, sottocategoria,
@@ -537,7 +537,7 @@ def modifica_transazione_eur(id_transazione):
             # 3. LOGICA GEMELLA
             importo_da_cercare = -vecchio_importo
             cursor.execute("""
-                SELECT id FROM transazioni 
+                SELECT id FROM transazioni
                 WHERE user_id=? AND data=? AND abs(importo - ?) < 0.01 AND id != ?
             """, (current_user.id, vecchia_data, importo_da_cercare, id_transazione))
 
@@ -547,8 +547,8 @@ def modifica_transazione_eur(id_transazione):
                 id_gemella = gemella_row[0]
                 # Aggiorniamo la gemella con l'importo OPPOSTO e i nuovi dati btc
                 cursor.execute("""
-                    UPDATE transazioni 
-                    SET data=?, descrizione=?, importo=?, note=?, 
+                    UPDATE transazioni
+                    SET data=?, descrizione=?, importo=?, note=?,
                         valore_btc_eur=?, controvalore_btc=?
                     WHERE id=? AND user_id=?
                 """, (data, descrizione, -importo, note,
@@ -1146,7 +1146,7 @@ def scarica_csv_per_mese_onchain():
 @app.route('/analytics/<tipo>')
 @login_required
 def analytics(tipo):
-    # Assicurati che l'import sia corretto
+    # Usiamo la connessione universale intelligente
     from db.db_utils import get_db_connection
 
     mese_selezionato = request.args.get('mese')
@@ -1159,7 +1159,7 @@ def analytics(tipo):
     if not anno_selezionato:
         anno_selezionato = None
 
-    # 1. Recupero dati grafici e bilancio
+    # 1. Recupero dati grafici e bilancio standard
     labels_spese, valori_spese = get_spese_per_categoria_filtrate(
         current_user.id, tipo, mese=mese_selezionato, anno=anno_selezionato)
 
@@ -1172,7 +1172,12 @@ def analytics(tipo):
     delta = tot_entrate - tot_spese
     saving_rate = (delta / tot_entrate * 100) if tot_entrate > 0 else 0
 
-    # --- INIZIO LOGICA RENDIMENTO UNIFICATA (BTC & SATS) ---
+    # Inizializziamo le variabili per i grafici Bitcoin (vuote di default per l'Euro)
+    date_btc = []
+    saldi_btc = []
+    saldi_eur_btc = []
+
+    # --- INIZIO LOGICA RENDIMENTO E GRAFICI UNIFICATA (BTC & SATS) ---
     rendimento = 0
     percentuale = 0
     valore_attuale_eur = 0
@@ -1180,15 +1185,21 @@ def analytics(tipo):
     costo_storico_eur = 0
 
     if tipo in ['ONCHAIN', 'LIGHTNING']:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
+        conn = get_db_connection()  # <-- Connessione corretta e sicura!
         cursor = conn.cursor()
 
-        # 1. Prendiamo l'ultimo prezzo BTC (serve per entrambi)
+        # 1. Prendiamo l'ultimo prezzo BTC (serve per i calcoli veloci)
         cursor.execute(
             "SELECT prezzo_eur FROM prezzi_btc ORDER BY data DESC LIMIT 1")
         prezzo_record = cursor.fetchone()
         prezzo_attuale_btc = prezzo_record[0] if prezzo_record else 0
+
+        # 2. Recuperiamo anche TUTTI i prezzi storici per generare la linea temporale del grafico
+        cursor.execute(
+            "SELECT data, prezzo_eur FROM prezzi_btc ORDER BY data ASC")
+        prezzi_rows = cursor.fetchall()
+        prezzi_storici = {row['data']: row['prezzo_eur']
+                          for row in prezzi_rows}
 
         if tipo == 'ONCHAIN':
             from db.db_utils import get_transazioni_con_saldo_onchain
@@ -1200,34 +1211,98 @@ def analytics(tipo):
             costo_storico_eur = res[0] if res[0] else 0
             valore_attuale_eur = saldo_asset * prezzo_attuale_btc
 
+            # Query Storica Grafico On-chain (Sottraiamo le fee se registrate come costo positivo)
+            cursor.execute('''
+                SELECT SUBSTR(data, 1, 10) as giorno, 
+                       SUM(importo_btc - IFNULL(fee, 0)) as flusso
+                FROM transazioni_onchain 
+                WHERE user_id = ? 
+                GROUP BY giorno ORDER BY giorno ASC
+            ''', (current_user.id,))
+            tx_storiche = cursor.fetchall()
+
         elif tipo == 'LIGHTNING':
             from db.db_utils import get_transazioni_con_saldo_lightning
             _, saldo_asset, _ = get_transazioni_con_saldo_lightning(
-                current_user.id)  # saldo_asset qui sono SATS
+                current_user.id)
 
             cursor.execute(
                 "SELECT SUM(controvalore_eur) FROM transazioni_lightning WHERE user_id = ?", (current_user.id,))
             res = cursor.fetchone()
             costo_storico_eur = res[0] if res[0] else 0
-            # Traduciamo i sats in valore EUR
             valore_attuale_eur = (saldo_asset / 100000000) * prezzo_attuale_btc
 
-        # Calcoli finali comuni
+            # Query Storica Grafico Lightning (Convertiamo i satoshi in BTC fluttuanti)
+            cursor.execute('''
+                SELECT SUBSTR(data, 1, 10) as giorno, 
+                       SUM(satoshi * 0.00000001) as flusso
+                FROM transazioni_lightning 
+                WHERE user_id = ? 
+                GROUP BY giorno ORDER BY giorno ASC
+            ''', (current_user.id,))
+            tx_storiche = cursor.fetchall()
+
+        # Calcoliamo il saldo progressivo temporale per il grafico Bitcoin
+        saldo_temporale_btc = 0.0
+        for tx in tx_storiche:
+            giorno = tx['giorno']
+            flusso = tx['flusso']
+            saldo_temporale_btc += flusso
+
+            # Troviamo il prezzo di quel giorno specifico nel DB, se manca usiamo l'ultimo noto
+            prezzo_quel_giorno = prezzi_storici.get(giorno, prezzo_attuale_btc)
+            controvalore_fiat_storico = saldo_temporale_btc * prezzo_quel_giorno
+
+            date_btc.append(str(giorno))
+            saldi_btc.append(round(saldo_temporale_btc, 8))
+            saldi_eur_btc.append(round(controvalore_fiat_storico, 2))
+
+        # Calcoli finali comuni del box rendimento
         rendimento = valore_attuale_eur - costo_storico_eur
         if costo_storico_eur > 0:
             percentuale = (rendimento / costo_storico_eur) * 100
 
         conn.close()
-    # --- RECUPERO ASSET TRADIZIONALI ---
+
+    # --- RECUPERO ASSET TRADIZIONALI (Solo per tipo EURO) ---
     investimenti_fiat = []
+    cronologia_fiat = []
+    date_fiat = []
+    valori_fiat = []
+
     if tipo == 'EURO':
         conn = get_db_connection()
         cursor = conn.cursor()
+
         cursor.execute(
             "SELECT * FROM assets_watch WHERE user_id = ?", (current_user.id,))
         investimenti_fiat = cursor.fetchall()
+
+        try:
+            cursor.execute('''
+                SELECT h.*, w.nome_asset
+                FROM assets_history h
+                JOIN assets_watch w ON h.asset_id = w.id
+                WHERE w.user_id = ?
+                ORDER BY h.data_rilevazione DESC
+            ''', (current_user.id,))
+            cronologia_fiat = cursor.fetchall()
+        except Exception as e:
+            print(f"Nota nel recupero cronologia: {e}")
+
+        cursor.execute('''
+            SELECT SUBSTR(data_rilevazione, 1, 10) as giorno, SUM(valore_rilevato) as totale
+            FROM assets_history
+            JOIN assets_watch w ON assets_history.asset_id = w.id
+            WHERE w.user_id = ?
+            GROUP BY giorno ORDER BY giorno ASC
+        ''', (current_user.id,))
+        dati_grafico_fiat = cursor.fetchall()
+
+        date_fiat = [str(row['giorno']) for row in dati_grafico_fiat]
+        valori_fiat = [float(row['totale']) for row in dati_grafico_fiat]
+
         conn.close()
-    # --- FINE LOGICA RENDIMENTO ---
 
     titoli = {
         'EURO': 'Statistiche Euro (€)',
@@ -1248,13 +1323,18 @@ def analytics(tipo):
                            tot_spese=tot_spese,
                            delta=delta,
                            savings_rate=saving_rate,
-                           # Passiamo i nuovi dati al template
                            rendimento=rendimento,
                            percentuale=percentuale,
                            valore_attuale_eur=valore_attuale_eur,
                            costo_storico_eur=costo_storico_eur,
-                           investimenti_fiat=investimenti_fiat
-
+                           investimenti_fiat=investimenti_fiat,
+                           cronologia_fiat=cronologia_fiat,
+                           date_fiat=date_fiat,
+                           valori_fiat=valori_fiat,
+                           # --- NUOVI DATI PASSATI A JINJA PER I GRAFICI BITCOIN ---
+                           date_btc=date_btc,
+                           saldi_btc=saldi_btc,
+                           saldi_eur_btc=saldi_eur_btc
                            )
 
 
@@ -1276,6 +1356,99 @@ def add_asset():
         conn.close()
 
     return redirect(url_for('analytics', tipo='EURO'))
+
+
+@app.route('/update_asset_value', methods=['POST'])
+@login_required
+def update_asset_value():
+    asset_id = request.form.get('asset_id')
+    nuovo_valore = request.form.get('nuovo_valore')
+
+    if asset_id and nuovo_valore:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 1. Inseriamo il nuovo record nello storico per non perdere il passato
+        cursor.execute('''
+            INSERT INTO assets_history (asset_id, valore_rilevato)
+            VALUES (?, ?)
+        ''', (int(asset_id), float(nuovo_valore)))
+
+        # 2. Aggiorniamo comunque il 'valore_attuale' nella tabella principale per comodità di lettura veloce
+        cursor.execute('''
+            UPDATE assets_watch
+            SET valore_attuale = ?, data_aggiornamento = CURRENT_TIMESTAMP
+            WHERE id = ? AND user_id = ?
+        ''', (float(nuovo_valore), int(asset_id), current_user.id))
+
+        conn.commit()
+        conn.close()
+
+    return redirect(url_for('analytics', tipo='EURO'))
+
+
+@app.route('/modifica_asset/<int:asset_id>', methods=['POST'])
+@login_required
+def modifica_asset(asset_id):
+    from db.db_utils import get_db_connection
+
+    nuovo_nome = request.form.get('nuovo_nome')
+
+    if nuovo_nome:
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            # Forziamo gli ID a intero per evitare brutte sorprese con SQLite
+            int_asset_id = int(asset_id)
+            int_user_id = int(current_user.id)
+
+            print(
+                f"DEBUG: Tentativo di modifica asset {int_asset_id} per utente {int_user_id} con nome: '{nuovo_nome.strip()}'")
+
+            # Eseguiamo l'aggiornamento
+            cursor.execute('''
+                UPDATE assets_watch
+                SET nome_asset = ?
+                WHERE id = ? AND user_id = ?
+            ''', (nuovo_nome.strip(), int_asset_id, int_user_id))
+
+            # Verifichiamo quante righe sono state effettivamente modificate
+            righe_modificate = cursor.rowcount
+            print(f"DEBUG: Righe modificate nel DB: {righe_modificate}")
+
+            conn.commit()
+            conn.close()
+
+            return redirect(url_for('analytics', tipo='EURO'))
+
+        except Exception as e:
+            print(f"Errore durante la modifica dell'asset: {e}")
+            return "Si è verificato un errore", 500
+
+    return redirect(url_for('analytics', tipo='EURO'))
+
+
+@app.route('/elimina_cronologia/<int:history_id>/<tipo>', methods=['POST'])
+@login_required
+def elimina_cronologia(history_id, tipo):
+    from db.db_utils import get_db_connection
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Eliminiamo la riga specifica dalla cronologia
+        cursor.execute(
+            'DELETE FROM assets_history WHERE id = ?', (history_id,))
+
+        conn.commit()
+        conn.close()
+        print(f"❌ Riga cronologia {history_id} eliminata correttamente!")
+
+    except Exception as e:
+        print(f"Errore durante l'eliminazione della cronologia: {e}")
+
+    return redirect(url_for('analytics', tipo=tipo))
 
 
 @app.route('/faq')
@@ -1456,6 +1629,22 @@ def test_nostr_ripristino_protetto():
     return render_template('test_nostr_ripristino_protetto.html')
 
 # FINE LABORATORIO.
+
+
+@app.context_processor
+def inject_dev_mode():
+    # Troviamo la cartella dove gira il server
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    percorso_file = os.path.join(base_dir, '.dev_mode')
+
+    # Controlliamo se esiste
+    is_dev = os.path.exists(percorso_file)
+
+    # STAMPA DI DIAGNOSTICA: Guarda cosa esce nel terminale nero!
+    print(f"🔎 DEBUG BADGE: Sto cercando il file in: {percorso_file}")
+    print(f"🔮 DEBUG BADGE: Il file esiste davvero? -> {is_dev}")
+
+    return dict(is_dev_mode=is_dev)
 
 
 if __name__ == '__main__':

@@ -19,6 +19,8 @@ env/
 *.sqlite3
 pulisci.py
 fix_db.py
+beesy_BACKUP_PRIMA_MIGRAZIONE.db
+database_dev.db
 
 # Cartella dei backup personali
 backups/

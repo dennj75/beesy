@@ -279,68 +279,365 @@ block content %}
       {% endif %}
   });
 </script>
+
+{% if tipo == 'EURO' %}
+<div
+  class="card shadow p-4 mb-4"
+  style="background-color: #1a1a1a; border: 1px solid #3498db"
+>
+  <h4 style="color: #3498db">➕ Aggiungi Nuovo Investimento</h4>
+  <form action="{{ url_for('add_asset') }}" method="POST" class="row g-3">
+    <div class="col-md-4">
+      <input
+        type="text"
+        name="nome_asset"
+        class="form-control bg-dark text-white"
+        placeholder="Nome (es. Buono Postale)"
+        required
+      />
+    </div>
+    <div class="col-md-3">
+      <input
+        type="number"
+        step="0.01"
+        name="capitale_investito"
+        class="form-control bg-dark text-white"
+        placeholder="Capitale Investito €"
+        required
+      />
+    </div>
+    <div class="col-md-3">
+      <input
+        type="number"
+        step="0.01"
+        name="valore_attuale"
+        class="form-control bg-dark text-white"
+        placeholder="Valore Iniziale €"
+        required
+      />
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary w-100">Salva</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
 <h2 class="text-center mb-4" style="color: #3498db">
   Performance Investimenti
-  </h2>
-  <div  
-    class="card shadow p-4 mb-5"
-    style="background-color: #1a1a1a; border: 1px solid #333"
-  >
-    <div class="table-responsive">
-      <table class="table table-dark table-hover">
-        <thead>
-          <tr>
-            <th>Asset</th>
-            <th>Costo Storico (Carico)</th>
-            <th>Valore Attuale</th>
-            <th>Rendimento</th>
-          </tr>
-        </thead>
-        <tbody>
-  
-  {% if tipo == 'EURO' %}
-  <div class="card shadow p-4 mb-4" style="background-color: #1a1a1a; border: 1px solid #3498db">
-    <h4 style="color: #3498db">➕ Aggiungi Nuovo Investimento</h4>
-    <form action="{{ url_for('add_asset') }}" method="POST" class="row g-3">
-        <div class="col-md-4">
-            <input type="text" name="nome_asset" class="form-control bg-dark text-white" placeholder="Nome (es. Buono Postale)" required>
-        </div>
-        <div class="col-md-3">
-            <input type="number" step="0.01" name="capitale_investito" class="form-control bg-dark text-white" placeholder="Capitale Investito €" required>
-        </div>
-        <div class="col-md-3">
-            <input type="number" step="0.01" name="valore_attuale" class="form-control bg-dark text-white" placeholder="Valore Attuale €" required>
-        </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100">Salva</button>
-        </div>
-    </form>
+</h2>
+<div
+  class="card shadow p-4 mb-5"
+  style="background-color: #1a1a1a; border: 1px solid #333"
+>
+  <div class="table-responsive">
+    <table class="table table-dark table-hover">
+      <thead>
+        <tr>
+          <th>Asset</th>
+          <th>Costo Storico (Carico)</th>
+          <th>Valore Attuale</th>
+          <th>Rendimento</th>
+          {% if tipo == 'EURO' %}
+          <th>Registra Valore Mese</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% if tipo == 'EURO' %} {% for asset in investimenti_fiat %}
+        <tr>
+          <td>
+            <form
+              action="{{ url_for('modifica_asset', asset_id=asset['id']) }}"
+              method="POST"
+              class="d-flex align-items-center m-0"
+            >
+              <input
+                type="text"
+                name="nuovo_nome"
+                value="{{ asset['nome_asset'] }}"
+                class="form-control form-control-sm bg-dark text-white border-0 p-1"
+                style="
+                  background: #222 !important;
+                  font-weight: bold;
+                  min-width: 150px;
+                  border-radius: 4px;
+                "
+                title="Modifica il nome e clicca sul dischetto o premi Invio"
+                required
+              />
+              <button
+                type="submit"
+                class="btn btn-sm p-0 ms-2 bg-transparent border-0"
+                title="Conferma cambio nome"
+                style="font-size: 0.9rem"
+              >
+                💾
+              </button>
+            </form>
+          </td>
+          <td>{{ "%.2f"|format(asset['capitale_investito']) }} €</td>
+          <td>{{ "%.2f"|format(asset['valore_attuale']) }} €</td>
+          {% set rend = asset['valore_attuale'] - asset['capitale_investito'] %}
+          {% set perc = (rend / asset['capitale_investito'] * 100) if
+          asset['capitale_investito'] > 0 else 0 %}
+          <td
+            style="color: {% if rend >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}"
+          >
+            {{ "%+.2f"|format(rend) }} € ({{ "%+.1f"|format(perc) }}%)
+          </td>
+          <td>
+            <form
+              action="{{ url_for('update_asset_value') }}"
+              method="POST"
+              class="d-flex align-items-center m-0"
+              style="max-width: 180px"
+            >
+              <input type="hidden" name="asset_id" value="{{ asset['id'] }}" />
+              <input
+                type="number"
+                step="0.01"
+                name="nuovo_valore"
+                class="form-control form-control-sm bg-dark text-white me-2"
+                placeholder="Nuovo importo €"
+                required
+              />
+              <button
+                type="submit"
+                class="btn btn-sm btn-outline-info"
+                title="Salva rilevazione mese"
+              >
+                💾
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %} {% else %}
+        <tr>
+          <td>
+            {{ 'Bitcoin On-chain' if tipo == 'ONCHAIN' else 'Lightning (Sats)'
+            }}
+          </td>
+          <td>{{ "%.2f"|format(costo_storico_eur) }} €</td>
+          <td>{{ "%.2f"|format(valore_attuale_eur) }} €</td>
+          <td
+            style="color: {% if rendimento >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}"
+          >
+            {{ "%+.2f"|format(rendimento) }} € ({{ "%+.1f"|format(percentuale)
+            }}%)
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
 </div>
-    {% for asset in investimenti_fiat %}
-    <tr>
-      <td>{{ asset['nome_asset'] }}</td>
-      <td>{{ "%.2f"|format(asset['capitale_investito']) }} €</td>
-      <td>{{ "%.2f"|format(asset['valore_attuale']) }} €</td>
-      {% set rend = asset['valore_attuale'] - asset['capitale_investito'] %}
-      {% set perc = (rend / asset['capitale_investito'] * 100) if asset['capitale_investito'] > 0 else 0 %}
-      <td style="color: {% if rend >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}">
-        {{ "%+.2f"|format(rend) }} € ({{ "%+.1f"|format(perc) }}%)
-      </td>
-    </tr>
-    {% endfor %}
-  {% else %}
-    <tr>
-      <td>{{ 'Bitcoin On-chain' if tipo == 'ONCHAIN' else 'Lightning (Sats)' }}</td>
-      <td>{{ "%.2f"|format(costo_storico_eur) }} €</td>
-      <td>{{ "%.2f"|format(valore_attuale_eur) }} €</td>
-      <td style="color: {% if rendimento >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}">
-        {{ "%+.2f"|format(rendimento) }} € ({{ "%+.1f"|format(percentuale) }}%)
-      </td>
-    </tr>
-  {% endif %}
-</tbody>
-      </table>
+
+<div class="row mt-5 mb-5 pb-5">
+  <div
+    class="{% if tipo == 'EURO' %}col-md-7{% else %}col-md-12{% endif %} mb-4"
+  >
+    <div
+      class="card shadow p-4"
+      style="
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+        min-height: 380px;
+      "
+    >
+      <h4
+        style="color: {% if tipo == 'EURO' %}#3498db{% else %}#f39c12{% endif %}"
+        class="mb-4"
+      >
+        📈 {% if tipo == 'EURO' %}Andamento Patrimoniale Euro{% else %}Saldo
+        Storico Patrimoniale (Controvalore €){% endif %}
+      </h4>
+      <div style="position: relative; height: 280px; width: 100%">
+        <canvas id="chartStoricoPatrimonio"></canvas>
+      </div>
     </div>
   </div>
-  {% endblock %}
-</h2>
+
+  {% if tipo == 'EURO' %}
+  <div class="col-md-5 mb-4">
+    <div
+      class="card shadow p-4"
+      style="
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+        min-height: 380px;
+      "
+    >
+      <h4 class="text-danger mb-4">⏳ Storico Rilevazioni Mese</h4>
+      <div class="table-responsive" style="max-height: 280px; overflow-y: auto">
+        <table
+          class="table table-dark table-sm table-hover mb-0"
+          style="table-layout: fixed; width: 100%"
+        >
+          <thead>
+            <tr>
+              <th style="width: 25%">Data</th>
+              <th style="width: 45%">Asset</th>
+              <th style="width: 20%">Valore</th>
+              <th style="width: 10%">Azione</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if cronologia_fiat %} {% for hist in cronologia_fiat %}
+            <tr>
+              <td class="small text-muted align-middle">
+                {{ hist['data_rilevazione'][:10] }}
+              </td>
+              <td
+                class="text-info fw-bold small align-middle"
+                style="
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                "
+                title="{{ hist['nome_asset'] }}"
+              >
+                {{ hist['nome_asset'] }}
+              </td>
+              <td class="align-middle small">
+                {{ "%.2f"|format(hist['valore_rilevato']) }} €
+              </td>
+              <td class="align-middle text-center">
+                <form
+                  action="{{ url_for('elimina_cronologia', history_id=hist['id'], tipo='EURO') }}"
+                  method="POST"
+                  onsubmit="
+                    return confirm(
+                      'Sicuro di voler eliminare questa rilevazione?',
+                    );
+                  "
+                  class="m-0"
+                >
+                  <button
+                    type="submit"
+                    class="btn btn-sm p-0 border-0 bg-transparent"
+                    title="Elimina errore"
+                  >
+                    ❌
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %} {% else %}
+            <tr>
+              <td colspan="4" class="text-muted text-center small py-3">
+                Nessuna rilevazione salvata finora.
+              </td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+      const tipoAmbiente = "{{ tipo }}";
+      const canvas = document.getElementById('chartStoricoPatrimonio');
+
+      if (!canvas) {
+          console.error("Errore critico: Canvas non trovato nel DOM!");
+          return;
+      }
+      const ctx = canvas.getContext('2d');
+
+      if (tipoAmbiente === 'EURO') {
+          // DATI EURO FIAT
+          const dateLabels = {{ date_fiat | tojson | safe if date_fiat else '[]' }};
+          const valoriData = {{ valori_fiat | tojson | safe if valori_fiat else '[]' }};
+
+          window.myLineChart = new Chart(ctx, {
+              type: 'line',
+              data: {
+                  labels: dateLabels,
+                  datasets: [{
+                      label: 'Patrimonio Totale (€)',
+                      data: valoriData,
+                      borderColor: '#3498db',
+                      backgroundColor: 'rgba(52, 152, 219, 0.05)',
+                      borderWidth: 3,
+                      pointBackgroundColor: '#ffffff',
+                      pointBorderColor: '#3498db',
+                      pointRadius: 4,
+                      tension: 0.15,
+                      fill: true
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                      x: { grid: { color: '#2a2a2a' }, ticks: { color: '#aaa' } },
+                      y: { grid: { color: '#2a2a2a' }, ticks: { color: '#aaa' } }
+                  }
+              }
+          });
+
+      } else {
+          // DATI BITCOIN (ONCHAIN & LIGHTNING)
+          const etichetteDate = {{ date_btc | tojson | safe if date_btc else '[]' }};
+          const datiControvaloreEur = {{ saldi_eur_btc | tojson | safe if saldi_eur_btc else '[]' }};
+          const datiQuantitaBtc = {{ saldi_btc | tojson | safe if saldi_btc else '[]' }};
+
+          if (etichetteDate.length === 0) {
+              ctx.font = "16px sans-serif";
+              ctx.fillStyle = "#888";
+              ctx.textAlign = "center";
+              ctx.fillText("Nessuna transazione passata per generare il grafico storico.", canvas.width/2, 100);
+          } else {
+              window.myLineChart = new Chart(ctx, {
+                  type: 'line',
+                  data: {
+                      labels: etichetteDate,
+                      datasets: [{
+                          label: tipoAmbiente === 'ONCHAIN' ? 'Bilancio On-chain (€)' : 'Bilancio Lightning (€)',
+                          data: datiControvaloreEur,
+                          borderColor: '#f39c12', // Arancione BTC
+                          backgroundColor: 'rgba(243, 156, 18, 0.05)',
+                          borderWidth: 3,
+                          pointBackgroundColor: '#ffffff',
+                          pointBorderColor: '#f39c12',
+                          pointRadius: 4,
+                          tension: 0.15,
+                          fill: true
+                      }]
+                  },
+                  options: {
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                          legend: { display: false },
+                          tooltip: {
+                              callbacks: {
+                                  label: function(context) {
+                                      let index = context.dataIndex;
+                                      let valBtc = datiQuantitaBtc[index];
+                                      if (tipoAmbiente === 'LIGHTNING') {
+                                          let sats = Math.round(valBtc * 100000000);
+                                          return ` Valore: ${datiControvaloreEur[index]} € (${sats.toLocaleString()} sats)`;
+                                      }
+                                      return ` Valore: ${datiControvaloreEur[index]} € (${valBtc.toFixed(8)} BTC)`;
+                                  }
+                              }
+                          }
+                      },
+                      scales: {
+                          x: { grid: { color: '#2a2a2a' }, ticks: { color: '#aaa' } },
+                          y: { grid: { color: '#2a2a2a' }, ticks: { color: '#aaa' } }
+                      }
+                  }
+              });
+          }
+      }
+  });
+</script>
+{% endblock %}
