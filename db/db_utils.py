@@ -854,35 +854,55 @@ def ripristina_database_completo(user_id, dati_json):
                             'capitale_investito', 0), a.get('valore_attuale', 0), a.get('data_aggiornamento')
                     ))
 
-        # 6. IMPORT ASSETS HISTORY (Rilevazioni Storiche)
+        # =====================================================================
+        # 6. IMPORT ASSETS HISTORY (Rilevazioni Storiche) - CORRETTO CON ASSET_ID
+        # =====================================================================
         assets_hist = dati_json.get('assets_history', [])
         print(
             f"DEBUG RIPRISTINO: Inserimento {len(assets_hist)} rilevazioni storiche")
         colonne_hist = ottieni_colonne("assets_history")
 
-        if colonne_hist:
-            # Capisce al volo se la colonna si chiama nome_asset o asset
-            col_nome_h = "nome_asset" if "nome_asset" in colonne_hist else (
-                "asset" if "asset" in colonne_hist else None)
+        if colonne_hist and assets_hist:
             has_user_id = "user_id" in colonne_hist
 
             for h in assets_hist:
-                val_nome_h = h.get('nome_asset') or h.get(
-                    'asset') or h.get('nome', 'Asset')
-                val_rilevato = h.get('valore_rilevato') or h.get('valore', 0)
+                # 1. Recuperiamo i dati fondamentali dal backup
+                valore_rilevato = h.get(
+                    'valore_rilevato') or h.get('valore', 0)
                 data_rilev = h.get('data_rilevazione') or h.get('data')
 
-                if col_nome_h:
+                # 2. STRATEGIA DI RECUPERO DEL COLLEGAMENTO:
+                # Se nel backup abbiamo l'asset_id originale, lo usiamo.
+                # Altrimenti, se abbiamo solo il nome, cerchiamo il nuovo ID dal DB.
+                id_asset_corretto = h.get('asset_id')
+
+                if not id_asset_corretto:
+                    nome_da_cercare = h.get('nome_asset') or h.get(
+                        'asset') or h.get('nome')
+                    if nome_da_cercare:
+                        cursor.execute("""
+                            SELECT id FROM assets_watch 
+                            WHERE (nome_asset = ? OR asset = ?) AND user_id = ?
+                        """, (nome_da_cercare, nome_da_cercare, user_id))
+                        res = cursor.fetchone()
+                        if res:
+                            id_asset_corretto = res[0]
+
+                # 3. Se abbiamo trovato l'ID dell'asset, inseriamo lo storico!
+                if id_asset_corretto:
                     if has_user_id:
-                        cursor.execute(f'''
-                            INSERT INTO assets_history ({col_nome_h}, valore_rilevato, data_rilevazione, user_id) 
+                        cursor.execute('''
+                            INSERT INTO assets_history (asset_id, valore_rilevato, data_rilevazione, user_id) 
                             VALUES (?, ?, ?, ?)
-                        ''', (val_nome_h, val_rilevato, data_rilev, user_id))
+                        ''', (id_asset_corretto, valore_rilevato, data_rilev, user_id))
                     else:
-                        cursor.execute(f'''
-                            INSERT INTO assets_history ({col_nome_h}, valore_rilevato, data_rilevazione) 
+                        cursor.execute('''
+                            INSERT INTO assets_history (asset_id, valore_rilevato, data_rilevazione) 
                             VALUES (?, ?, ?)
-                        ''', (val_nome_h, val_rilevato, data_rilev))
+                        ''', (id_asset_corretto, valore_rilevato, data_rilev))
+                else:
+                    print(
+                        f"⚠️ Salto riga storico: Impossibile associare la rilevazione del valore {valore_rilevato}")
 
         # 7. IMPORT MAPPING CATEGORIE
         mapping_cat = dati_json.get('mapping_categorie', [])
