@@ -65,6 +65,8 @@ test_import.py
 # Environment variables
 .env
 
+.dev_mode
+
 # Cache e Database (già inclusi sopra, ma non guasta)
 __pycache__/
 *.db

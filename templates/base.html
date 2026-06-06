@@ -45,9 +45,9 @@
         <div class="logo-container">
           <a href="{{ url_for('home') }}">
             <span style="color: #f39c12; font-weight: bold">₿</span>eesy
-          </a>
-          {% if is_dev_mode %}
-          <span
+          </a>             
+          {% if beesy_env == 'development' %}
+            <span
             class="animate-pulse"
             style="
               background-color: #f39c12;
@@ -65,6 +65,7 @@
           </span>
           {% endif %}
         </div>
+        
         {% if current_user.is_authenticated %}
         <div class="user-menu" style="position: relative">
           <button class="user-menu-btn" id="user-menu-btn" type="button">
@@ -225,8 +226,9 @@
         Built with passion for a decentralized future.
       </p>
       <a class="nav-link" href="{{ url_for('faq') }}">F.A.Q.</a>
-    </footer>
 
+    </footer>
+    
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"

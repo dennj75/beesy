@@ -2,26 +2,36 @@
 
 import sqlite3
 import os
-
+import subprocess
 
 # 1. Troviamo la cartella principale del progetto (EE)
-# Visto che db_utils.py è dentro la cartella 'db', saliamo di un livello per trovare la radice
 BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
-# 2. Controlliamo se esiste il file .dev_mode nella cartella principale
-# Se siamo in sviluppo ('development') o c'è il file .dev_mode, usa il DB di test
-if os.environ.get('FLASK_ENV') == 'development' or os.path.exists(os.path.join(BASE_DIR, '.dev_mode')):
+# 2. Chiediamo a Git in quale branch siamo in questo momento
+try:
+    # Esegue il comando 'git branch' in sottofondo e legge il nome
+    branch = subprocess.check_output(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"]).decode("utf-8").strip()
+except Exception:
+    branch = "main"  # Fallback di sicurezza se Git dovesse fallire
+
+# 3. Autoscambio intelligente basato sul Branch!
+if branch == "dev":
     DB_NAME = 'database_dev.db'
+    os.environ['BEESY_ENV'] = 'development'
+    print("🛠️ [MODE AUTOMATICO]: Branch DEV rilevato. Utilizzo -> database_dev.db")
 else:
     DB_NAME = 'database.db'
+    os.environ['BEESY_ENV'] = 'production'
+    print("🚀 [MODE AUTOMATICO]: Branch MAIN rilevato. Utilizzo -> database.db")
 
-# 3. Creiamo il percorso globale ASSOLUTO che si aspettano le tue altre funzioni
+# 4. Creiamo il percorso globale ASSOLUTO
 DB_PATH = os.path.join(BASE_DIR, DB_NAME)
 
+# 5. Funzione di connessione universale
 
-# 4. Ecco la tua funzione di connessione, pulita e universale
+
 def get_db_connection():
-    # Usa il DB_PATH globale che abbiamo calcolato sopra
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn

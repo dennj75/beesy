@@ -402,7 +402,8 @@ def home():
                            rendimento_onchain=rendimento_onchain,
                            percentuale_onchain=percentuale_onchain,
                            rendimento_lightning=rendimento_lightning,
-                           percentuale_lightning=percentuale_lightning
+                           percentuale_lightning=percentuale_lightning,
+                           beesy_env=os.environ.get('BEESY_ENV', 'production')
                            )
 
 
@@ -1376,24 +1377,32 @@ def update_asset_value():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # 1. Inseriamo il nuovo record nello storico per non perdere il passato
-        cursor.execute('''
-            INSERT INTO assets_history (asset_id, valore_rilevato)
-            VALUES (?, ?)
-        ''', (int(asset_id), float(nuovo_valore)))
-
-        # 2. Aggiorniamo comunque il 'valore_attuale' nella tabella principale per comodità di lettura veloce
+        # 1. Aggiorniamo il valore attuale nella tabella principale degli asset
         cursor.execute('''
             UPDATE assets_watch
             SET valore_attuale = ?, data_aggiornamento = CURRENT_TIMESTAMP
             WHERE id = ? AND user_id = ?
         ''', (float(nuovo_valore), int(asset_id), current_user.id))
 
+        # 2. Per fare un grafico perfetto, prendiamo TUTTI gli asset dell'utente con i loro valori attuali aggiornati
+        cursor.execute("SELECT id, valore_attuale FROM assets_watch WHERE user_id = ?", (current_user.id,))
+        tutti_gli_asset = cursor.fetchall()
+
+        # 3. Inseriamo nello storico il valore aggiornato di ogni singolo asset con lo stesso identico timestamp!
+        # In questo modo, ogni volta che fai un cambio, creiamo una "foto di gruppo" perfetta del tuo patrimonio.
+        import datetime
+        ora_attuale = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        for row in tutti_gli_asset:
+            cursor.execute('''
+                INSERT INTO assets_history (asset_id, valore_rilevato, data_rilevazione)
+                VALUES (?, ?, ?)
+            ''', (row['id'], float(row['valore_attuale']), ora_attuale))
+
         conn.commit()
         conn.close()
 
     return redirect(url_for('analytics', tipo='EURO'))
-
 
 @app.route('/modifica_asset/<int:asset_id>', methods=['POST'])
 @login_required
