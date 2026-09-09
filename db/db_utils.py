@@ -37,10 +37,27 @@ def get_db_connection():
     return conn
 
 
+# --- GESTIONE AUTOMATICA DEL DATABASE (Main vs Dev) ---
+# Controlliamo se esiste il file sorgente .dev_mode nella cartella principale del progetto
+if os.path.exists(".dev_mode") or os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".dev_mode")):
+    DB_PATH = "database_dev.db"
+    print("🛠️ [MODE]: Sviluppo attivo. Utilizzo -> database_dev.db")
+else:
+    DB_PATH = "database.db"
+    print("🚀 [MODE]: Produzione attiva. Utilizzo -> database.db")
+# ------------------------------------------------------
 COLONNE_TRANSAZIONI = [
     "id", "data", "descrizione", "categoria", "sottocategoria",
     "importo", "controvalore_btc", "valore_btc_eur", "conto", "user_id", "note"
 ]
+
+
+def get_db_connection():
+    # 'database.db' deve essere il nome esatto del tuo file
+    db_path = DB_PATH
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 def verifica_ownership_transazione(id_transazione, user_id, tabella):
@@ -907,10 +924,9 @@ def ripristina_database_completo(user_id, dati_json):
                     ))
 
         # =====================================================================
-        # 6. IMPORT ASSETS HISTORY (Rilevazioni Storiche) - FIX QUERY COLONNA
+        # 6. IMPORT ASSETS HISTORY (Rilevazioni Storiche) - CORRETTO CON ASSET_ID
         # =====================================================================
         assets_hist = dati_json.get('assets_history', [])
-        assets_watch_backup = dati_json.get('assets_watch', [])
         print(
             f"DEBUG RIPRISTINO: Inserimento {len(assets_hist)} rilevazioni storiche")
         colonne_hist = ottieni_colonne("assets_history")
@@ -918,37 +934,30 @@ def ripristina_database_completo(user_id, dati_json):
         if colonne_hist and assets_hist:
             has_user_id = "user_id" in colonne_hist
 
-            # 1. Costruiamo la mappa usando le chiavi flessibili del backup
-            mappa_vecchi_id_nomi = {}
-            for aw in assets_watch_backup:
-                v_id = aw.get('id')
-                v_nome = aw.get('nome_asset') or aw.get(
-                    'asset') or aw.get('nome')
-                if v_id and v_nome:
-                    mappa_vecchi_id_nomi[v_id] = v_nome
-
             for h in assets_hist:
+                # 1. Recuperiamo i dati fondamentali dal backup
                 valore_rilevato = h.get(
                     'valore_rilevato') or h.get('valore', 0)
                 data_rilev = h.get('data_rilevazione') or h.get('data')
 
-                # 2. Recuperiamo il nome dell'asset associato al vecchio ID del backup
-                vecchio_id = h.get('asset_id')
-                nome_da_cercare = mappa_vecchi_id_nomi.get(vecchio_id)
+                # 2. STRATEGIA DI RECUPERO DEL COLLEGAMENTO:
+                # Se nel backup abbiamo l'asset_id originale, lo usiamo.
+                # Altrimenti, se abbiamo solo il nome, cerchiamo il nuovo ID dal DB.
+                id_asset_corretto = h.get('asset_id')
 
-                id_asset_corretto = None
+                if not id_asset_corretto:
+                    nome_da_cercare = h.get('nome_asset') or h.get(
+                        'asset') or h.get('nome')
+                    if nome_da_cercare:
+                        cursor.execute("""
+                            SELECT id FROM assets_watch 
+                            WHERE (nome_asset = ? OR asset = ?) AND user_id = ?
+                        """, (nome_da_cercare, nome_da_cercare, user_id))
+                        res = cursor.fetchone()
+                        if res:
+                            id_asset_corretto = res[0]
 
-                # 3. Cerchiamo il NUOVO ID usando solo la colonna REALE del database ('nome_asset')
-                if nome_da_cercare:
-                    cursor.execute("""
-                        SELECT id FROM assets_watch 
-                        WHERE nome_asset = ? AND user_id = ?
-                    """, (nome_da_cercare, user_id))
-                    res = cursor.fetchone()
-                    if res:
-                        id_asset_corretto = res[0]
-
-                # 4. Inserimento nel database
+                # 3. Se abbiamo trovato l'ID dell'asset, inseriamo lo storico!
                 if id_asset_corretto:
                     if has_user_id:
                         cursor.execute('''
@@ -962,7 +971,7 @@ def ripristina_database_completo(user_id, dati_json):
                         ''', (id_asset_corretto, valore_rilevato, data_rilev))
                 else:
                     print(
-                        f"⚠️ Salto riga storico: Impossibile associare il vecchio ID {vecchio_id} (Nome trovato: '{nome_da_cercare}') al nuovo DB")
+                        f"⚠️ Salto riga storico: Impossibile associare la rilevazione del valore {valore_rilevato}")
 
         # 7. IMPORT MAPPING CATEGORIE
         mapping_cat = dati_json.get('mapping_categorie', [])
@@ -977,12 +986,12 @@ def ripristina_database_completo(user_id, dati_json):
                 subcat = m.get('sottocategoria', 'Generica')
                 if has_user_id_map:
                     cursor.execute('''
-                        INSERT OR REPLACE INTO mapping_categorie (parola_chiave, categoria, sottocategoria, user_id) 
+                        INSERT INTO mapping_categorie (parola_chiave, categoria, sottocategoria, user_id) 
                         VALUES (?, ?, ?, ?)
                     ''', (parola, cat, subcat, user_id))
                 else:
                     cursor.execute('''
-                        INSERT OR REPLACE INTO mapping_categorie (parola_chiave, categoria, sottocategoria) 
+                        INSERT INTO mapping_categorie (parola_chiave, categoria, sottocategoria) 
                         VALUES (?, ?, ?)
                     ''', (parola, cat, subcat))
 
