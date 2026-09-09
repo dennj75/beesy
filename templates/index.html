@@ -96,7 +96,9 @@ block content %}
       💰 {{ _('Saldo:') }} {{
       "{:,}".format(saldo_totale_satoshi|int).replace(",",".") }} SATS
     </p>
+   
     <p class="saldo-secondario">{{ "%.2f"|format(saldo_eur_lightning) }} €</p>
+     <!--
     <a
       href="{{ url_for('importa_blink') }}"
       class="btn btn-sm btn-outline-warning"
@@ -104,6 +106,7 @@ block content %}
     >
       📥 {{ _('Importa CSV BLINK') }}
     </a>
+  -->
   </div>
 
   <div class="balance-card tracker-euro-card">
