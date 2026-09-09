@@ -38,19 +38,18 @@ This project is an **EXPERIMENTAL EDUCATIONAL LABORATORY**.
 | :----------------------------------------------: | :-----------------------------------------: |
 | ![Dashboard](/static/img/Dashboard_20260502.png) | ![Analytics](static/img/Chart_20260502.png) |
 
-
-
 ### 🛠️ TechStack
 
-| Component | Technology | Role |
-| :--- | :--- | :--- |
-| **Backend** | Flask (Python) | Server-side logic & API management |
-| **Data Viz** | **Chart.js** | Interactive bar and doughnut charts with modal drill-down |
-| **Database** | SQLite | Local-first, private data storage |
-| **Security** | Fernet (PBKDF2HMAC + SHA-256) | Zero-knowledge local encryption for backups |
-| **Localization** | **Flask-Babel / gettext** | Server-side i18n translation framework |
-| **Auth** | Nostr (Amber / NIP-07) | Decentralized, password-less authentication |
-| **Dev Method** | **Vibe Coding** | Building with passion and real-time iteration |
+| Component        | Technology                    | Role                                                      |
+| :--------------- | :---------------------------- | :-------------------------------------------------------- |
+| **Backend**      | Flask (Python)                | Server-side logic & API management                        |
+| **Data Viz**     | **Chart.js**                  | Interactive bar and doughnut charts with modal drill-down |
+| **Database**     | SQLite                        | Local-first, private data storage                         |
+| **Security**     | Fernet (PBKDF2HMAC + SHA-256) | Zero-knowledge local encryption for backups               |
+| **Localization** | **Flask-Babel / gettext**     | Server-side i18n translation framework                    |
+| **Auth**         | Nostr (Amber / NIP-07)        | Decentralized, password-less authentication               |
+| **Dev Method**   | **Vibe Coding**               | Building with passion and real-time iteration             |
+
 ---
 
 ## 🚀 Quick Start (Self-Hosted)
@@ -69,40 +68,52 @@ This project is an **EXPERIMENTAL EDUCATIONAL LABORATORY**.
 git clone [https://github.com/dennj75/beesy.git](https://github.com/dennj75/beesy.git)
 cd beesy
 ```
+
 #### 2. Create and activate virtual environment(first time only)
 
 Windows (PowerShell / CMD)
+
 ```bash
 py -m venv .venv
 .\.venv\Scripts\activate
 ```
+
 Linux / macOS
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
+
 💡 Troubleshooting: If py -m venv .venv hangs or fails during setup, run:
+
 ```bash
 py -m venv .venv --without-pip
 .\.venv\Scripts\activate
 python -m ensurepip
 ```
+
 3. Install dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
+
 4. Compile translation files (i18n)
+
 ```bash
 pybabel compile -d translations
 ```
+
 5. Launch Beesy
+
 ```bash
 python app.py
 ```
+
 Open your browser and go to:
 
 👉 http://localhost:5000
-
 
 ## 🧪 "Nostr" & Mobile Laboratory
 
@@ -119,9 +130,9 @@ Open your browser and go to:
 🛡️ **Zero-Knowledge Backup System**
 
 We implemented a robust backup system to ensure you never lose your data:
+
 - **Passphrase Derived Encryption: Local** .json.enc files are protected by a key generated via PBKDF2HMAC with SHA-256.
-- **Fernet Specification**: Data payload encryption utilizes 128-bit AES in CBC mode with PKCS7 padding and HMAC authentication using SHA-256.
--**Standalone Recovery**: Run python test_backup.py from any terminal to decrypt your backups directly using your passphrase. Guaranteed data sovereignty even if the application server is unreachable.
+- **Fernet Specification**: Data payload encryption utilizes 128-bit AES in CBC mode with PKCS7 padding and HMAC authentication using SHA-256. -**Standalone Recovery**: Run python test_backup.py from any terminal to decrypt your backups directly using your passphrase. Guaranteed data sovereignty even if the application server is unreachable.
 - **Traditional Users:** Your backup is encrypted using a Master Key derived from your password. Even if someone steals your backup file, they cannot read it without your Beesy password.
 - **Nostr Users:** Quick JSON export/import for seamless identity portability.
 - **Mobile Ready:** Restore your history directly from your smartphone browser with 100% success rate on traditional accounts.
@@ -135,8 +146,8 @@ We implemented a robust backup system to ensure you never lose your data:
 - [x] **Plug & Play DB:** Automatic database and table creation on first run.
 - [x] Parachute Offline Test: Independent recovery CLI tool (test_backup.py).
 - [x] **Multi-language Support (i18n):** Translating the interface into English and Chinese to reach the global Bitcoin community. 🌍
+- [x] **Detailed History:** Transaction drill-down within the Analytics page.
 - [ ] **Multi-currency support:** Beyond EUR (USD, CHF, etc.).
-- [ ] **Detailed History:** Transaction drill-down within the Analytics page.
 - [ ] **Docker Support:** One-click deployment for Umbrel/Raspberry Pi.
 
 ---

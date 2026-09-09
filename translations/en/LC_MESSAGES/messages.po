@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-26 17:24+0200\n"
-"PO-Revision-Date: 2026-07-26 17:34+0200\n"
+"POT-Creation-Date: 2026-09-09 15:03+0200\n"
+"PO-Revision-Date: 2026-09-09 15:20+0200\n"
 "Last-Translator: \n"
 "Language-Team: en <LL@li.org>\n"
 "Language: en\n"
@@ -19,586 +19,575 @@ msgstr ""
 "Generated-By: Babel 2.18.0\n"
 "X-Generator: Poedit 3.9\n"
 
-#: app.py:133 templates/analytics.html:9
+#: app.py:109 templates/analytics.html:10
 msgid "Entrate"
 msgstr "Revenue"
 
-#: app.py:134
-msgid "Abitazione"
-msgstr "Home"
-
-#: app.py:135
-msgid "Alimentari"
-msgstr "Grocery"
-
-#: app.py:136
-msgid "Trasporti"
-msgstr "Transportation"
-
-#: app.py:137
-msgid "Spese Personali"
-msgstr "Personal Expenses"
-
-#: app.py:138
-msgid "Tempo Libero"
-msgstr "Free time"
-
-#: app.py:139
-msgid "Patrimonio & Finanze"
-msgstr "Assets & Finances"
-
-#: app.py:140
-msgid "Tasse & Stato"
-msgstr "Taxes & State"
-
-#: app.py:141
-msgid "Lavoro & Studio"
-msgstr "Work & Study"
-
-#: app.py:142
-msgid "Famiglia"
-msgstr "Family"
-
-#: app.py:143
-msgid "Salute"
-msgstr "Health"
-
-#: app.py:144
-msgid "Imprevisti"
-msgstr "Unforeseen events"
-
-#: app.py:147
+#: app.py:109
 msgid "Cedole O Dividendi"
 msgstr "Coupons or Dividends"
 
-#: app.py:148
-msgid "plusvalenze investimenti"
-msgstr "capital gains on investments"
-
-#: app.py:149
+#: app.py:109
 msgid "Interessi attivi"
 msgstr "Active interests"
 
-#: app.py:150
+#: app.py:110
 msgid "Stipendio"
 msgstr "Salary"
 
-#: app.py:151
+#: app.py:110
 msgid "Rimborso capitale investito"
 msgstr "Refund of invested capital"
 
-#: app.py:152
+#: app.py:111
 msgid "Regalo"
 msgstr "Gift"
 
-#: app.py:153
+#: app.py:111
 msgid "Donazioni"
 msgstr "Donations"
 
-#: app.py:154
+#: app.py:111
 msgid "Claim giochi online"
 msgstr "Claim online games"
 
-#: app.py:155
-msgid "Affitto/Mutuo"
-msgstr "Rent/Mortgage"
+#: app.py:112
+msgid "Plusvalenze Investimenti"
+msgstr "Capital Gains Investments"
 
-#: app.py:156
-msgid "Bollette: Luce"
-msgstr "Bills: Electricity"
-
-#: app.py:157
-msgid "Bollette: acqua"
-msgstr "Bills: water"
-
-#: app.py:158
-msgid "Bollette: Gas"
-msgstr "Bills: Gas"
-
-#: app.py:159
-msgid "Bollette: Rifiuti"
-msgstr "Bills: Waste"
-
-#: app.py:160
-msgid "Manutenzione"
-msgstr "Maintenance"
-
-#: app.py:161
-msgid "Spese condominiali"
-msgstr "Condominium expenses"
-
-#: app.py:162
-msgid "Assicurazione casa"
-msgstr "Home insurance"
-
-#: app.py:163
-msgid "IMU"
-msgstr "IMU"
-
-#: app.py:164
-msgid "Supermercato"
-msgstr "Supermarket"
-
-#: app.py:165
-msgid "Ristorante - Bar"
-msgstr "Restaurant - Bar"
-
-#: app.py:166
-msgid "Spesa online"
-msgstr "Online shopping"
-
-#: app.py:167 app.py:176 app.py:198 app.py:210 app.py:214
+#: app.py:112 templates/importa_anteprima.html:82
 msgid "Altro"
 msgstr "Other"
 
-#: app.py:168
+#: app.py:113
+msgid "Abitazione"
+msgstr "Home"
+
+#: app.py:114
+msgid "Affitto/Mutuo"
+msgstr "Rent/Mortgage"
+
+#: app.py:114
+msgid "Bollette: Luce"
+msgstr "Bills: Electricity"
+
+#: app.py:114
+msgid "Bollette: acqua"
+msgstr "Bills: water"
+
+#: app.py:114
+msgid "Bollette: Gas"
+msgstr "Bills: Gas"
+
+#: app.py:115
+msgid "Bollette: Rifiuti"
+msgstr "Bills: Waste"
+
+#: app.py:115
+msgid "Manutenzione"
+msgstr "Maintenance"
+
+#: app.py:116
+msgid "Spese condominiali"
+msgstr "Condominium expenses"
+
+#: app.py:116
+msgid "Assicurazione casa"
+msgstr "Home insurance"
+
+#: app.py:116
+msgid "IMU"
+msgstr "IMU"
+
+#: app.py:117
+msgid "Alimentari"
+msgstr "Grocery"
+
+#: app.py:117
+msgid "Supermercato"
+msgstr "Supermarket"
+
+#: app.py:118
+msgid "Ristorante - Bar"
+msgstr "Restaurant - Bar"
+
+#: app.py:118
+msgid "Spesa online"
+msgstr "Online shopping"
+
+#: app.py:119
+msgid "Trasporti"
+msgstr "Transportation"
+
+#: app.py:119
 msgid "Carburante"
 msgstr "Fuel"
 
-#: app.py:169
+#: app.py:119
 msgid "Mezzi pubblici"
 msgstr "Public transport"
 
-#: app.py:170
+#: app.py:120
 msgid "Manutenzione auto / moto"
 msgstr "Car / motorcycle maintenance"
 
-#: app.py:171
+#: app.py:120
 msgid "Assicurazione auto"
 msgstr "Car insurance"
 
-#: app.py:172
+#: app.py:121
 msgid "Bollo auto"
 msgstr "Car tax"
 
-#: app.py:173
+#: app.py:121
 msgid "Taxi / Uber"
 msgstr "Taxi / Uber"
 
-#: app.py:174
+#: app.py:121
 msgid "Noleggi"
 msgstr "Rentals"
 
-#: app.py:175
+#: app.py:121
 msgid "Parcheggi / pedaggi"
 msgstr "Parking / tolls"
 
-#: app.py:177
+#: app.py:122
+msgid "Spese Personali"
+msgstr "Personal Expenses"
+
+#: app.py:123
 msgid "Abbigliamento / Scarpe"
 msgstr "Clothing / Shoes"
 
-#: app.py:178
+#: app.py:123
 msgid "Igiene personale"
 msgstr "Personal hygiene"
 
-#: app.py:179
+#: app.py:123
 msgid "Parrucchiere / estetista"
 msgstr "Hairdresser / beautician"
 
-#: app.py:180
+#: app.py:124
 msgid "Abbonamenti (Netflix, Spotify, ecc)"
 msgstr "Subscriptions (Netflix, Spotify, etc.)"
 
-#: app.py:181
+#: app.py:124
 msgid "Libri / Riviste"
 msgstr "Books / Magazines"
 
-#: app.py:182
+#: app.py:125
+msgid "Tempo Libero"
+msgstr "Free time"
+
+#: app.py:126
 msgid "Cinema / Teatro / Eventi"
 msgstr "Cinema / Theater / Events"
 
-#: app.py:183
+#: app.py:126
 msgid "Sport / Palestra"
 msgstr "Sports / Gym"
 
-#: app.py:184
+#: app.py:126
 msgid "Viaggi / Vacanze"
 msgstr "Travel / Holidays"
 
-#: app.py:185
+#: app.py:127
 msgid "Hobby / Collezioni"
 msgstr "Hobbies / Collections"
 
-#: app.py:186
+#: app.py:127
 msgid "Giochi / App"
 msgstr "Games / Apps"
 
-#: app.py:187
+#: app.py:128
+msgid "Patrimonio & Finanze"
+msgstr "Assets and Finances"
+
+#: app.py:128
 msgid "Commissioni bancarie"
 msgstr "Bank fees"
 
-#: app.py:188
+#: app.py:129
 msgid "Interessi passivi"
 msgstr "Passive interests"
 
-#: app.py:189
+#: app.py:129
 msgid "Minusvalenze investimenti"
 msgstr "Capital losses on investments"
 
-#: app.py:190
+#: app.py:130
 msgid "Imposte di bollo / IVAFE"
 msgstr "Stamp duty / IVAFE"
 
-#: app.py:191
+#: app.py:130
 msgid "Acquisto Titoli/Fondi (Giroconto)"
 msgstr "Purchase of Securities/Funds (Transfer)"
 
-#: app.py:192
+#: app.py:131
 msgid "Versamento Pensione (Giroconto)"
 msgstr "Pension Payment (Transfer)"
 
-#: app.py:193
+#: app.py:132
 msgid "Investimento Crypto"
 msgstr "Crypto Investment"
 
-#: app.py:194
+#: app.py:132
 msgid "Prelievo Contante"
 msgstr "Cash Withdrawal"
 
-#: app.py:195
+#: app.py:133
+msgid "Tasse & Stato"
+msgstr "Taxes and State"
+
+#: app.py:134
 msgid "IRPEF (Saldo/Acconto)"
 msgstr "IRPEF (Balance/Advance Payment)"
 
-#: app.py:196
+#: app.py:134
 msgid "Capital Gain (Tassazione)"
 msgstr "Capital Gain (Taxation)"
 
-#: app.py:197
+#: app.py:134
 msgid "Multe"
 msgstr "Fines"
 
-#: app.py:199
+#: app.py:135
+msgid "Lavoro & Studio"
+msgstr "Work and Study"
+
+#: app.py:136
 msgid "Ufficio / Coworking"
 msgstr "Office / Coworking"
 
-#: app.py:200
+#: app.py:136
 msgid "Formazione / Corsi"
 msgstr "Training / Courses"
 
-#: app.py:201
+#: app.py:136
 msgid "Materiali didattici"
 msgstr "Teaching materials"
 
-#: app.py:202
+#: app.py:137
 msgid "Trasporti lavoro"
 msgstr "Work transport"
 
-#: app.py:203
+#: app.py:137
 msgid "Pasti lavoro"
 msgstr "Work meals"
 
-#: app.py:204
+#: app.py:138
+msgid "Famiglia"
+msgstr "Family"
+
+#: app.py:138
 msgid "Spese scolastiche"
 msgstr "School expenses"
 
-#: app.py:205
+#: app.py:139
 msgid "Abbigliamento bambino"
 msgstr "Children's clothing"
 
-#: app.py:206
+#: app.py:139
 msgid "Salute bambino"
 msgstr "Child health"
 
-#: app.py:207
+#: app.py:139
 msgid "Giocattoli"
 msgstr "Toys"
 
-#: app.py:208
+#: app.py:140
 msgid "Baby sitter / Asilo"
 msgstr "Babysitter / Nursery"
 
-#: app.py:209
+#: app.py:140
 msgid "Regali fatti"
 msgstr "Gifts made"
 
-#: app.py:211
+#: app.py:141
+msgid "Salute"
+msgstr "Health"
+
+#: app.py:141
 msgid "Farmacia"
 msgstr "Pharmacy"
 
-#: app.py:212
+#: app.py:141
 msgid "Visita medica"
 msgstr "Medical visit"
 
-#: app.py:213
+#: app.py:141
 msgid "Assicurazione Sanitaria"
 msgstr "Health Insurance"
 
-#: app.py:215
+#: app.py:142
+msgid "Imprevisti"
+msgstr "Unforeseen events"
+
+#: app.py:142
 msgid "Riparazioni urgenti"
 msgstr "Urgent repairs"
 
-#: app.py:216
+#: app.py:143
 msgid "Emergenze"
 msgstr "Emergencies"
 
-#: app.py:217
+#: app.py:143
 msgid "Sostituzione tech"
 msgstr "Tech replacement"
 
-#: app.py:482
+#: app.py:411
 msgid "Disponibilità (Banca/Contanti)"
 msgstr "Availability (Bank/Cash)"
 
-#: app.py:483
+#: app.py:412
 msgid "Investimenti/Pensione"
 msgstr "Investments/Pension"
 
-#: app.py:484
+#: app.py:413
 msgid "Lightning"
 msgstr "Lightning"
 
-#: app.py:485
+#: app.py:414
 msgid "On-chain"
 msgstr "On-chain"
 
-#: app.py:1449
+#: app.py:1378
 msgid "Statistiche Euro (€)"
 msgstr "Statistics Euro (€)"
 
-#: app.py:1450
+#: app.py:1379
 msgid "Statistiche Lightning (⚡)"
 msgstr "Statistics Lightning (⚡️)"
 
-#: app.py:1451
+#: app.py:1380
 msgid "Statistiche On-chain (₿)"
 msgstr "Statistics On-chain (₿)"
 
-#: app.py:1460 templates/analytics.html:1
+#: app.py:1389 templates/analytics.html:1 templates/base.html:211
+#: templates/base.html:224 templates/base.html:237
 msgid "Statistiche"
 msgstr "Statistics"
 
-#: templates/analytics.html:21
+#: templates/analytics.html:22
 msgid "Uscite"
 msgstr "Exits"
 
-#: templates/analytics.html:33
+#: templates/analytics.html:34
 msgid "Delta (Bilancio)"
 msgstr "Delta (Budget)"
 
-#: templates/analytics.html:52
+#: templates/analytics.html:53
 msgid "📈 Savings Rate (Efficienza del Risparmio)"
 msgstr "📈 Savings Rate (Savings Efficiency)"
 
-#: templates/analytics.html:69
+#: templates/analytics.html:70
 msgid "Livello Leggenda!"
 msgstr "Legend Level!"
 
-#: templates/analytics.html:70
+#: templates/analytics.html:71
 msgid "Ottimo lavoro!"
 msgstr "Great job!"
 
-#: templates/analytics.html:71
+#: templates/analytics.html:72
 msgid "Buono, ma ottimizzabile."
 msgstr "Good, but can be optimized."
 
-#: templates/analytics.html:72
+#: templates/analytics.html:73
 msgid "Deficit mensile."
 msgstr "Monthly deficit."
 
-#: templates/analytics.html:92
+#: templates/analytics.html:93
 msgid "VISTA MENSILE"
 msgstr "MONTHLY VIEW"
 
-#: templates/analytics.html:95
-msgid "mese_selezionato"
-msgstr "selected_month"
-
-#: templates/analytics.html:108
+#: templates/analytics.html:109
 msgid "VISTA ANNUALE"
 msgstr "ANNUAL VIEW"
 
-#: templates/analytics.html:111
-msgid "anno_selezionato"
-msgstr "selected_year"
-
-#: templates/analytics.html:124
+#: templates/analytics.html:125
 msgid "Totale Storico"
 msgstr "Historical Total"
 
-#: templates/analytics.html:141
+#: templates/analytics.html:144
 msgid "Mese specifico"
 msgstr "Specific month"
 
-#: templates/analytics.html:154
+#: templates/analytics.html:157
 msgid "oppure"
 msgstr "or"
 
-#: templates/analytics.html:158
+#: templates/analytics.html:161
 msgid "Solo Anno"
 msgstr "Only Year"
 
-#: templates/analytics.html:179
+#: templates/analytics.html:184
 msgid "Filtra"
 msgstr "Filter"
 
-#: templates/analytics.html:189
+#: templates/analytics.html:200
 msgid "Reset"
 msgstr "Reset"
 
-#: templates/analytics.html:197
+#: templates/analytics.html:209
 msgid "Esporta Report"
 msgstr "Export Report"
 
-#: templates/analytics.html:205
+#: templates/analytics.html:218
 msgid "Analisi Uscite"
 msgstr "Output Analysis"
 
-#: templates/analytics.html:216
+#: templates/analytics.html:229
 msgid "Nessuna spesa registrata."
 msgstr "No expenses recorded."
 
-#: templates/analytics.html:223
+#: templates/analytics.html:236
 msgid "Analisi Entrate"
 msgstr "Revenue Analysis"
 
-#: templates/analytics.html:234
+#: templates/analytics.html:247
 msgid "Nessuna entrata registrata."
 msgstr "No entries recorded."
 
-#: templates/analytics.html:246
+#: templates/analytics.html:260
 msgid "Aggiungi Nuovo Investimento"
 msgstr "Add New Investment"
 
-#: templates/analytics.html:253
+#: templates/analytics.html:267
 msgid "Nome (es. Buono Postale)"
 msgstr "Name (e.g. Postal Order)"
 
-#: templates/analytics.html:263
+#: templates/analytics.html:277
 msgid "Capitale Investito €"
 msgstr "Invested Capital €"
 
-#: templates/analytics.html:273
+#: templates/analytics.html:287
 msgid "Valore Iniziale €"
 msgstr "Initial Value €"
 
-#: templates/analytics.html:279
+#: templates/analytics.html:293
 msgid "Salva"
 msgstr "Save"
 
-#: templates/analytics.html:287
+#: templates/analytics.html:303
 msgid "Performance Investimenti"
 msgstr "Investment Performance"
 
-#: templates/analytics.html:297 templates/analytics.html:440
+#: templates/analytics.html:313 templates/analytics.html:472
 msgid "Asset"
 msgstr "Asset"
 
-#: templates/analytics.html:298
+#: templates/analytics.html:314
 msgid "Costo Storico (Carico)"
 msgstr "Historical Cost (Load)"
 
-#: templates/analytics.html:299
+#: templates/analytics.html:315
 msgid "Valore Attuale"
 msgstr "Current Value"
 
-#: templates/analytics.html:300 templates/index.html:67 templates/index.html:91
+#: templates/analytics.html:316 templates/index.html:67 templates/index.html:91
 msgid "Rendimento"
 msgstr "Performance"
 
-#: templates/analytics.html:302
+#: templates/analytics.html:318
 msgid "Registra Valore Mese"
 msgstr "Record Monthly Value"
 
-#: templates/analytics.html:362
+#: templates/analytics.html:382
 msgid "Nuovo importo €"
 msgstr "New amount €"
 
-#: templates/analytics.html:368
+#: templates/analytics.html:388
 msgid "Salva rilevazione mese"
 msgstr "Save month detection"
 
-#: templates/analytics.html:412
+#: templates/analytics.html:434
 msgid "Andamento Patrimoniale Euro"
 msgstr "Euro Asset Performance"
 
-#: templates/analytics.html:413
+#: templates/analytics.html:435
 msgid "Saldo Storico Patrimoniale (Controvalore €)"
 msgstr "Historical Asset Balance (Amount €)"
 
-#: templates/analytics.html:431
+#: templates/analytics.html:454
 msgid "Storico Rilevazioni Mese"
 msgstr "Historical Surveys Month"
 
-#: templates/analytics.html:439 templates/analytics.html:516
-#: templates/importa_anteprima.html:11
+#: templates/analytics.html:471 templates/analytics.html:564
+#: templates/importa_anteprima.html:14
 #: templates/modifica_transazione_lightning.html:8
 #: templates/modifica_transazione_onchain.html:8 templates/transazioni.html:54
 #: templates/transazioni_lightning.html:42 templates/transazioni_onchain.html:43
 msgid "Data"
 msgstr "Date"
 
-#: templates/analytics.html:441
+#: templates/analytics.html:473
 msgid "Valore"
 msgstr "Value"
 
-#: templates/analytics.html:442
-msgid "Azione"
-msgstr "Action"
-
-#: templates/analytics.html:471
+#: templates/analytics.html:512
 msgid "Sicuro di voler eliminare questa rilevazione?"
 msgstr "Are you sure you want to delete this detection?"
 
-#: templates/analytics.html:479
+#: templates/analytics.html:518
 msgid "Elimina errore"
 msgstr "Delete error"
 
-#: templates/analytics.html:489
+#: templates/analytics.html:529
 msgid "Nessuna rilevazione salvata finora."
 msgstr "No detections saved so far."
 
-#: templates/analytics.html:511 templates/analytics.html:531
+#: templates/analytics.html:559 templates/analytics.html:587
 msgid "Dettaglio Categoria:"
 msgstr "Category Details:"
 
-#: templates/analytics.html:512
+#: templates/analytics.html:560
 msgid "Caricamento in corso..."
 msgstr "Loading..."
 
-#: templates/analytics.html:513
+#: templates/analytics.html:561
 msgid "💶 Transazioni Fiat (EUR)"
 msgstr "💶 Fiat Transactions (EUR)"
 
-#: templates/analytics.html:514
+#: templates/analytics.html:562
 msgid "⚡ Transazioni Lightning Network"
 msgstr "Lightning Transactions (⚡️)"
 
-#: templates/analytics.html:515
+#: templates/analytics.html:563
 msgid "🔗 Transazioni Bitcoin On-Chain"
 msgstr "On-chain Bitcoin transactions🔗"
 
-#: templates/analytics.html:517 templates/importa_anteprima.html:12
+#: templates/analytics.html:565 templates/importa_anteprima.html:15
 #: templates/modifica_transazione_lightning.html:14
 #: templates/modifica_transazione_onchain.html:14 templates/transazioni.html:55
 #: templates/transazioni_lightning.html:44 templates/transazioni_onchain.html:45
 msgid "Descrizione"
 msgstr "Description"
 
-#: templates/analytics.html:518
+#: templates/analytics.html:566
 msgid "Importo"
 msgstr "Amount"
 
-#: templates/analytics.html:519 templates/transazioni_lightning.html:47
+#: templates/analytics.html:567 templates/transazioni_lightning.html:47
 msgid "Satoshi"
 msgstr "Satoshi"
 
-#: templates/analytics.html:520
+#: templates/analytics.html:568
 msgid "BTC"
 msgstr "BTC"
 
-#: templates/analytics.html:521
+#: templates/analytics.html:569
 msgid "Nessuna transazione trovata per questa categoria nel periodo selezionato."
 msgstr "No transactions found for this category in the selected period."
 
-#: templates/analytics.html:522
+#: templates/analytics.html:570
 msgid "Si è verificato un errore durante il caricamento dei dati."
 msgstr "An error occurred while loading data."
 
-#: templates/analytics.html:539 templates/analytics.html:551
+#: templates/analytics.html:601 templates/analytics.html:619
 msgid "Chiudi"
 msgstr "Close"
 
-#: templates/analytics.html:588
+#: templates/analytics.html:662
 msgid "Totale Speso"
 msgstr "Total Spent"
 
@@ -615,20 +604,13 @@ msgid "Proteggi i tuoi dati prima di scaricarli."
 msgstr "Protect your data before downloading."
 
 #: templates/backup_confirm.html:10
+#, python-format
 msgid ""
-"Sei loggato con <strong>Nostr</strong>.\n"
-"      Per"
+"Sei loggato con %(auth_type)s. Per\n"
+"      criptare il backup, utilizzeremo una firma digitale della tua chiave."
 msgstr ""
-"You are logged in with <strong>Nostr</strong>.\n"
-"      For"
-
-#: templates/backup_confirm.html:11
-msgid ""
-"criptare il backup, utilizzeremo una firma digitale della\n"
-"      tua chiave."
-msgstr ""
-"to encrypt the backup, we will use a digital signature of\n"
-" your key."
+"You are logged in with %(auth_type)s. To encrypt the backup, we will use a "
+"digital signature of your key."
 
 #: templates/backup_confirm.html:19
 msgid "Firma e Scarica Backup"
@@ -644,7 +626,7 @@ msgid ""
 "        file."
 msgstr ""
 "The password is used to unlock your Master Key and encrypt the\n"
-" file."
+"file."
 
 #: templates/backup_confirm.html:35
 msgid "Cripta e Scarica"
@@ -664,41 +646,45 @@ msgid ""
 "        Master"
 msgstr ""
 "Beesy uses a system where not even the server knows your\n"
-" Master"
+"Master"
 
 #: templates/backup_confirm.html:50
 msgid ""
 "Key in chiaro. Viene decriptata solo \"al volo\" nella\n"
 "        memoria RAM quando"
-msgstr "The key is clear. It is only decrypted \"on the fly\" in RAM when"
+msgstr "The key is in plaintext. It is decrypted only \"on the fly\" in RAM when"
 
 #: templates/backup_confirm.html:51
 msgid ""
 "inserisci la password. Se il server\n"
 "        venisse compromesso, i tuoi backup"
 msgstr ""
-"enter your password. If the server\n"
-" is compromised, your backups"
+"Enter your password. If the server\n"
+"is compromised, your backups"
 
 #: templates/backup_confirm.html:52
 msgid ""
 "resterebbero comunque\n"
 "        illeggibili."
 msgstr ""
-"they would still remain\n"
-" unreadable."
+"they would remain\n"
+"illegible regardless."
 
 #: templates/backup_confirm.html:59
 msgid ""
 "Il file scaricato contiene tutte le tue transazioni (Euro,\n"
 "        Lightning,"
-msgstr "The downloaded file contains all your transactions (Euro, Lightning,"
+msgstr ""
+"The downloaded file contains all your transactions (Euro,\n"
+"Lightning,"
 
 #: templates/backup_confirm.html:60
 msgid ""
 "On-chain). Conservalo in un posto sicuro (come un\n"
 "        password manager o una"
-msgstr "On-chain). Store it in a safe place (such as a password manager or a"
+msgstr ""
+"On-chain). Store it in a safe place (such as a\n"
+"password manager or a"
 
 #: templates/backup_confirm.html:61
 msgid "chiavetta USB criptata)."
@@ -713,70 +699,62 @@ msgid ""
 "Verifica il tuo backup\n"
 "    almeno una volta"
 msgstr ""
-"Please verify your backup\n"
-" at least once"
+"Verify your backup\n"
+"at least once"
 
 #: templates/backup_confirm.html:68
 msgid ""
 "ogni tre mesi facendo un test di ripristino\n"
 "    (dopo aver salvato il database"
 msgstr ""
-"every three months by doing a restore test\n"
-" (after saving the database"
+"Every three months, perform a recovery test\n"
+"(after saving the database)"
 
 #: templates/backup_confirm.html:69
 msgid "attuale!)."
 msgstr "current!)."
 
-#: templates/base.html:64
+#: templates/base.html:156
 msgid "DEV MODE"
 msgstr "DEV MODE"
 
-#: templates/base.html:81
+#: templates/base.html:174
 msgid "Backup Totale (JSON)"
 msgstr "Total Backup (JSON)"
 
-#: templates/base.html:84 templates/ripristino_protetto.html:6
+#: templates/base.html:177 templates/ripristino_protetto.html:6
 msgid "Ripristino Dati"
 msgstr "Data Recovery"
 
-#: templates/base.html:86
+#: templates/base.html:179
 msgid "Impostazioni"
 msgstr "Settings"
 
-#: templates/base.html:88
+#: templates/base.html:181
 msgid "Logout"
 msgstr "Logout"
 
-#: templates/base.html:93
+#: templates/base.html:186
 msgid "Sei DAVVERO sicuro?"
 msgstr "Are you REALLY sure?"
 
-#: templates/base.html:95
+#: templates/base.html:188
 msgid "Elimina account"
 msgstr "Delete account"
 
-#: templates/base.html:120
-msgid "FT 💶 Euro"
+#: templates/base.html:209
+msgid "FT Euro"
 msgstr "FT 💶 Euro"
 
-#: templates/base.html:125
-msgid "Stat €"
-msgstr "Stat €"
+#: templates/base.html:221
+msgid "FT Lightning"
+msgstr "Lightning "
 
-#: templates/base.html:131
-msgid "FT ⚡ LN"
-msgstr "FT ⚡ LN"
+#: templates/base.html:234
+msgid "FT Onchain"
+msgstr "On-chain"
 
-#: templates/base.html:136
-msgid "Stat ⚡"
-msgstr "Stat ⚡"
-
-#: templates/base.html:145
-msgid "Stat ₿"
-msgstr "Stat ₿"
-
-#: templates/base.html:228 templates/login.html:312
+#: templates/base.html:306 templates/login.html:411
 msgid "F.A.Q."
 msgstr "F.A.Q."
 
@@ -793,8 +771,8 @@ msgid ""
 "I tuoi dati sono cifrati in locale utilizzando la tua Master Key\n"
 "          personale e la crittografia Fernet (PBKDF2HMAC con SHA-256)."
 msgstr ""
-"Your data is encrypted locally using your personal Master Key\n"
-"and Fernet encryption (PBKDF2HMAC with SHA-256)."
+"Your data is encrypted locally using your personal Master Key and Fernet "
+"encryption (PBKDF2HMAC with SHA-256)."
 
 #: templates/faq.html:26
 msgid ""
@@ -804,10 +782,10 @@ msgid ""
 "mai\n"
 "          accedere alle tue transazioni."
 msgstr ""
-"Without your password or your Nostr signature, the file is\n"
-"completely indecipherable. This ensures that, even if you lose a\n"
-"USB drive or the file falls into the wrong hands, no one will ever be able to\n"
-"access your transactions."
+"Without your password or Nostr signature, the file is completely "
+"indecipherable. This ensures that, even if you lose a USB drive or the file "
+"falls into the wrong hands, no one will ever be able to access your "
+"transactions."
 
 #: templates/faq.html:43
 msgid "Come faccio un backup manuale del database \"al volo\"?"
@@ -827,17 +805,17 @@ msgid ""
 "            ripristinarla, basta chiudere Beesy e rimettere il file nella\n"
 "            cartella del progetto."
 msgstr ""
-"This command creates a dated copy on your Desktop. To\n"
-"restore it, simply close Beesy and move the file back to the\n"
-"project folder."
+"This command creates a dated copy on your desktop. To\n"
+"restore it, simply close Beesy and place the file back\n"
+"into the project folder."
 
 #: templates/faq.html:80
 msgid ""
 "Come verifico se il mio backup funziona davvero? (Test del\n"
 "          Paracadute)"
 msgstr ""
-"How can I check if my backup actually works? (The\n"
-"Parachute Test)"
+"How do I verify that my backup is actually working? (Parachute\n"
+"Test)"
 
 #: templates/faq.html:92
 msgid "Scarica il backup cifrato da"
@@ -857,7 +835,7 @@ msgid ""
 "              ricarica il file scaricato."
 msgstr ""
 "and\n"
-"open the downloaded file."
+"reloads the downloaded file."
 
 #: templates/faq.html:104
 msgid ""
@@ -865,8 +843,8 @@ msgid ""
 "              esattamente i tuoi dati originali, il sistema di ripristino è\n"
 "              perfetto!"
 msgstr ""
-"If the test transaction disappears and is restored\n"
-"exactly your original data, the recovery system is\n"
+"If the test transaction disappears and your original data is\n"
+"restored exactly, the restoration system is\n"
 "perfect!"
 
 #: templates/faq.html:122
@@ -874,27 +852,27 @@ msgid ""
 "Cosa succede se Beesy va offline? Posso leggere i miei backup\n"
 "          senza l'app?"
 msgstr ""
-"What happens if Beesy goes offline? Can I read my backups?\n"
-"without the app?"
+"What happens if Beesy goes offline? Can I read my backups without the app?"
 
 #: templates/faq.html:134
-msgid "Sì, la tua sovranità sui dati è garantita al 100"
-msgstr "Yes, your data sovereignty is 100% guaranteed."
+#, python-format
+msgid "Sì, la tua sovranità sui dati è garantita al 100%%."
+msgstr "Yes, your data sovereignty is 100%% guaranteed."
 
 #: templates/faq.html:137
 msgid ""
 "Poiché Beesy utilizza standard crittografici open source, non\n"
 "            dipendi dal server dell'applicazione per recuperare i tuoi file."
 msgstr ""
-"Since Beesy uses open source cryptographic standards, it does not\n"
-"You depend on the application server to retrieve your files."
+"Since Beesy uses open-source encryption standards, you do not\n"
+"depend on the application server to retrieve your files."
 
 #: templates/faq.html:142
 msgid ""
 "Troverai nella radice del progetto uno script isolato\n"
 "            chiamato"
 msgstr ""
-"You will find an isolated script in the root of the project\n"
+"You will find a standalone script in the root of the project\n"
 "called"
 
 #: templates/faq.html:143
@@ -905,10 +883,8 @@ msgid ""
 "tuo\n"
 "            computer:"
 msgstr ""
-"Running it from\n"
-"terminal, you will be able to unlock your Master Key and view it in\n"
-"clear the contents of any .json.enc file directly to your\n"
-"computer:"
+"By running it from the terminal, you can unlock your Master Key and view the "
+"plaintext content of any .json.enc file directly on your computer:"
 
 #: templates/faq.html:152
 msgid ""
@@ -916,7 +892,7 @@ msgid ""
 "            verificare e leggere le tue transazioni in totale indipendenza."
 msgstr ""
 "Enter the file path and your password/signature to\n"
-"Verify and read your transactions with complete independence."
+"verify and read your transactions in complete independence."
 
 #: templates/force_password_reset.html:5
 msgid "Aggiornamento Sicurezza - ₿eesy"
@@ -972,62 +948,96 @@ msgstr "Update Password and Continue"
 msgid "Torna al Login"
 msgstr "Return to Login"
 
-#: templates/importa_anteprima.html:1
+#: templates/importa_anteprima.html:2
 msgid "Importa Anteprima - ₿eesy"
 msgstr "Import Preview - ₿eesy"
 
-#: templates/importa_anteprima.html:4
+#: templates/importa_anteprima.html:6
 msgid "Anteprima Importazione"
 msgstr "Import Preview"
 
-#: templates/importa_anteprima.html:13 templates/transazioni.html:58
+#: templates/importa_anteprima.html:16 templates/transazioni.html:58
 msgid "Importo (€)"
 msgstr "New amount €"
 
-#: templates/importa_anteprima.html:14 templates/transazioni.html:59
+#: templates/importa_anteprima.html:17 templates/transazioni.html:59
 msgid "Controvalore BTC"
 msgstr "BTC value"
 
-#: templates/importa_anteprima.html:15
+#: templates/importa_anteprima.html:18
 #: templates/modifica_transazione_lightning.html:17
 #: templates/modifica_transazione_onchain.html:17 templates/transazioni.html:56
 #: templates/transazioni_lightning.html:45 templates/transazioni_onchain.html:46
 msgid "Categoria"
 msgstr "Category"
 
-#: templates/importa_anteprima.html:16
+#: templates/importa_anteprima.html:19
 #: templates/modifica_transazione_lightning.html:25
 #: templates/modifica_transazione_onchain.html:25 templates/transazioni.html:57
 #: templates/transazioni_lightning.html:46 templates/transazioni_onchain.html:47
 msgid "Sottocategoria"
 msgstr "Subcategory"
 
-#: templates/importa_anteprima.html:58
+#: templates/importa_anteprima.html:61
 msgid "Ricorda queste associazioni per i prossimi caricamenti"
 msgstr "Remember these associations for future uploads"
 
-#: templates/importa_anteprima.html:62
+#: templates/importa_anteprima.html:65
 msgid "Conferma e Salva tutto nel Database"
 msgstr "Confirm and Save All in Database"
 
-#: templates/importa_csv.html:1
-msgid "Importa csv - ₿eesy"
+#: templates/importa_csv.html:2
+msgid "Importa Blink CSV - ₿eesy"
 msgstr "Import CSV - ₿eesy"
 
-#: templates/importa_csv.html:5
-msgid "Importa Estratto Conto"
+#: templates/importa_csv.html:2
+msgid ""
+"Importa Estratto Conto -\n"
+"₿eesy"
+msgstr ""
+"Import Bank Statement -\n"
+"₿eesy"
+
+#: templates/importa_csv.html:9
+msgid ""
+"Importa Transazioni Blink\n"
+"        Lightning"
+msgstr "Return to Lightning transactions (⚡️)"
+
+#: templates/importa_csv.html:10
+msgid "Importa Estratto Conto Bancario"
 msgstr "Import Bank Statement"
 
-#: templates/importa_csv.html:6
-msgid "Seleziona il tuo file .csv esportato dalla banca."
-msgstr "Select your .csv file exported from the bank."
+#: templates/importa_csv.html:16
+msgid ""
+"Seleziona il tuo file .csv\n"
+"        esportato dall'app Blink."
+msgstr ""
+"Select your .csv file\n"
+"exported from the Blink app."
 
-#: templates/importa_csv.html:24
-msgid "Analizza Movimenti"
+#: templates/importa_csv.html:17
+msgid ""
+"Seleziona il tuo file\n"
+"        .csv esportato dalla banca."
+msgstr ""
+"Select your file\n"
+".csv exported from the bank."
+
+#: templates/importa_csv.html:40
+msgid ""
+"Analizza Transazioni\n"
+"          Lightning"
+msgstr "Analyze Lightning Transactions"
+
+#: templates/importa_csv.html:41
+msgid "Analizza Movimenti Bancari"
 msgstr "Analyze Movements"
 
-#: templates/importa_csv.html:29
-msgid "Il file verrà cancellato dal server immediatamente dopo l'analisi."
+#: templates/importa_csv.html:47
+msgid ""
+"Il file verrà\n"
+"        cancellato dal server immediatamente dopo l'analisi."
 msgstr "The file will be deleted from the server immediately after analysis."
 
 #: templates/index.html:1 templates/index.html:3
@@ -1054,7 +1064,7 @@ msgstr "Savings & Future:"
 msgid "Titoli:"
 msgstr "Titles:"
 
-#: templates/index.html:39 templates/index.html:118
+#: templates/index.html:39 templates/index.html:125
 msgid "Pensione:"
 msgstr "Pension:"
 
@@ -1066,7 +1076,7 @@ msgstr "Net Worth Totale (EUR):"
 msgid "TRACKER ₿itcoin on-chain🔗"
 msgstr "TRACKER ₿itcoin on-chain🔗"
 
-#: templates/index.html:62 templates/index.html:86 templates/index.html:123
+#: templates/index.html:62 templates/index.html:86 templates/index.html:130
 msgid "Analisi"
 msgstr "Output Analysis"
 
@@ -1079,64 +1089,70 @@ msgid "TRACKER Lightning Network⚡️"
 msgstr "TRACKER Lightning Network⚡️"
 
 #: templates/index.html:105
+msgid "Importa CSV BLINK"
+msgstr "Import CSV Bank"
+
+#: templates/index.html:112
 msgid "TRACKER €"
 msgstr "TRACKER €"
 
-#: templates/index.html:109
+#: templates/index.html:116
 msgid "Banca:"
 msgstr "Bank:"
 
-#: templates/index.html:112
+#: templates/index.html:119
 msgid "Contanti:"
 msgstr "Cash:"
 
-#: templates/index.html:115
+#: templates/index.html:122
 msgid "Investimenti:"
 msgstr "Investment Performance:"
 
-#: templates/index.html:127
+#: templates/index.html:134
 msgid "Saldo"
 msgstr "Balance"
 
-#: templates/index.html:136
+#: templates/index.html:143
 msgid "Importa CSV Banca"
 msgstr "Import CSV Bank"
 
-#: templates/index.html:142
+#: templates/index.html:150
 msgid "Inserisci nuova transazione"
 msgstr "Enter new transaction"
 
-#: templates/index.html:145
+#: templates/index.html:153
 msgid "Nuova transazione On-chain (₿)"
 msgstr "New On-chain Transaction (₿)"
 
-#: templates/index.html:149
+#: templates/index.html:157
 msgid "Nuova transazione Lightning (⚡️)"
 msgstr "New Lightning transaction (⚡️)"
 
-#: templates/index.html:151
+#: templates/index.html:159
 msgid "Nuova transazione Euro (€)"
 msgstr "New Euro transaction (€)"
 
-#: templates/index.html:154
+#: templates/index.html:162
 msgid "Importa file CSV (Banca)"
 msgstr "Import CSV file (Bank)"
 
-#: templates/index.html:166
+#: templates/index.html:175
 msgid "Ripartizione del tuo Capitale"
 msgstr "Breakdown of your Capital"
 
-#: templates/index.html:178
+#: templates/index.html:184
+msgid "I controvalori in BTC/SATS sono calcolati"
+msgstr "The equivalent values ​​in BTC/SATS are calculated."
+
+#: templates/index.html:184
 msgid ""
-"I controvalori in BTC/SATS sono\n"
-"    calcolati"
-msgstr "BTC/SATS exchange rates are calculated"
+"in base\n"
+"            al prezzo attuale di mercato."
+msgstr ""
+"based on\n"
+"the current market price."
 
-#: templates/index.html:179
-msgid "in base al prezzo attuale di mercato."
-msgstr "based on the current market price."
-
-#: templates/index.html:183 templates/login.html:71
+#: templates/index.html:193 templates/login.html:173
 msgid "Supporta il progetto"
 msgstr "Support the project"
 
@@ -1144,76 +1160,44 @@ msgstr "Support the project"
 msgid "Login - ₿eesy"
 msgstr "Login - ₿eesy"
 
-#: templates/login.html:41
-msgid "Username"
-msgstr "Username"
-
-#: templates/login.html:42
-msgid "Password"
-msgstr "Password"
-
-#: templates/login.html:43
+#: templates/login.html:100
 msgid "Login"
 msgstr "Login"
 
-#: templates/login.html:45
+#: templates/login.html:133
 msgid "Non hai un account? Registrati qui! ⬅ "
 msgstr "Don't have an account? Sign up here! ⬅ "
 
-#: templates/login.html:48 templates/login.html:66
+#: templates/login.html:138 templates/login.html:167
 msgid "Nostr Login"
 msgstr "Nostr Login"
 
-#: templates/login.html:51
+#: templates/login.html:148
 msgid ""
-"Nostr è un protocollo decentralizzato per comunicazioni e identità "
-"crittografiche. In pratica puoi fare login senza password, usando il tuo "
-"wallet compatibile (es. <strong>nos2x</strong>, <strong>Alby</strong>, "
-"<strong>Amber</strong>)."
+"Login veloce e senza password tramite il tuo wallet Nostr\n"
+"        compatibile (es. <strong>nos2x</strong>, <strong>Alby</strong>,\n"
+"        <strong>Amber</strong>)."
 msgstr ""
-"Nostr is a decentralized protocol for communications and cryptographic "
-"identity. In short, you can log in without a password using your compatible "
-"wallet (e.g. <strong>nos2x</strong>, <strong>Alby</strong>, <strong>Amber</"
-"strong>)."
+"Quick, password-free login using your compatible Nostr wallet (e.g., "
+"<strong>nos2x</strong>, <strong>Alby</strong>, <strong>Amber</strong>)."
 
-#: templates/login.html:54
-msgid "Vantaggi del login Nostr:"
-msgstr "Benefits of Nostr login:"
-
-#: templates/login.html:56
-msgid "Nessuna password da ricordare"
-msgstr "No password to remember"
-
-#: templates/login.html:57
-msgid "Decentralizzato e sicuro"
-msgstr "Decentralized and secure"
-
-#: templates/login.html:58
-msgid "Unico account su diversi siti compatibili"
-msgstr "Single account on multiple compatible sites"
-
-#: templates/login.html:62
-msgid ""
-"Per loggarti basta cliccare il pulsante qui sotto e scegliere il tuo signer."
-msgstr "To log in, simply click the button below and choose your signer."
-
-#: templates/login.html:76
+#: templates/login.html:178
 msgid "Lightning Network"
 msgstr "Lightning Network"
 
-#: templates/login.html:119
+#: templates/login.html:218
 msgid "Scegli il tuo Nostr Signer"
 msgstr "Choose your Nostr Signer"
 
-#: templates/login.html:217
+#: templates/login.html:311
 msgid "Errore login mobile: "
 msgstr "Mobile login error: "
 
-#: templates/login.html:224
+#: templates/login.html:318
 msgid "Installa Alby o nos2x sul tuo browser desktop!"
 msgstr "Install Alby or nos2x on your browser desktop!"
 
-#: templates/login.html:257
+#: templates/login.html:354
 msgid "Errore desktop: "
 msgstr "Desktop error: "
 
@@ -1378,7 +1362,9 @@ msgstr "Select Subcategory"
 msgid ""
 "Nuova transazione Lightning⚡️ -\n"
 "₿eesy"
-msgstr "New Lightning transaction (⚡️) - ₿eesy"
+msgstr ""
+"New Lightning transaction⚡️ -\n"
+"₿eesy"
 
 #: templates/nuova_transazione_lightning.html:4
 msgid "Bitcoin Lightning⚡️"
@@ -1467,7 +1453,7 @@ msgid ""
 "        ripristinare la tua cronologia."
 msgstr ""
 "to\n"
-" restore your history."
+"restore your history."
 
 #: templates/ripristino_protetto.html:13
 msgid "ATTENZIONE:"
@@ -1477,15 +1463,15 @@ msgstr "ATTENTION:"
 msgid ""
 "Il ripristino è\n"
 "        un'operazione distruttiva."
-msgstr ""
-"Restoring is\n"
-" a destructive operation."
+msgstr "Restoration is a destructive operation."
 
 #: templates/ripristino_protetto.html:14
 msgid ""
 "Tutti i dati attualmente presenti\n"
 "        su Beesy (transazioni, conti, ecc.)"
-msgstr "All data currently present on Beesy (transactions, accounts, etc.)"
+msgstr ""
+"All data currently on Beesy\n"
+"(transactions, accounts, etc.)"
 
 #: templates/ripristino_protetto.html:15
 msgid "verranno"
@@ -1501,7 +1487,7 @@ msgid ""
 "        contenuti"
 msgstr ""
 "with those\n"
-" contents"
+"contents"
 
 #: templates/ripristino_protetto.html:17
 msgid "nel file."
@@ -1585,7 +1571,9 @@ msgstr "Download CSV per month On-chain🔗"
 msgid ""
 "Transazioni €\n"
 " - ₿eesy"
-msgstr "Transactions € - ₿eesy"
+msgstr ""
+"Transactions €\n"
+"- ₿eesy"
 
 #: templates/transazioni.html:4
 msgid "Transazioni €"
@@ -1697,15 +1685,47 @@ msgstr "Amount BTC"
 msgid "fee"
 msgstr "fee"
 
-#~ msgid ""
-#~ "You are logged in with <strong>Nostr</strong>.\n"
-#~ "      For"
-#~ msgstr ""
-#~ "You are logged in with <strong>Nostr</strong>.\n"
-#~ " For"
+#~ msgid "mese_selezionato"
+#~ msgstr "selected_month"
+
+#~ msgid "anno_selezionato"
+#~ msgstr "selected_year"
+
+#~ msgid "Azione"
+#~ msgstr "Action"
+
+#~ msgid "Stat €"
+#~ msgstr "Stat €"
+
+#~ msgid "FT ⚡ LN"
+#~ msgstr "FT ⚡ LN"
+
+#~ msgid "Stat ⚡"
+#~ msgstr "Stat ⚡"
+
+#~ msgid "Stat ₿"
+#~ msgstr "Stat ₿"
+
+#~ msgid "Username"
+#~ msgstr "Username"
+
+#~ msgid "Password"
+#~ msgstr "Password"
+
+#~ msgid "Vantaggi del login Nostr:"
+#~ msgstr "Benefits of Nostr login:"
+
+#~ msgid "Nessuna password da ricordare"
+#~ msgstr "No password to remember"
+
+#~ msgid "Decentralizzato e sicuro"
+#~ msgstr "Decentralized and secure"
+
+#~ msgid "Unico account su diversi siti compatibili"
+#~ msgstr "Single account on multiple compatible sites"
 
 #~ msgid "Rendimento:"
-#~ msgstr "Performance"
+#~ msgstr "Performance:"
 
 #~ msgid "Analisi ₿"
 #~ msgstr "Output Analysis ₿"
@@ -1718,10 +1738,6 @@ msgstr "fee"
 
 #~ msgid "password, il file è inutilizzabile. Questo garantisce che se perdi la"
 #~ msgstr "password, the file is unusable. This ensures that if you lose the"
-
-#~ msgid "chiavetta USB o il file finisce in mani sbagliate, nessuno potrà"
-#~ msgstr ""
-#~ "USB stick or the file ends up in the wrong hands, no one will be able to"
 
 #~ msgid "vedere le tue transazioni."
 #~ msgstr "see your transactions."
@@ -1736,7 +1752,7 @@ msgstr "fee"
 #~ msgstr "This command creates a dated copy on your Desktop."
 
 #~ msgid "ripristinarla, basta chiudere Beesy e rimettere il file nella"
-#~ msgstr "To restore it, just close Beesy and put the file back in"
+#~ msgstr "to restore it, just close Beesy and put the file back in"
 
 #~ msgid "cartella del progetto."
 #~ msgstr "project folder."
@@ -1752,3 +1768,6 @@ msgstr "fee"
 
 #~ msgid "sistema è perfetto!"
 #~ msgstr "system is perfect!"
+
+#~ msgid "plusvalenze investimenti"
+#~ msgstr "capital gains on investments"

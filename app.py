@@ -4,7 +4,7 @@ from werkzeug.utils import secure_filename
 from utils.security import decrypt_master_key, encrypt_data, decrypt_data
 from utils.helpers import normalizza_importo
 from models import User
-from utils.import_manager import anteprima_importazione_csv
+from utils.import_manager import anteprima_importazione_csv, anteprima_importazione_blink_csv
 from utils.export import (
     genera_stringa_backup_json,
     esporta_csv, esporta_csv_per_mese, esporta_csv_lightning,
@@ -39,6 +39,7 @@ import secrets
 # Flask & Estensioni
 from flask import request, jsonify, redirect, url_for, flash, render_template
 from flask_babel import Babel, _
+from flask_babel import gettext as _
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_login import LoginManager, login_required, UserMixin, current_user, login_remembered
 from flask_wtf.csrf import CSRFProtect
@@ -56,12 +57,8 @@ from bech32 import convertbits, bech32_encode, bech32_decode
 load_dotenv()
 # Logica di Progetto (i tuoi moduli)
 
-
-load_dotenv()
-# Importazioni dei tuoi moduli DB
-
 # --- CONFIGURAZIONE COSTANTI ---
-VERSIONE_APP = "0.1.1"
+VERSIONE_APP = "0.1.2"
 
 CATEGORIE = {
     'Entrate': [
@@ -108,6 +105,43 @@ CATEGORIE = {
         'Riparazioni urgenti', 'Emergenze', 'Sostituzione tech'
     ]
 }
+LISTA_CATEGORIE_UNICHE = [
+    _('Entrate'), _('Cedole O Dividendi'), _('Interessi attivi'), _(
+        'Stipendio'), _('Rimborso capitale investito'),
+    _('Regalo'), _('Donazioni'), _('Claim giochi online'), _(
+        'Plusvalenze Investimenti'), _('Altro'),
+    _('Abitazione'), _(
+        'Affitto/Mutuo'), _('Bollette: Luce'), _('Bollette: acqua'), _('Bollette: Gas'),
+    _('Bollette: Rifiuti'), _('Manutenzione'), _(
+        'Spese condominiali'), _('Assicurazione casa'), _('IMU'),
+    _('Alimentari'), _('Supermercato'), _(
+        'Ristorante - Bar'), _('Spesa online'),
+    _('Trasporti'), _('Carburante'), _('Mezzi pubblici'), _(
+        'Manutenzione auto / moto'), _('Assicurazione auto'),
+    _('Bollo auto'), _('Taxi / Uber'), _('Noleggi'), _('Parcheggi / pedaggi'),
+    _('Spese Personali'), _(
+        'Abbigliamento / Scarpe'), _('Igiene personale'), _('Parrucchiere / estetista'),
+    _('Abbonamenti (Netflix, Spotify, ecc)'), _('Libri / Riviste'),
+    _('Tempo Libero'), _(
+        'Cinema / Teatro / Eventi'), _('Sport / Palestra'), _('Viaggi / Vacanze'),
+    _('Hobby / Collezioni'), _('Giochi / App'),
+    _('Patrimonio & Finanze'), _('Commissioni bancarie'), _(
+        'Interessi passivi'), _('Minusvalenze investimenti'),
+    _('Imposte di bollo / IVAFE'), _('Acquisto Titoli/Fondi (Giroconto)'), _(
+        'Versamento Pensione (Giroconto)'),
+    _('Investimento Crypto'), _('Prelievo Contante'),
+    _('Tasse & Stato'), _(
+        'IRPEF (Saldo/Acconto)'), _('Capital Gain (Tassazione)'), _('Multe'),
+    _('Lavoro & Studio'), _(
+        'Ufficio / Coworking'), _('Formazione / Corsi'), _('Materiali didattici'),
+    _('Trasporti lavoro'), _('Pasti lavoro'),
+    _('Famiglia'), _('Spese scolastiche'), _(
+        'Abbigliamento bambino'), _('Salute bambino'), _('Giocattoli'),
+    _('Baby sitter / Asilo'), _('Regali fatti'),
+    _('Salute'), _('Farmacia'), _('Visita medica'), _('Assicurazione Sanitaria'),
+    _('Imprevisti'), _('Riparazioni urgenti'), _(
+        'Emergenze'), _('Sostituzione tech')
+]
 
 # --- INIZIALIZZAZIONE FLASK ---
 app = Flask(__name__)
@@ -1542,7 +1576,49 @@ def importa_csv():
                 flash(f"Errore durante l'analisi del file: {e}", "danger")
                 return redirect(request.url)
 
-    return render_template('importa_csv.html')
+    return render_template('importa_csv.html', tipo_import="BANCA")
+
+
+@app.route('/importa_blink', methods=['GET', 'POST'])
+@login_required
+def importa_blink():
+    if request.method == 'POST':
+        if 'file_csv' not in request.files:
+            flash("Nessun file selezionato", "danger")
+            return redirect(request.url)
+
+        file = request.files['file_csv']
+        if file.filename == '' or not file.filename.endswith('.csv'):
+            flash("Formato file non valido. Seleziona un file CSV.", "warning")
+            return redirect(request.url)
+
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
+
+        try:
+            # Data di partenza per ignorare lo storico vecchio
+            DATA_START = "2026-08-01"
+
+            dati_anteprima = anteprima_importazione_blink_csv(
+                filepath, current_user.id, data_inizio_filtro=DATA_START)
+
+            # Cancelliamo il file temporaneo
+            if os.path.exists(filepath):
+                os.remove(filepath)
+
+            # Inviamo i dati all'anteprima passando conto_origine="BLINK"
+            return render_template('importa_anteprima.html',
+                                   transazioni=dati_anteprima,
+                                   tutte_categorie=CATEGORIE,
+                                   conto_origine="BLINK")
+
+        except Exception as e:
+            flash(f"Errore durante l'analisi del file Blink: {e}", "danger")
+            return redirect(request.url)
+
+    # Pagina iniziale con il form di upload
+    return render_template('importa_csv.html', tipo_import='BLINK')
 
 
 @app.route('/conferma_importazione', methods=['POST'])
@@ -1603,6 +1679,8 @@ def conferma_importazione():
             conn.commit()
             conn.close()
 
+            # 1. Recuperiamo il conto (BLINK o BANCA) inviato dalla form
+            conto_selezionato = request.form.get('conto_origine', 'BANCA')
             registra_transazione_conto(
                 user_id=current_user.id,
                 data=data,
@@ -1610,7 +1688,7 @@ def conferma_importazione():
                 categoria=categoria,
                 sottocategoria=sottocategoria,
                 importo=importo,
-                conto="BANCA",
+                conto=conto_selezionato,  # <-- QUI! Dinamico (BANCA o BLINK)
                 controvalore_btc=controvalore_btc,
                 valore_btc_eur=valore_spot
             )

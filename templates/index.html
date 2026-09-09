@@ -97,6 +97,13 @@ block content %}
       "{:,}".format(saldo_totale_satoshi|int).replace(",",".") }} SATS
     </p>
     <p class="saldo-secondario">{{ "%.2f"|format(saldo_eur_lightning) }} €</p>
+    <a
+      href="{{ url_for('importa_blink') }}"
+      class="btn btn-sm btn-outline-warning"
+      style="text-decoration: none; font-size: 0.8rem"
+    >
+      📥 {{ _('Importa CSV BLINK') }}
+    </a>
   </div>
 
   <div class="balance-card tracker-euro-card">
@@ -138,6 +145,7 @@ block content %}
     </div>
   </div>
 </div>
+<!-- Puoi semplicemente rimuovere o commentare questo blocco 
 <div class="dropdown">
   <button class="dropbtn">➕ {{ _('Inserisci nuova transazione') }}</button>
   <div class="dropdown-content">
@@ -154,30 +162,32 @@ block content %}
       >📥 {{ _('Importa file CSV (Banca)') }}</a
     >
   </div>
+  -->
 </div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <div class="container mt-4">
   <div class="row">
     <div class="col-md-8 mx-auto">
-      <div class="card shadow p-3 mb-5 bg-white rounded">
+      <div class="card shadow p-3 mb-5 bg-dark text-white rounded">
         <div class="card-body">
           <h5 class="card-title text-center">
             {{ _('Ripartizione del tuo Capitale') }}
           </h5>
-          <canvas id="chartPatrimonio"></canvas>
+
+          <div class="dashboard-chart-container">
+            <canvas id="chartPatrimonio"></canvas>
+          </div>
+
+          <p class="text-muted text-center mt-3" style="font-size: 0.8rem">
+            <i class="fas fa-info-circle"></i>
+            {{ _('I controvalori in BTC/SATS sono calcolati') }} {{ _('in base
+            al prezzo attuale di mercato.') }}
+          </p>
         </div>
       </div>
     </div>
   </div>
-</div>
-
-<div class="card-body">
-  <canvas id="chartPatrimonio"></canvas>
-  <p class="text-muted text-center mt-3" style="font-size: 0.8rem">
-    <i class="fas fa-info-circle"></i> {{ _('I controvalori in BTC/SATS sono
-    calcolati') }} {{ _('in base al prezzo attuale di mercato.') }}
-  </p>
 </div>
 <hr class="main-separator" />
 <h2>💝 {{ _('Supporta il progetto') }}</h2>
@@ -193,17 +203,13 @@ block content %}
       class="qr-img"
       alt="QR Lightning"
     />
-
-    <div class="donation-address">
-      lnbc1p533fcupp586jkums59acur6kmwlpvqm54fcyhkep2xa0sdetkvykp43j4v5pqdp82pshjgr5dusyymrfde4jq4mpd3kx2apq24ek2uscqzpuxqr8pqsp56dhmdx4a3jshg76d49vhg8nguj3x6w6n9qe9vrnyzew5krsgk9ns9qxpqysgqnrjmqmdtnjqayen4fjct0m7k9a4zkydhk7lkl2wr0ag6yk3vmsdpvt5tupvp8swq8n04z6da57dazle5jsrrppwzxsnqukmcaml8uegqqaxl9z
-    </div>
   </div>
 
   <!-- Bitcoin address (Blink) -->
   <div class="donation-card">
     <div class="donation-title">₿ Bitcoin (Blink)</div>
     <div class="donation-address">
-      bc1qwxsmkcwpnrjng2lvw9hezmznftcg893rvck3uq
+      bc1phravgnnndrdxszu2k3x26m7whsgxcgt4yksrh8rttj34nwvkltqs7d6xdv
     </div>
 
     <img

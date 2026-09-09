@@ -11,15 +11,96 @@
       href="{{ url_for('static', filename='img/favicon.ico') }}"
     />
     <title>{% block title %}Gestione Finanze{% endblock %}</title>
+
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
+      href="{{ url_for('static', filename='/style.css') }}?v=6"
     />
 
     <link rel="manifest" href="/static/manifest.json" />
     <meta name="theme-color" content="#f39c12" />
     <link rel="apple-touch-icon" href="/static/img/beesy_icon_512.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+
+    <style>
+      /* 🎯 STILI PER I MENU A TENDINA DELLA NAVBAR */
+      .nav-dropdown-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .nav-dropdown {
+        position: relative;
+        display: inline-block;
+      }
+
+      .nav-dropdown-btn {
+        background: transparent;
+        color: #eee;
+        border: none;
+        padding: 8px 12px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        border-radius: 6px;
+        transition:
+          background-color 0.2s,
+          color 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .nav-dropdown-btn:hover {
+        background-color: #333;
+        color: #f39c12;
+      }
+
+      .nav-dropdown-content {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #2a2a2a;
+        min-width: 170px;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.5);
+        border: 1px solid #444;
+        border-radius: 8px;
+        z-index: 1100;
+        overflow: hidden;
+        margin-top: 2px;
+      }
+
+      .nav-dropdown-content a {
+        color: #ddd;
+        padding: 10px 14px;
+        text-decoration: none;
+        display: block;
+        font-size: 0.9rem;
+        transition: background-color 0.2s;
+        text-align: left;
+      }
+
+      .nav-dropdown-content a:hover {
+        background-color: #383838;
+        color: #f39c12;
+      }
+
+      /* Desktop Hover */
+      @media (min-width: 768px) {
+        .nav-dropdown:hover .nav-dropdown-content {
+          display: block;
+        }
+      }
+
+      /* Classe per apertura via JS (soprattutto mobile) */
+      .nav-dropdown-content.show-nav {
+        display: block !important;
+      }
+    </style>
   </head>
 
   <body>
@@ -31,122 +112,137 @@
         z-index: 1000;
         background-color: #1a1a1a;
         border-bottom: 2px solid #f39c12;
+        display: block; /* Modificato da flex per contenere la griglia interna */
+        padding: 0;
       "
     >
+      <!-- CONTENITORE CENTRATO (Allineato a <main>) -->
       <div
-        class="header-top"
         style="
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 10px 20px;
-        "
-      >
-        <div class="logo-container">
-          <a href="{{ url_for('home') }}">
-            <span style="color: #f39c12; font-weight: bold">₿</span>eesy
-          </a>             
-          {% if beesy_env == 'development' %}
-            <span
-            class="animate-pulse"
-            style="
-              background-color: #f39c12;
-              color: #1a1a1a;
-              font-weight: bold;
-              font-size: 0.65rem;
-              padding: 3px 8px;
-              margin-left: 2px;
-              border-radius: 4px;
-              white-space: nowrap;
-              letter-spacing: 0.5px;
-            "
-          >
-            ⚠️ {{ _('DEV MODE') }}
-          </span>
-          {% endif %}
-        </div>
-        
-        {% if current_user.is_authenticated %}
-        <div class="user-menu" style="position: relative">
-          <button class="user-menu-btn" id="user-menu-btn" type="button">
-            👤 {% if current_user.auth_type == 'nostr' and current_user.npub %}
-            <span title="{{ current_user.npub }}">
-              {{ current_user.npub[:9] }}...{{ current_user.npub[-4:] }}
-            </span>
-            {% else %} {{ current_user.username }} {% endif %} ▾
-          </button>
-
-          <div class="user-menu-dropdown" id="user-menu-dropdown">
-            <a href="{{ url_for('backup_protetto') }}"
-              >💾 {{ _('Backup Totale (JSON)') }}</a
-            >
-            <a href="{{ url_for('ripristino_protetto') }}"
-              >♻️ {{ _('Ripristino Dati') }}</a
-            >
-            <a href="#">⚙️ {{ _('Impostazioni') }}</a>
-            <div class="dropdown-divider"></div>
-            <a href="{{ url_for('auth.logout') }}">🚪 {{ _('Logout') }}</a>
-            <div class="dropdown-divider"></div>
-            <a
-              href="{{ url_for('auth.elimina_utente', user_id=current_user.id) }}"
-              class="danger-btn delete-account-link"
-              onclick="return confirm('{{ _('Sei DAVVERO sicuro?') }}');"
-            >
-              🗑️ {{ _('Elimina account') }}
-            </a>
-          </div>
-        </div>
-        {% endif %}
-      </div>
-
-      {% if current_user.is_authenticated %}
-      <nav
-        class="main-nav"
-        style="
-          background-color: #222;
-          padding: 5px 0;
-          border-top: 1px solid #333;
+          max-width: 1200px;
+          margin: 0 auto;
+          width: 100%;
+          box-sizing: border-box;
         "
       >
         <div
+          class="header-top"
           style="
             display: flex;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
           "
         >
-          <a href="{{ url_for('transazioni') }}" class="nav-link-custom"
-            >{{ _('FT 💶 Euro') }}</a
-          >
-          <a
-            href="{{ url_for('analytics', tipo='EURO') }}"
-            class="nav-link-custom"
-            >📊 {{ _('Stat €') }}</a
-          >
-          <span style="color: #444">|</span>
-          <a
-            href="{{ url_for('transazioni_lightning') }}"
-            class="nav-link-custom"
-            >{{ _('FT ⚡ LN') }}</a
-          >
-          <a
-            href="{{ url_for('analytics', tipo='LIGHTNING') }}"
-            class="nav-link-custom"
-            >📊 {{ _('Stat ⚡') }}</a
-          >
-          <span style="color: #444">|</span>
-          <a href="{{ url_for('transazioni_onchain') }}" class="nav-link-custom"
-            >FT ₿ Onchain</a
-          >
-          <a
-            href="{{ url_for('analytics', tipo='ONCHAIN') }}"
-            class="nav-link-custom"
-            >📊 {{ _('Stat ₿') }}</a
-          >
+          <div class="logo-container">
+            <a href="{{ url_for('home') }}">
+              <span style="color: #f39c12; font-weight: bold">₿</span>eesy
+            </a>
+            {% if beesy_env == 'development' %}
+            <span
+              class="animate-pulse"
+              style="
+                background-color: #f39c12;
+                color: #1a1a1a;
+                font-weight: bold;
+                font-size: 0.65rem;
+                padding: 3px 8px;
+                margin-left: 2px;
+                border-radius: 4px;
+                white-space: nowrap;
+                letter-spacing: 0.5px;
+              "
+            >
+              ⚠️ {{ _('DEV MODE') }}
+            </span>
+            {% endif %}
+          </div>
+
+          {% if current_user.is_authenticated %}
+          <div class="user-menu" style="position: relative">
+            <button class="user-menu-btn" id="user-menu-btn" type="button">
+              👤 {% if current_user.auth_type == 'nostr' and current_user.npub
+              %}
+              <span title="{{ current_user.npub }}">
+                {{ current_user.npub[:9] }}...{{ current_user.npub[-4:] }}
+              </span>
+              {% else %} {{ current_user.username }} {% endif %} ▾
+            </button>
+
+            <div class="user-menu-dropdown" id="user-menu-dropdown">
+              <a href="{{ url_for('backup_protetto') }}"
+                >💾 {{ _('Backup Totale (JSON)') }}</a
+              >
+              <a href="{{ url_for('ripristino_protetto') }}"
+                >♻️ {{ _('Ripristino Dati') }}</a
+              >
+              <a href="#">⚙️ {{ _('Impostazioni') }}</a>
+              <div class="dropdown-divider"></div>
+              <a href="{{ url_for('auth.logout') }}">🚪 {{ _('Logout') }}</a>
+              <div class="dropdown-divider"></div>
+              <a
+                href="{{ url_for('auth.elimina_utente', user_id=current_user.id) }}"
+                class="danger-btn delete-account-link"
+                onclick="return confirm('{{ _('Sei DAVVERO sicuro?') }}');"
+              >
+                🗑️ {{ _('Elimina account') }}
+              </a>
+            </div>
+          </div>
+          {% endif %}
         </div>
-      </nav>
-      {% endif %}
+
+        {% if current_user.is_authenticated %}
+        <nav
+          class="main-nav"
+          style="
+            background-color: #222;
+            padding: 4px 0;
+            border-top: 1px solid #333;
+          "
+        >
+          <div class="nav-dropdown-container">
+            <!-- MENU EURO -->
+            <div class="nav-dropdown">
+              <button class="nav-dropdown-btn" type="button">💶 ▾</button>
+              <div class="nav-dropdown-content">
+                <a href="{{ url_for('transazioni') }}">📝 {{ _('FT Euro') }}</a>
+                <a href="{{ url_for('analytics', tipo='EURO') }}"
+                  >📊 {{ _('Statistiche') }}</a
+                >
+              </div>
+            </div>
+
+            <!-- MENU LIGHTNING -->
+            <div class="nav-dropdown">
+              <button class="nav-dropdown-btn" type="button">⚡ ▾</button>
+              <div class="nav-dropdown-content">
+                <a href="{{ url_for('transazioni_lightning') }}"
+                  >📝 {{ _('FT Lightning') }}</a
+                >
+                <a href="{{ url_for('analytics', tipo='LIGHTNING') }}"
+                  >📊 {{ _('Statistiche') }}</a
+                >
+              </div>
+            </div>
+
+            <!-- MENU ONCHAIN -->
+            <div class="nav-dropdown">
+              <button class="nav-dropdown-btn" type="button">₿🔗 ▾</button>
+              <div class="nav-dropdown-content">
+                <a href="{{ url_for('transazioni_onchain') }}"
+                  >📝 {{ _('FT Onchain') }}</a
+                >
+                <a href="{{ url_for('analytics', tipo='ONCHAIN') }}"
+                  >📊 {{ _('Statistiche') }}</a
+                >
+              </div>
+            </div>
+          </div>
+        </nav>
+        {% endif %}
+      </div>
+      <!-- /FINE CONTENITORE CENTRATO -->
     </header>
 
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
@@ -156,24 +252,6 @@
 
     <main style="padding-top: 20px">{% block content %}{% endblock %}</main>
 
-    <!-- JS MENU UTENTE -->
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const btn = document.getElementById("user-menu-btn");
-        const dropdown = document.getElementById("user-menu-dropdown");
-
-        if (btn && dropdown) {
-          btn.addEventListener("click", function (e) {
-            e.stopPropagation();
-            dropdown.classList.toggle("show");
-          });
-
-          document.addEventListener("click", function () {
-            dropdown.classList.remove("show");
-          });
-        }
-      });
-    </script>
     <footer
       style="
         margin-top: 50px;
@@ -222,25 +300,68 @@
       </div>
 
       <p style="font-size: 0.75em; line-height: 1.5">
-        Laboratory Version <p>₿eesy v{{ versione_beesy }} | Made with ⚡</p> <br />
+        Laboratory Version ₿eesy v{{ versione_beesy }} | Made with ⚡ <br />
         Built with passion for a decentralized future.
       </p>
       <a class="nav-link" href="{{ url_for('faq') }}">{{ _('F.A.Q.') }}</a>
-
     </footer>
-    
+
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     />
+
+    <!-- JS UNIFICATO GESTIONE MENU DROP DOWNS E CSRF -->
     <script>
-      // 1. IL MAGGIORDOMO DEI FORM (Automatico)
       document.addEventListener("DOMContentLoaded", function () {
+        // 1. Menu Utente Dropdown
+        const userBtn = document.getElementById("user-menu-btn");
+        const userDropdown = document.getElementById("user-menu-dropdown");
+
+        if (userBtn && userDropdown) {
+          userBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            closeAllNavDropdowns();
+            userDropdown.classList.toggle("show");
+          });
+        }
+
+        // 2. Menu Navigazione Dropdowns (Euro, Lightning, Onchain)
+        const navDropdownBtns = document.querySelectorAll(".nav-dropdown-btn");
+
+        navDropdownBtns.forEach((btn) => {
+          btn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            const content = this.nextElementSibling;
+            const isOpen = content.classList.contains("show-nav");
+
+            // Chiudi tutti i menu prima di aprire quello selezionato
+            closeAllNavDropdowns();
+            if (userDropdown) userDropdown.classList.remove("show");
+
+            if (!isOpen) {
+              content.classList.add("show-nav");
+            }
+          });
+        });
+
+        // Chiudi tutti i menu cliccando fuori
+        document.addEventListener("click", function () {
+          closeAllNavDropdowns();
+          if (userDropdown) userDropdown.classList.remove("show");
+        });
+
+        function closeAllNavDropdowns() {
+          document.querySelectorAll(".nav-dropdown-content").forEach((el) => {
+            el.classList.remove("show-nav");
+          });
+        }
+
+        // 3. Iniezione Automatica CSRF Token nei Form
         const token = document.querySelector(
           'meta[name="csrf-token"]',
         )?.content;
         if (token) {
-          // Trova tutti i form POST e inietta il token se manca
           document
             .querySelectorAll('form[method="POST"], form[method="post"]')
             .forEach((form) => {
@@ -250,13 +371,12 @@
                 input.name = "csrf_token";
                 input.value = token;
                 form.appendChild(input);
-                console.log("🛡️ CSRF iniettato nel form:", form.action);
               }
             });
         }
       });
 
-      // 2. FUNZIONE UNIVERSALE BEESY FETCH (Manuale per JS)
+      // 4. Funzione Universale Beesy Fetch
       async function beesyFetch(url, options = {}) {
         const token =
           document.querySelector('meta[name="csrf-token"]')?.content || "";
@@ -269,39 +389,4 @@
       }
     </script>
   </body>
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const dropBtn = document.querySelector(".dropbtn");
-      const dropContent = document.querySelector(".dropdown-content");
-
-      if (dropBtn && dropContent) {
-        dropBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          dropContent.classList.toggle("show");
-        });
-
-        // Chiudi se clicchi fuori
-        document.addEventListener("click", function () {
-          dropContent.classList.remove("show");
-        });
-      }
-    });
-
-    function toggleUserMenu() {
-      document.getElementById("userDropdown").classList.toggle("show");
-    }
-
-    // Chiude il menu se l'utente clicca fuori dal pulsante
-    window.onclick = function (event) {
-      if (!event.target.matches(".user-menu-btn")) {
-        var dropdowns = document.getElementsByClassName("user-menu-dropdown");
-        for (var i = 0; i < dropdowns.length; i++) {
-          var openDropdown = dropdowns[i];
-          if (openDropdown.classList.contains("show")) {
-            openDropdown.classList.remove("show");
-          }
-        }
-      }
-    };
-  </script>
 </html>

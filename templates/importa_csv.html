@@ -1,13 +1,28 @@
-{% extends "base.html" %} {% block title %}{{ _('Importa csv - ₿eesy') }}{% endblock %} {% block content %}
+{% extends "base.html" %} {% block title %} {% if tipo_import == 'BLINK' %} {{
+_("Importa Blink CSV - ₿eesy") }} {% else %} {{ _("Importa Estratto Conto -
+₿eesy") }} {% endif %} {% endblock %} {% block content %}
 <div class="container mt-4">
   <div class="card bg-dark text-white border-warning">
     <div class="card-body text-center">
-      <h2 class="text-warning">📥 {{ _('Importa Estratto Conto') }}</h2>
-      <p>{{ _('Seleziona il tuo file .csv esportato dalla banca.') }}</p>
+      <!-- Titolo Dinamico -->
+      <h2 class="text-warning">
+        {% if tipo_import == 'BLINK' %} ⚡ {{ _("Importa Transazioni Blink
+        Lightning") }} {% else %} 📥 {{ _("Importa Estratto Conto Bancario") }}
+        {% endif %}
+      </h2>
+
+      <!-- Sottotitolo Dinamico -->
+      <p>
+        {% if tipo_import == 'BLINK' %} {{ _("Seleziona il tuo file .csv
+        esportato dall'app Blink.") }} {% else %} {{ _("Seleziona il tuo file
+        .csv esportato dalla banca.") }} {% endif %}
+      </p>
+
       <hr class="border-secondary" />
 
+      <!-- Form Dinamica: Invia alla rotta corretta in base al tipo -->
       <form
-        action="{{ url_for('importa_csv') }}"
+        action="{% if tipo_import == 'BLINK' %}{{ url_for('importa_blink') }}{% else %}{{ url_for('importa_csv') }}{% endif %}"
         method="post"
         enctype="multipart/form-data"
       >
@@ -20,13 +35,17 @@
             required
           />
         </div>
-        <button type="submit" class="btn btn-warning w-100">
-          🔍 {{ _('Analizza Movimenti') }}
+
+        <button type="submit" class="btn btn-warning w-100 fw-bold">
+          {% if tipo_import == 'BLINK' %} 🔍 {{ _("Analizza Transazioni
+          Lightning") }} {% else %} 🔍 {{ _("Analizza Movimenti Bancari") }} {%
+          endif %}
         </button>
       </form>
 
       <div class="mt-3 small text-muted">
-        <i class="bi bi-shield-lock"></i> Privacy: {{ _('Il file verrà cancellato dal server immediatamente dopo l\'analisi.') }}
+        <i class="bi bi-shield-lock"></i> Privacy: {{ _("Il file verrà
+        cancellato dal server immediatamente dopo l'analisi.") }}
       </div>
     </div>
   </div>

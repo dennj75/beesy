@@ -1,5 +1,6 @@
 {% extends "base.html" %} {% block title %}{{ _('Statistiche') }}{% endblock %}
 {% block content %}
+
 <div class="row mb-4">
   <div class="col-md-4">
     <div
@@ -47,13 +48,13 @@
       class="card shadow p-3"
       style="background-color: #1a1a1a; border-top: 3px solid #3498db"
     >
-      <div class="d-flex justify-content-between align-items-center">
+      <div class="d-flex justify-content-between align-items-center flex-wrap">
         <h6 style="color: #888; margin: 0">
           {{ _('📈 Savings Rate (Efficienza del Risparmio)') }}
         </h6>
-        <span style="font-weight: bold; color: #3498db; font-size: 1.2rem"
-          >{{ "%.1f"|format(savings_rate) }}%</span
-        >
+        <span style="font-weight: bold; color: #3498db; font-size: 1.2rem">
+          {{ "%.1f"|format(savings_rate) }}%
+        </span>
       </div>
       <div class="progress mt-3" style="height: 10px; background-color: #333">
         <div
@@ -78,7 +79,7 @@
 <div class="container mt-4">
   <h1 class="main-title text-center">{{ titolo_pagina }}</h1>
 
-  <div class="d-flex justify-content-center gap-3 mb-4">
+  <div class="d-flex justify-content-center flex-wrap gap-3 mb-4">
     {% if mese_selezionato %}
     <div
       class="badge p-3 shadow-sm"
@@ -92,10 +93,10 @@
         >{{ _('VISTA MENSILE') }}</span
       >
       <span style="color: #f39c12; font-size: 1.1rem; font-weight: bold"
-        >{{ _('mese_selezionato') }}</span
+        >{{ mese_selezionato }}</span
       >
     </div>
-    {% elif ('anno_selezionato') %}
+    {% elif anno_selezionato %}
     <div
       class="badge p-3 shadow-sm"
       style="
@@ -108,7 +109,7 @@
         >{{ _('VISTA ANNUALE') }}</span
       >
       <span style="color: #3498db; font-size: 1.1rem; font-weight: bold"
-        >{{ _('anno_selezionato') }}</span
+        >{{ anno_selezionato }}</span
       >
     </div>
     {% else %}
@@ -135,7 +136,9 @@
         action="{{ url_for('analytics', tipo=tipo) }}"
         class="mb-4"
       >
-        <div class="d-flex justify-content-center align-items-end gap-2 mb-4">
+        <div
+          class="d-flex justify-content-center align-items-end flex-wrap gap-2 mb-4"
+        >
           <div class="text-start">
             <label style="color: #888; font-size: 0.7rem; margin-left: 5px"
               >{{ _('Mese specifico') }}</label
@@ -170,33 +173,43 @@
           </div>
         </div>
 
-        <div class="d-flex justify-content-center flex-wrap gap-2">
-          <button
-            type="submit"
-            class="tracker-button"
-            style="padding: 10px 25px; min-width: 120px"
-          >
-            🔍 {{ _('Filtra') }}
-          </button>
-          <a
-            href="{{ url_for('analytics', tipo=tipo) }}"
-            class="tracker-button"
-            style="
-              padding: 10px 25px;
-              background-color: #444;
-              text-decoration: none;
-            "
-            >🔄 {{ _('Reset') }}</a
-          >
-          <button
-            type="button"
-            onclick="window.print()"
-            class="tracker-button"
-            style="padding: 10px 25px; background-color: #3498db"
-          >
-            📄 {{ _('Esporta Report') }}
-          </button>
-        </div>
+        <!-- Wrapper compatto e centrato per i bottoni -->
+<div class="d-flex justify-content-center align-items-center flex-wrap gap-2 mx-auto my-3" style="max-width: 500px;">
+    
+    <button
+        type="submit"
+        class="tracker-button"
+        style="padding: 6px 16px; width: auto; font-size: 0.9rem;"
+    >
+        🔍 {{ _('Filtra') }}
+    </button>
+
+    <a
+        href="{{ url_for('analytics', tipo=tipo) }}"
+        class="tracker-button"
+        style="
+            padding: 6px 16px;
+            width: auto;
+            font-size: 0.9rem;
+            background-color: #444;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        "
+    >
+        🔄 {{ _('Reset') }}
+    </a>
+
+    <button
+        type="button"
+        onclick="window.print()"
+        class="tracker-button"
+        style="padding: 6px 16px; width: auto; font-size: 0.9rem; background-color: #3498db;"
+    >
+        📄 {{ _('Esporta Report') }}
+    </button>
+
+</div>
       </form>
     </div>
   </div>
@@ -239,273 +252,308 @@
 </div>
 
 {% if tipo == 'EURO' %}
-<div
-  class="card shadow p-4 mb-4"
-  style="background-color: #1a1a1a; border: 1px solid #3498db"
->
-  <h4 style="color: #3498db">➕ {{ _('Aggiungi Nuovo Investimento') }}</h4>
-  <form action="{{ url_for('add_asset') }}" method="POST" class="row g-3">
-    <div class="col-md-4">
-      <input
-        type="text"
-        name="nome_asset"
-        class="form-control bg-dark text-white"
-        placeholder="{{ _('Nome (es. Buono Postale)') }}"
-        required
-      />
-    </div>
-    <div class="col-md-3">
-      <input
-        type="number"
-        step="0.01"
-        name="capitale_investito"
-        class="form-control bg-dark text-white"
-        placeholder="{{ _('Capitale Investito €') }}"
-        required
-      />
-    </div>
-    <div class="col-md-3">
-      <input
-        type="number"
-        step="0.01"
-        name="valore_attuale"
-        class="form-control bg-dark text-white"
-        placeholder="{{ _('Valore Iniziale €') }}"
-        required
-      />
-    </div>
-    <div class="col-md-2">
-      <button type="submit" class="btn btn-primary w-100">
-        {{ _('Salva') }}
-      </button>
-    </div>
-  </form>
+<div class="container mb-4">
+  <div
+    class="card shadow p-4"
+    style="background-color: #1a1a1a; border: 1px solid #3498db"
+  >
+    <h4 style="color: #3498db">➕ {{ _('Aggiungi Nuovo Investimento') }}</h4>
+    <form action="{{ url_for('add_asset') }}" method="POST" class="row g-3">
+      <div class="col-md-4">
+        <input
+          type="text"
+          name="nome_asset"
+          class="form-control bg-dark text-white"
+          placeholder="{{ _('Nome (es. Buono Postale)') }}"
+          required
+        />
+      </div>
+      <div class="col-md-3">
+        <input
+          type="number"
+          step="0.01"
+          name="capitale_investito"
+          class="form-control bg-dark text-white"
+          placeholder="{{ _('Capitale Investito €') }}"
+          required
+        />
+      </div>
+      <div class="col-md-3">
+        <input
+          type="number"
+          step="0.01"
+          name="valore_attuale"
+          class="form-control bg-dark text-white"
+          placeholder="{{ _('Valore Iniziale €') }}"
+          required
+        />
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">
+          {{ _('Salva') }}
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 {% endif %}
 
-<h2 class="text-center mb-4" style="color: #3498db">
-  {{ _('Performance Investimenti') }}
-</h2>
-<div
-  class="card shadow p-4 mb-5"
-  style="background-color: #1a1a1a; border: 1px solid #333"
->
-  <div class="table-responsive">
-    <table class="table table-dark table-hover">
-      <thead>
-        <tr>
-          <th>{{ _('Asset') }}</th>
-          <th>{{ _('Costo Storico (Carico)') }}</th>
-          <th>{{ _('Valore Attuale') }}</th>
-          <th>{{ _('Rendimento') }}</th>
-          {% if tipo == 'EURO' %}
-          <th>{{ _('Registra Valore Mese') }}</th>
-          {% endif %}
-        </tr>
-      </thead>
-      <tbody>
-        {% if tipo == 'EURO' %} {% for asset in investimenti_fiat %}
-        <tr>
-          <td>
-            <form
-              action="{{ url_for('modifica_asset', asset_id=asset['id']) }}"
-              method="POST"
-              class="d-flex align-items-center m-0"
-            >
-              <input
-                type="text"
-                name="nuovo_nome"
-                value="{{ asset['nome_asset'] }}"
-                class="form-control form-control-sm bg-dark text-white border-0 p-1"
-                style="
-                  background: #222 !important;
-                  font-weight: bold;
-                  min-width: 150px;
-                  border-radius: 4px;
-                "
-                title="Modifica il nome e clicca sul dischetto o premi Invio"
-                required
-              />
-              <button
-                type="submit"
-                class="btn btn-sm p-0 ms-2 bg-transparent border-0"
-                title="Conferma cambio nome"
-                style="font-size: 0.9rem"
-              >
-                💾
-              </button>
-            </form>
-          </td>
-          <td>{{ "%.2f"|format(asset['capitale_investito']) }} €</td>
-          <td>{{ "%.2f"|format(asset['valore_attuale']) }} €</td>
-          {% set rend = asset['valore_attuale'] - asset['capitale_investito'] %}
-          {% set perc = (rend / asset['capitale_investito'] * 100) if
-          asset['capitale_investito'] > 0 else 0 %}
-          <td
-            style="color: {% if rend >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}"
-          >
-            {{ "%+.2f"|format(rend) }} € ({{ "%+.1f"|format(perc) }}%)
-          </td>
-          <td>
-            <form
-              action="{{ url_for('update_asset_value') }}"
-              method="POST"
-              class="d-flex align-items-center m-0"
-              style="max-width: 180px"
-            >
-              <input type="hidden" name="asset_id" value="{{ asset['id'] }}" />
-              <input
-                type="number"
-                step="0.01"
-                name="nuovo_valore"
-                class="form-control form-control-sm bg-dark text-white me-2"
-                placeholder="{{ _('Nuovo importo €') }}"
-                required
-              />
-              <button
-                type="submit"
-                class="btn btn-sm btn-outline-info"
-                title="{{ _('Salva rilevazione mese') }}"
-              >
-                💾
-              </button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %} {% else %}
-        <tr>
-          <td>
-            {{ 'Bitcoin On-chain' if tipo == 'ONCHAIN' else 'Lightning (Sats)'
-            }}
-          </td>
-          <td>{{ "%.2f"|format(costo_storico_eur) }} €</td>
-          <td>{{ "%.2f"|format(valore_attuale_eur) }} €</td>
-          <td
-            style="color: {% if rendimento >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}"
-          >
-            {{ "%+.2f"|format(rendimento) }} € ({{ "%+.1f"|format(percentuale)
-            }}%)
-          </td>
-        </tr>
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div class="row mt-5 mb-5 pb-5">
+<div class="container mb-5">
+  <h2 class="text-center mb-4" style="color: #3498db">
+    {{ _('Performance Investimenti') }}
+  </h2>
   <div
-    class="{% if tipo == 'EURO' %}col-md-7{% else %}col-md-12{% endif %} mb-4"
+    class="card shadow p-4"
+    style="background-color: #1a1a1a; border: 1px solid #333"
   >
-    <div
-      class="card shadow p-4"
-      style="
-        background-color: #1a1a1a;
-        border: 1px solid #333;
-        min-height: 380px;
-      "
-    >
-      <h4
-        style="color: {% if tipo == 'EURO' %}#3498db{% else %}#f39c12{% endif %}"
-        class="mb-4"
-      >
-        📈 {% if tipo == 'EURO' %}{{ _('Andamento Patrimoniale Euro') }}{% else
-        %}{{ _('Saldo Storico Patrimoniale (Controvalore €)') }}{% endif %}
-      </h4>
-      <div style="position: relative; height: 280px; width: 100%">
-        <canvas id="chartStoricoPatrimonio"></canvas>
-      </div>
-    </div>
-  </div>
-
-  {% if tipo == 'EURO' %}
-  <div class="col-md-5 mb-4">
-    <div
-      class="card shadow p-4"
-      style="
-        background-color: #1a1a1a;
-        border: 1px solid #333;
-        min-height: 380px;
-      "
-    >
-      <h4 class="text-danger mb-4">⏳ {{ _('Storico Rilevazioni Mese') }}</h4>
-      <div class="table-responsive" style="max-height: 280px; overflow-y: auto">
-        <table
-          class="table table-dark table-sm table-hover mb-0"
-          style="table-layout: fixed; width: 100%"
-        >
-          <thead>
-            <tr>
-              <th style="width: 25%">{{ _('Data') }}</th>
-              <th style="width: 45%">{{ _('Asset') }}</th>
-              <th style="width: 20%">{{ _('Valore') }}</th>
-              <th style="width: 10%">{{ _('Azione') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% if cronologia_fiat %} {% for hist in cronologia_fiat %}
-            <tr>
-              <td class="small text-muted align-middle">
-                {{ hist['data_rilevazione'][:10] }}
-              </td>
-              <td
-                class="text-info fw-bold small align-middle"
-                style="
-                  white-space: nowrap;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                "
-                title="{{ hist['nome_asset'] }}"
-              >
-                {{ hist['nome_asset'] }}
-              </td>
-              <td class="align-middle small">
-                {{ "%.2f"|format(hist['valore_rilevato']) }} €
-              </td>
-              <td class="align-middle text-center">
-                <form
-                  action="{{ url_for('elimina_cronologia', history_id=hist['id'], tipo='EURO') }}"
-                  method="POST"
-                  onsubmit="
-                      return confirm(
-                        '{{ _('Sicuro di voler eliminare questa rilevazione?') }}',
-                      );
-                    "
-                  class="m-0"
-                >
-                  <button
-                    type="submit"
-                    class="btn btn-sm p-0 border-0 bg-transparent"
-                    title="{{ _('Elimina errore') }}"
-                  >
-                    ❌
-                  </button>
-                </form>
-              </td>
-            </tr>
-            {% endfor %} {% else %}
-            <tr>
-              <td colspan="4" class="text-muted text-center small py-3">
-                {{ _('Nessuna rilevazione salvata finora.') }}
-              </td>
-            </tr>
+    <div class="table-responsive">
+      <table class="table table-dark table-hover">
+        <thead>
+          <tr>
+            <th>{{ _('Asset') }}</th>
+            <th>{{ _('Costo Storico (Carico)') }}</th>
+            <th>{{ _('Valore Attuale') }}</th>
+            <th>{{ _('Rendimento') }}</th>
+            {% if tipo == 'EURO' %}
+            <th>{{ _('Registra Valore Mese') }}</th>
             {% endif %}
-          </tbody>
-        </table>
-      </div>
+          </tr>
+        </thead>
+        <tbody>
+          {% if tipo == 'EURO' %} {% for asset in investimenti_fiat %}
+          <tr>
+            <td>
+              <form
+                action="{{ url_for('modifica_asset', asset_id=asset['id']) }}"
+                method="POST"
+                class="d-flex align-items-center m-0"
+              >
+                <input
+                  type="text"
+                  name="nuovo_nome"
+                  value="{{ asset['nome_asset'] }}"
+                  class="form-control form-control-sm bg-dark text-white border-0 p-1"
+                  style="
+                    background: #222 !important;
+                    font-weight: bold;
+                    min-width: 150px;
+                    border-radius: 4px;
+                  "
+                  title="Modifica il nome e clicca sul dischetto o premi Invio"
+                  required
+                />
+                <button
+                  type="submit"
+                  class="btn btn-sm p-0 ms-2 bg-transparent border-0"
+                  title="Conferma cambio nome"
+                  style="font-size: 0.9rem"
+                >
+                  💾
+                </button>
+              </form>
+            </td>
+            <td>{{ "%.2f"|format(asset['capitale_investito']) }} €</td>
+            <td>{{ "%.2f"|format(asset['valore_attuale']) }} €</td>
+            {% set rend = asset['valore_attuale'] - asset['capitale_investito']
+            %} {% set perc = (rend / asset['capitale_investito'] * 100) if
+            asset['capitale_investito'] > 0 else 0 %}
+            <td
+              style="color: {% if rend >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}"
+            >
+              {{ "%+.2f"|format(rend) }} € ({{ "%+.1f"|format(perc) }}%)
+            </td>
+            <td>
+              <form
+                action="{{ url_for('update_asset_value') }}"
+                method="POST"
+                class="d-flex align-items-center m-0"
+                style="max-width: 180px"
+              >
+                <input
+                  type="hidden"
+                  name="asset_id"
+                  value="{{ asset['id'] }}"
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  name="nuovo_valore"
+                  class="form-control form-control-sm bg-dark text-white me-2"
+                  placeholder="{{ _('Nuovo importo €') }}"
+                  required
+                />
+                <button
+                  type="submit"
+                  class="btn btn-sm btn-outline-info"
+                  title="{{ _('Salva rilevazione mese') }}"
+                >
+                  💾
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %} {% else %}
+          <tr>
+            <td>
+              {{ 'Bitcoin On-chain' if tipo == 'ONCHAIN' else 'Lightning (Sats)'
+              }}
+            </td>
+            <td>{{ "%.2f"|format(costo_storico_eur) }} €</td>
+            <td>{{ "%.2f"|format(valore_attuale_eur) }} €</td>
+            <td
+              style="color: {% if rendimento >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}"
+            >
+              {{ "%+.2f"|format(rendimento) }} € ({{ "%+.1f"|format(percentuale)
+              }}%)
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
     </div>
   </div>
-  {% endif %}
 </div>
-<!-- Modal per il Dettaglio Transazioni (Drill-down) -->
+
+<div class="container mb-5 pb-5">
+  <div class="row">
+    <div
+      class="{% if tipo == 'EURO' %}col-md-7{% else %}col-md-12{% endif %} mb-4"
+    >
+      <div
+        class="card shadow p-4"
+        style="
+          background-color: #1a1a1a;
+          border: 1px solid #333;
+          min-height: 380px;
+        "
+      >
+        <h4
+          style="color: {% if tipo == 'EURO' %}#3498db{% else %}#f39c12{% endif %}"
+          class="mb-4"
+        >
+          📈 {% if tipo == 'EURO' %}{{ _('Andamento Patrimoniale Euro') }}{%
+          else %}{{ _('Saldo Storico Patrimoniale (Controvalore €)') }}{% endif
+          %}
+        </h4>
+        <div style="position: relative; height: 280px; width: 100%">
+          <canvas id="chartStoricoPatrimonio"></canvas>
+        </div>
+      </div>
+    </div>
+
+    {% if tipo == 'EURO' %}
+    <div class="col-md-5 mb-4">
+      <div
+        class="card shadow p-4"
+        style="
+          background-color: #1a1a1a;
+          border: 1px solid #333;
+          min-height: 380px;
+        "
+      >
+        <h4 class="text-danger mb-3">⏳ {{ _('Storico Rilevazioni Mese') }}</h4>
+
+        <!-- WRAPPER ISOLATO TABELLA -->
+        <div
+          class="historical-surveys-wrapper p-2 rounded"
+          style="background-color: #121212; border: 1px solid #2a2a2a"
+        >
+          <div
+            class="table-responsive"
+            style="max-height: 260px; overflow-y: auto"
+          >
+            <table
+              class="table table-dark table-sm table-hover mb-0 align-middle"
+              style="table-layout: fixed; width: 100%"
+            >
+              <thead>
+                <tr>
+                  <th style="width: 25%">{{ _('Data') }}</th>
+                  <th style="width: 42%">{{ _('Asset') }}</th>
+                  <th style="width: 23%">{{ _('Valore') }}</th>
+                  <th style="width: 10%" class="text-center">❌</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if cronologia_fiat %} {% for hist in cronologia_fiat %}
+                <tr>
+                  <!-- 1. DATA: Evita di andare a capo -->
+                  <td
+                    class="small text-muted align-middle text-nowrap"
+                    style="width: 28%"
+                  >
+                    {{ hist['data_rilevazione'][:10] }}
+                  </td>
+
+                  <!-- 2. ASSET: Troncamento forzato con i tre puntini (...) -->
+                  <td class="align-middle" style="width: 38%; max-width: 0">
+                    <div
+                      class="text-info fw-bold small text-truncate"
+                      style="width: 100%; display: block"
+                      title="{{ hist['nome_asset'] }}"
+                    >
+                      {{ hist['nome_asset'] }}
+                    </div>
+                  </td>
+
+                  <!-- 3. VALORE: Evita di andare a capo ed è allineato a destra -->
+                  <td
+                    class="small fw-bold align-middle text-nowrap text-end"
+                    style="width: 24%"
+                  >
+                    {{ "%.2f"|format(hist['valore_rilevato']) }} €
+                  </td>
+
+                  <!-- 4. AZIONE ELIMINA -->
+                  <td class="align-middle text-center" style="width: 10%">
+                    <form
+                      action="{{ url_for('elimina_cronologia', history_id=hist['id'], tipo='EURO') }}"
+                      method="POST"
+                      onsubmit="return confirm('{{ _('Sicuro di voler eliminare questa rilevazione?') }}');"
+                      class="m-0 p-0"
+                    >
+                      <button
+                        type="submit"
+                        class="btn btn-sm p-0 border-0 bg-transparent text-danger fw-bold"
+                        title="{{ _('Elimina errore') }}"
+                        style="line-height: 1"
+                      >
+                        ✖
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+                {% endfor %} {% else %}
+                <tr>
+                  <td colspan="4" class="text-muted text-center small py-3">
+                    {{ _('Nessuna rilevazione salvata finora.') }}
+                  </td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- FINE WRAPPER ISOLATO -->
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- =========================================================
+     MODAL DRILL-DOWN ANALYTICS
+     ========================================================= -->
+
 <div
   id="modalDettagli"
   class="modal fade"
   tabindex="-1"
   aria-labelledby="drillDownModalLabel"
   aria-hidden="true"
+  data-bs-backdrop="static"
 >
-  <!-- Dizionario stringhe i18n per JavaScript -->
+  <!-- Dizionario i18n per JavaScript -->
   <div
     id="i18n-drilldown"
     data-title-prefix="{{ _('Dettaglio Categoria:') }}"
@@ -523,16 +571,30 @@
     style="display: none"
   ></div>
 
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+  <div class="modal-dialog">
     <div class="modal-content bg-dark text-white border-secondary">
-      <!-- Intestazione -->
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title" id="modalDettagliTitolo">
-          🔍 <span id="i18nModalPrefix">{{ _('Dettaglio Categoria:') }}</span>
-          <span id="modalCategoriaNome" class="text-warning"></span>
+
+      <!-- HEADER -->
+      <div
+        class="modal-header border-secondary d-flex justify-content-between align-items-center"
+      >
+        <h5
+          class="modal-title mb-0"
+          id="modalDettagliTitolo"
+        >
+          🔍
+          <span id="i18nModalPrefix">
+            {{ _('Dettaglio Categoria:') }}
+          </span>
+
+          <span
+            id="modalCategoriaNome"
+            class="text-warning"
+          ></span>
         </h5>
+
+        <!-- X -->
         <button
-          type="button"
           type="button"
           class="btn-close btn-close-white"
           data-bs-dismiss="modal"
@@ -540,27 +602,35 @@
         ></button>
       </div>
 
-      <!-- Corpo del Pop-up -->
-      <div class="modal-body" style="max-height: 450px; overflow-y: auto">
+
+      <!-- BODY -->
+      <div class="modal-body">
         <div id="modalDettagliContenuto"></div>
       </div>
 
-      <!-- Piè di pagina -->
+
+      <!-- FOOTER -->
       <div class="modal-footer border-secondary">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          data-bs-dismiss="modal"
+        >
           {{ _('Chiudi') }}
         </button>
       </div>
+
     </div>
   </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // 1. Mappa di traduzione ereditata dal dizionario CATEGORIE di Python
     const mappaTraduzioniGrafici = {
       {% if CATEGORIE %}
         {% for macro, sottocat_list in CATEGORIE.items() %}
-          "{{ macro }}": "{{ traduci(macro) }}",
+        "{{ macro }}": "{{ traduci(macro) }}",
           {% for sotto in sottocat_list %}
             "{{ sotto }}": "{{ traduci(sotto) }}",
           {% endfor %}
@@ -580,6 +650,10 @@
             const labelsSpeseOriginali = {{ labels_spese | tojson }};
             const labelsSpeseTradotte = labelsSpeseOriginali.map(cat => mappaTraduzioniGrafici[cat] || cat);
 
+            // Calcolo dinamico dell'altezza minima in base al numero di categorie (30px per barra)
+            const minHeightDynamic = Math.max(300, labelsSpeseOriginali.length * 30);
+            canvasSpese.parentElement.style.minHeight = `${minHeightDynamic}px`;
+
             new Chart(canvasSpese.getContext('2d'), {
                 type: 'bar',
                 data: {
@@ -594,6 +668,7 @@
                 options: {
                     indexAxis: 'y',
                     responsive: true,
+                    maintainAspectRatio: false, // <-- AGGIUNTO: Permette al grafico di rispettare i vincoli CSS
                     onHover: (event, chartElement) => {
                         event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
                     },
@@ -770,112 +845,150 @@
     });
 
     // 2. FUNZIONE DRILL-DOWN GLOBALE
-  function apriDrillDown(categoria, tipoMovimento, anno = '', mese = '') {
-      const contenitore = document.getElementById('modalDettagliContenuto');
-      const titoloModal = document.getElementById('modalDettagliTitolo');
+    function apriDrillDown(categoria, tipoMovimento, anno = '', mese = '') {
+        const contenitore = document.getElementById('modalDettagliContenuto');
+        const titoloModal = document.getElementById('modalDettagliTitolo');
 
-      // Recupera le traduzioni dall'HTML
-      const i18nEl = document.getElementById('i18n-drilldown');
-      const t = i18nEl ? i18nEl.dataset : {};
+        // Recupera le traduzioni dall'HTML
+        const i18nEl = document.getElementById('i18n-drilldown');
+        const t = i18nEl ? i18nEl.dataset : {};
 
-      if (!anno) {
-          const selectAnno = document.querySelector('[name="anno"], #anno');
-          if (selectAnno) anno = selectAnno.value;
-      }
-      if (!mese) {
-          const selectMese = document.querySelector('[name="mese"], #mese');
-          if (selectMese) mese = selectMese.value;
-      }
+        if (!anno) {
+            const selectAnno = document.querySelector('[name="anno"], #anno');
+            if (selectAnno) anno = selectAnno.value;
+        }
+        if (!mese) {
+            const selectMese = document.querySelector('[name="mese"], #mese');
+            if (selectMese) mese = selectMese.value;
+        }
 
-      if (titoloModal) {
-          const prefix = t.titlePrefix || 'Dettaglio Categoria:';
-          titoloModal.innerHTML = `🔍 ${prefix} <span class="text-warning">${categoria}</span>`;
-      }
+        if (titoloModal) {
+            const prefix = t.titlePrefix || 'Dettaglio Categoria:';
+            titoloModal.innerHTML = `🔍 ${prefix} <span class="text-warning">${categoria}</span>`;
+        }
 
-      if (contenitore) {
-          const loadingText = t.loading || 'Caricamento in corso...';
-          contenitore.innerHTML = `<p class="text-center text-muted">${loadingText}</p>`;
-      }
+        if (contenitore) {
+            const loadingText = t.loading || 'Caricamento in corso...';
+            contenitore.innerHTML = `<p class="text-center text-muted">${loadingText}</p>`;
+        }
 
-      // Mostra Modal Bootstrap
-      const modalElement = document.getElementById('modalDettagli');
-      if (modalElement) {
-          const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
-          modalInstance.show();
-      }
+        // Mostra Modal Bootstrap
+        const modalElement = document.getElementById('modalDettagli');
+        if (modalElement) {
+            const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+            modalInstance.show();
+        }
 
-      // Costruzione URL con parametri
-      let params = new URLSearchParams();
-      if (categoria) params.append('categoria', categoria);
-      if (tipoMovimento) params.append('tipo_movimento', tipoMovimento);
-      if (anno) params.append('anno', anno);
-      if (mese) params.append('mese', mese);
+        // Costruzione URL con parametri
+        let params = new URLSearchParams();
+        if (categoria) params.append('categoria', categoria);
+        if (tipoMovimento) params.append('tipo_movimento', tipoMovimento);
+        if (anno) params.append('anno', anno);
+        if (mese) params.append('mese', mese);
 
-      let url = `/api/analytics/drill-down?${params.toString()}`;
-      console.log("🚀 Chiamata Drill-Down inviata a:", url);
+        let url = `/api/analytics/drill-down?${params.toString()}`;
+        console.log("🚀 Chiamata Drill-Down inviata a:", url);
 
-      fetch(url)
-          .then(response => {
-              if (!response.ok) {
-                  throw new Error("Errore HTTP: " + response.status);
-              }
-              return response.json();
-          })
-          .then(data => {
-              if (!contenitore) return;
-              contenitore.innerHTML = '';
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error("Errore HTTP: " + response.status);
+                return response.json();
+            })
+            .then(data => {
+                if (!contenitore) return;
+                contenitore.innerHTML = '';
 
-              let htmlGenerato = '';
+                let htmlGenerato = '';
 
-              // --- 1. TABELLA EURO ---
-              if (data.euro && data.euro.length > 0) {
-                  htmlGenerato += `<h5>${t.fiatTitle || '💶 Transazioni Fiat (EUR)'}</h5>`;
-                  htmlGenerato += `<table class="table table-dark table-striped mb-4">
-                      <thead><tr><th>${t.colDate || 'Data'}</th><th>${t.colDesc || 'Descrizione'}</th><th class="text-end">${t.colAmount || 'Importo'}</th></tr></thead><tbody>`;
-                  data.euro.forEach(tr => {
-                      htmlGenerato += `<tr><td>${tr.data}</td><td>${tr.descrizione}</td><td class="text-end">€ ${parseFloat(tr.importo).toFixed(2)}</td></tr>`;
-                  });
-                  htmlGenerato += '</tbody></table>';
-              }
+                // --- 1. TABELLA EURO ---
+                if (data.euro && data.euro.length > 0) {
+                    htmlGenerato += `<h5 class="mt-2">${t.fiatTitle || '💶 Transazioni Fiat (EUR)'}</h5>`;
+                    htmlGenerato += `
+                    <div class="table-responsive mb-4">
+                        <table class="table table-dark table-striped align-middle mb-0" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30%;">${t.colDate || 'Data'}</th>
+                                    <th style="width: 45%;">${t.colDesc || 'Descrizione'}</th>
+                                    <th style="width: 25%;" class="text-end">${t.colAmount || 'Importo'}</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    data.euro.forEach(tr => {
+                        htmlGenerato += `<tr>
+                            <td class="small">${tr.data}</td>
+                            <td class="small text-break">${tr.descrizione}</td>
+                            <td class="text-end fw-bold text-success small">€ ${parseFloat(tr.importo).toFixed(2)}</td>
+                        </tr>`;
+                    });
+                    htmlGenerato += '</tbody></table></div>';
+                }
 
-              // --- 2. TABELLA LIGHTNING ---
-              if (data.lightning && data.lightning.length > 0) {
-                  htmlGenerato += `<h5>${t.lnTitle || '⚡ Transazioni Lightning Network'}</h5>`;
-                  htmlGenerato += `<table class="table table-dark table-striped mb-4">
-                      <thead><tr><th>${t.colDate || 'Data'}</th><th>${t.colDesc || 'Descrizione'}</th><th class="text-end">${t.colSats || 'Satoshi'}</th></tr></thead><tbody>`;
-                  data.lightning.forEach(tr => {
-                      htmlGenerato += `<tr><td>${tr.data}</td><td>${tr.descrizione}</td><td class="text-end">⚡ ${tr.satoshi}</td></tr>`;
-                  });
-                  htmlGenerato += '</tbody></table>';
-              }
+                // --- 2. TABELLA LIGHTNING ---
+                if (data.lightning && data.lightning.length > 0) {
+                    htmlGenerato += `<h5 class="mt-2">${t.lnTitle || '⚡ Transazioni Lightning Network'}</h5>`;
+                    htmlGenerato += `
+                    <div class="table-responsive mb-4">
+                        <table class="table table-dark table-striped align-middle mb-0" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30%;">${t.colDate || 'Data'}</th>
+                                    <th style="width: 40%;">${t.colDesc || 'Descrizione'}</th>
+                                    <th style="width: 30%;" class="text-end">${t.colSats || 'Satoshi'}</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    data.lightning.forEach(tr => {
+                        htmlGenerato += `<tr>
+                            <td class="small">${tr.data}</td>
+                            <td class="small text-break">${tr.descrizione}</td>
+                            <td class="text-end fw-bold text-success small">⚡ ${tr.satoshi}</td>
+                        </tr>`;
+                    });
+                    htmlGenerato += '</tbody></table></div>';
+                }
 
-              // --- 3. TABELLA ONCHAIN ---
-              if (data.onchain && data.onchain.length > 0) {
-                  htmlGenerato += `<h5>${t.btcTitle || '🔗 Transazioni Bitcoin On-Chain'}</h5>`;
-                  htmlGenerato += `<table class="table table-dark table-striped mb-4">
-                      <thead><tr><th>${t.colDate || 'Data'}</th><th>${t.colDesc || 'Descrizione'}</th><th class="text-end">${t.colBtc || 'BTC'}</th></tr></thead><tbody>`;
-                  data.onchain.forEach(tr => {
-                      htmlGenerato += `<tr><td>${tr.data}</td><td>${tr.descrizione}</td><td class="text-end">₿ ${tr.importo_btc}</td></tr>`;
-                  });
-                  htmlGenerato += '</tbody></table>';
-              }
+                // --- 3. TABELLA ONCHAIN ---
+                if (data.onchain && data.onchain.length > 0) {
+                    htmlGenerato += `<h5 class="mt-2">${t.btcTitle || '🔗 Transazioni Bitcoin On-Chain'}</h5>`;
+                    htmlGenerato += `
+                    <div class="table-responsive mb-4">
+                        <table class="table table-dark table-striped align-middle mb-0" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30%;">${t.colDate || 'Data'}</th>
+                                    <th style="width: 40%;">${t.colDesc || 'Descrizione'}</th>
+                                    <th style="width: 30%;" class="text-end">${t.colBtc || 'BTC'}</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    data.onchain.forEach(tr => {
+                        htmlGenerato += `<tr>
+                            <td class="small">${tr.data}</td>
+                            <td class="small text-break">${tr.descrizione}</td>
+                            <td class="text-end fw-bold text-success small">₿ ${tr.importo_btc}</td>
+                        </tr>`;
+                    });
+                    htmlGenerato += '</tbody></table></div>';
+                }
 
-              if (!htmlGenerato) {
-                  const noDataText = t.noData || 'Nessuna transazione trovata per questa categoria nel periodo selezionato.';
-                  htmlGenerato = `<p class="text-center text-warning mb-0">${noDataText}</p>`;
-              }
+                if (!htmlGenerato) {
+                    const noDataText = t.noData || 'Nessuna transazione trovata per questa categoria nel periodo selezionato.';
+                    htmlGenerato = `<p class="text-center text-warning mb-0 p-3">${noDataText}</p>`;
+                }
 
-              contenitore.innerHTML = htmlGenerato;
-          })
-          .catch(error => {
-              console.error("❌ Errore durante il recupero dei dati:", error);
-              if (contenitore) {
-                  const errorText = t.error || 'Si è verificato un errore durante il caricamento dei dati.';
-                  contenitore.innerHTML = `<p class="text-center text-danger mb-0">${errorText}</p>`;
-              }
-          });
-  }
+                contenitore.innerHTML = htmlGenerato;
+            })
+            .catch(error => {
+                console.error("❌ Errore durante il recupero dei dati:", error);
+                if (contenitore) {
+                    const errorText = t.error || 'Si è verificato un errore durante il caricamento dei dati.';
+                    contenitore.innerHTML = `<p class="text-center text-danger mb-0 p-3">${errorText}</p>`;
+                }
+            });
+    }
 </script>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-{% endblock %}
+
+  {% endblock %}
+</div>
