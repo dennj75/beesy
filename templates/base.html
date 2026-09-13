@@ -176,7 +176,9 @@
               <a href="{{ url_for('ripristino_protetto') }}"
                 >♻️ {{ _('Ripristino Dati') }}</a
               >
-              <a href="#">⚙️ {{ _('Impostazioni') }}</a>
+              <a class="dropdown-item" href="{{ url_for('impostazioni') }}"
+                >⚙️ {{ _('Impostazioni') }}</a
+              >
               <div class="dropdown-divider"></div>
               <a href="{{ url_for('auth.logout') }}">🚪 {{ _('Logout') }}</a>
               <div class="dropdown-divider"></div>
