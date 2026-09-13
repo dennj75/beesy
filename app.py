@@ -495,31 +495,46 @@ def nuova_transazione():
         conto = request.form['conto']
         note = request.form.get('note', '')
 
+        # NUOVI CAMPI MULTI-VALUTA (con fallback sicuri a EUR)
+        valuta = request.form.get('valuta', 'EUR').upper()
+        tasso_cambio = float(request.form.get('tasso_cambio', 1.0))
+
         try:
             importo_normalizzato = float(
                 normalizza_importo(request.form['importo']))
             if importo_normalizzato is None:
                 flash("Importo non valido", "error")
                 return redirect(url_for('nuova_transazione'))
+
             importo = float(importo_normalizzato)
+
+            # Calcolo importo in valuta base (es. EUR)
+            # Se la valuta è EUR, l'importo base coincide con l'importo inserito
+            if valuta == 'EUR':
+                importo_valuta_base = importo
+            else:
+                importo_valuta_base = importo / tasso_cambio if tasso_cambio else importo
+
             valore_btc_eur = ottieni_valore_btc_eur(data)
             controvalore_btc = euro_to_btc(
-                importo, valore_btc_eur) if valore_btc_eur else None
+                importo_valuta_base, valore_btc_eur) if valore_btc_eur else None
 
-        # Salviamo sia valore controvalore (btc) che BTC (€/BTC)
+            # Salviamo passando anche i dati della valuta
             registra_transazione_conto(
-                current_user.id, data, descrizione, categoria, sottocategoria, importo, controvalore_btc=controvalore_btc,
-                valore_btc_eur=valore_btc_eur, conto=conto, note=note)
+                current_user.id, data, descrizione, categoria, sottocategoria, importo,
+                controvalore_btc=controvalore_btc, valore_btc_eur=valore_btc_eur,
+                conto=conto, note=note, valuta=valuta,
+                importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio
+            )
 
             return redirect(url_for('transazioni'))
         except ValueError:
             return "Importo non valido", 400
 
-    # Se GET, mostra il file
+    # Se GET, mostra il form
     return render_template(
         'nuova_transazione.html',
-        transazione=[None, None, None, '', '',
-                     '', None, None],  # valori placeholder
+        transazione=[None, None, None, '', '', '', None, None],
         categorie=list(CATEGORIE.keys()),
         categorie_json=json.dumps(CATEGORIE))
 
@@ -565,6 +580,11 @@ def modifica_transazione_eur(id_transazione):
         sottocategoria = request.form['sottocategoria']
         conto = request.form['conto'].strip().upper()
         note = request.form.get('note', '')
+
+        # NUOVI CAMPI MULTI-VALUTA
+        valuta = request.form.get('valuta', 'EUR').upper()
+        tasso_cambio = float(request.form.get('tasso_cambio', 1.0))
+
         importo_normalizzato = normalizza_importo(request.form['importo'])
 
         if "INVESTIMENTI" in conto:
@@ -579,24 +599,32 @@ def modifica_transazione_eur(id_transazione):
         vecchio_importo = t['importo']
         vecchia_data = t['data']
 
+        # Calcolo dell'importo convertito in valuta base (EUR)
+        if valuta == 'EUR':
+            importo_valuta_base = importo
+        else:
+            importo_valuta_base = importo / tasso_cambio if tasso_cambio else importo
+
         # --- UNICA CONNESSIONE PER TUTTO ---
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
         try:
-            # 1. Calcolo BTC (facciamolo prima di salvare)
+            # 1. Calcolo BTC sul controvalore EUR
             valore_btc_eur = ottieni_valore_btc_eur(data)
             controvalore_btc = euro_to_btc(
-                importo, valore_btc_eur) if valore_btc_eur else 0.0
+                importo_valuta_base, valore_btc_eur) if valore_btc_eur else 0.0
 
             # 2. Aggiornamento massivo della transazione PRINCIPALE
             cursor.execute("""
                 UPDATE transazioni
                 SET data=?, descrizione=?, categoria=?, sottocategoria=?,
-                    importo=?, conto=?, note=?, valore_btc_eur=?, controvalore_btc=?
+                    importo=?, conto=?, note=?, valore_btc_eur=?, controvalore_btc=?,
+                    valuta=?, importo_valuta_base=?, tasso_cambio=?
                 WHERE id=? AND user_id=?
             """, (data, descrizione, categoria, sottocategoria,
                   importo, conto, note, valore_btc_eur, controvalore_btc,
+                  valuta, importo_valuta_base, tasso_cambio,
                   id_transazione, current_user.id))
 
             # 3. LOGICA GEMELLA
@@ -610,14 +638,17 @@ def modifica_transazione_eur(id_transazione):
 
             if gemella_row:
                 id_gemella = gemella_row[0]
-                # Aggiorniamo la gemella con l'importo OPPOSTO e i nuovi dati btc
+                # Aggiorniamo la gemella con l'importo OPPOSTO e la stessa valuta
                 cursor.execute("""
                     UPDATE transazioni
                     SET data=?, descrizione=?, importo=?, note=?,
-                        valore_btc_eur=?, controvalore_btc=?
+                        valore_btc_eur=?, controvalore_btc=?,
+                        valuta=?, importo_valuta_base=?, tasso_cambio=?
                     WHERE id=? AND user_id=?
                 """, (data, descrizione, -importo, note,
-                      valore_btc_eur, -controvalore_btc, id_gemella, current_user.id))
+                      valore_btc_eur, -controvalore_btc,
+                      valuta, -importo_valuta_base, tasso_cambio,
+                      id_gemella, current_user.id))
                 flash("Aggiornata anche la transazione gemella!", "info")
 
             conn.commit()
@@ -635,7 +666,9 @@ def modifica_transazione_eur(id_transazione):
     transazione_dict = {
         "id": t["id"], "data": t["data"], "descrizione": t["descrizione"],
         "categoria": t["categoria"], "sottocategoria": t["sottocategoria"],
-        "importo": t["importo"], "conto": t["conto"], "note": t.get("note", "")
+        "importo": t["importo"], "conto": t["conto"], "note": t.get("note", ""),
+        "valuta": t.get("valuta", "EUR"),
+        "tasso_cambio": t.get("tasso_cambio", 1.0)
     }
 
     return render_template(
@@ -643,7 +676,6 @@ def modifica_transazione_eur(id_transazione):
         transazione=transazione_dict,
         categorie=list(CATEGORIE.keys()),
         categorie_json=json.dumps(CATEGORIE)
-
     )
 
 

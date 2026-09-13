@@ -55,7 +55,7 @@
           <th>{{ _('Descrizione') }}</th>
           <th>{{ _('Categoria') }}</th>
           <th>{{ _('Sottocategoria') }}</th>
-          <th>{{ _('Importo (€)') }}</th>
+          <th>{{ _('Importo') }}</th>
           <th>{{ _('Controvalore BTC') }}</th>
           <th>{{ _('Valore BTC') }}</th>
           <th>{{ _('Conto') }}</th>
@@ -72,10 +72,18 @@
           <td>{{ traduci(t.categoria) }}</td>
           <td>{{ traduci(t.sottocategoria) }}</td>
 
-          <td
-            class="{% if t.importo >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
-          >
-            {{ "%.2f"|format(t.importo) }} €
+          <td class="{% if t.importo >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}">
+            {% if t.valuta == 'USD' %}${{ "%.2f"|format(t.importo) }}
+            {% elif t.valuta == 'GBP' %}£{{ "%.2f"|format(t.importo) }}
+            {% elif t.valuta == 'CNY' %}¥{{ "%.2f"|format(t.importo) }}
+            {% elif t.valuta == 'CHF' %}{{ "%.2f"|format(t.importo) }} CHF
+            {% elif t.valuta == 'ALL' %}{{ "%.2f"|format(t.importo) }} Lek
+            {% else %}{{ "%.2f"|format(t.importo) }} €
+            {% endif %}
+
+            {% if t.valuta and t.valuta != 'EUR' %}
+              <br><small style="color: #888;">({{ "%.2f"|format(t.importo_valuta_base) }} €)</small>
+              {% endif %}
           </td>
 
           <td>

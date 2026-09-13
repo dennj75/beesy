@@ -1,10 +1,12 @@
-{% extends "base.html" %} {% block title %}{{ _('Modifica Transazione €- ₿eesy') }}{% endblock %} {% block
-content %}
+{% extends "base.html" %} 
+{% block title %}{{ _('Modifica Transazione - ₿eesy') }}{% endblock %} 
+{% block content %}
   <h1>✏️ {{ _('Modifica Transazione') }}</h1>
 
   <form method="post" 
-      action="{{ url_for('modifica_transazione_eur', id_transazione=transazione['id']) }}" 
-      onsubmit="document.querySelector('select[name=\'conto\']').disabled = false;">
+        action="{{ url_for('modifica_transazione_eur', id_transazione=transazione['id']) }}" 
+        onsubmit="document.querySelector('select[name=\'conto\']').disabled = false;">
+    
     <label>{{ _('Data:') }}</label>
     <input type="date" name="data" value="{{ transazione['data'] }}" required><br><br>
 
@@ -22,8 +24,39 @@ content %}
     <label>{{ _('Sottocategoria:') }}</label>
     <select name="sottocategoria" id="sottocategoria" required></select><br><br>
 
-    <label>{{ _('Importo (€):') }}</label>
-    <input type="text" name="importo" value="{{ '%.2f'|format(transazione['importo']|float) }}" required><br><br>
+    <!-- SEZIONE IMPORTO E SELEZIONE VALUTA -->
+    <label for="importo">💸 {{ _('Importo:') }} </label>
+    <input
+      type="text"
+      id="importo"
+      name="importo"
+      step="0.01"
+      required
+      value="{{ transazione.importo if transazione else '' }}"
+    />
+
+    <select name="valuta" id="valuta" onchange="gestisciCampoTassoCambio()" style="margin-left: 5px;">
+      <option value="EUR" {% if transazione.get('valuta') == 'EUR' %}selected{% endif %}>EUR (€)</option>
+      <option value="USD" {% if transazione.get('valuta') == 'USD' %}selected{% endif %}>USD ($)</option>
+      <option value="CNY" {% if transazione.get('valuta') == 'CNY' %}selected{% endif %}>CNY (¥)</option>
+      <option value="CHF" {% if transazione.get('valuta') == 'CHF' %}selected{% endif %}>CHF (Fr.)</option>
+      <option value="GBP" {% if transazione.get('valuta') == 'GBP' %}selected{% endif %}>GBP (£)</option>
+      <option value="ALL" {% if transazione.get('valuta') == 'ALL' %}selected{% endif %}>ALL (Lek)</option>
+    </select>
+    <br /><br />
+
+    <!-- CAMPO TASSO DI CAMBIO (Visibile solo se valuta != EUR) -->
+    <div id="box_tasso_cambio" style="display: none; margin-bottom: 15px;">
+      <label for="tasso_cambio">🔀 {{ _('Tasso di Cambio (Valuta/EUR):') }}</label>
+      <input
+        type="number"
+        id="tasso_cambio"
+        name="tasso_cambio"
+        step="0.0001"
+        value="{{ transazione.get('tasso_cambio', 1.0) }}"
+      />
+      <small style="color: #888; display: block;">{{ _('Es. Se 1 EUR = 1.08 USD, inserisci 1.08') }}</small>
+    </div>
 
     <label>{{ _('Conto:') }}</label>
     <select name="conto" required>
@@ -31,13 +64,14 @@ content %}
       <option value="CONTANTI" {% if transazione['conto'] == "CONTANTI" %}selected{% endif %}>💶 {{ _('Contanti') }}</option>
       <option value="INVESTIMENTI" {% if transazione['conto'] == "INVESTIMENTI" %}selected{% endif %}>📈 {{ _('Investimenti') }}</option>
       <option value="PENSIONE" {% if transazione['conto'] == "PENSIONE" %}selected{% endif %}>👴 {{ _('Pensione') }}</option>
-
     </select><br><br>
+
     <div class="mb-3">
-    <label class="form-label" style="color: #888;">{{ _('Note (opzionale)') }}</label>
-    <textarea name="note" class="form-control" rows="2" 
-              style="background-color: #222; border-color: #444; color: #eee;">{{ transazione.note if transazione.note else '' }}</textarea>
-</div>
+      <label class="form-label" style="color: #888;">{{ _('Note (opzionale)') }}</label>
+      <textarea name="note" class="form-control" rows="2" 
+                style="background-color: #222; border-color: #444; color: #eee;">{{ transazione.note if transazione.note else '' }}</textarea>
+    </div>
+
     <button type="submit">✅ {{ _('Salva Modifiche') }}</button>
   </form>
 
@@ -65,15 +99,26 @@ content %}
             opt.text = "-- Nessuna sottocategoria --";
             sottoSel.appendChild(opt);
         }
-        // FONDAMENTALE: chiama la blindatura qui!
         applicaBlindatura();
+    }
+
+    function gestisciCampoTassoCambio() {
+        const valuta = document.getElementById("valuta").value;
+        const boxTasso = document.getElementById("box_tasso_cambio");
+        const inputTasso = document.getElementById("tasso_cambio");
+
+        if (valuta === "EUR") {
+            boxTasso.style.display = "none";
+        } else {
+            boxTasso.style.display = "block";
+        }
     }
 
     function applicaBlindatura() {
         const sottocategoria = document.getElementById("sottocategoria").value;
         const contoSelect = document.querySelector("select[name='conto']");
         
-        if (!contoSelect) return; // Sicurezza se il campo non esiste
+        if (!contoSelect) return;
 
         contoSelect.disabled = false;
         
@@ -91,8 +136,8 @@ content %}
 
     document.addEventListener("DOMContentLoaded", () => {
         popolaSottocategoria();
-        // L'ascoltatore va messo qui
+        gestisciCampoTassoCambio();
         document.getElementById("sottocategoria").addEventListener("change", applicaBlindatura);
     });
 </script>
-  {% endblock %}
+{% endblock %}

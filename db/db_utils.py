@@ -1,21 +1,20 @@
-# db/db_utils.py
-
 import sqlite3
 import os
 import subprocess
 
-# 1. Troviamo la cartella principale del progetto (EE)
+# 1. Troviamo la cartella principale del progetto
 BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
 # 2. Chiediamo a Git in quale branch siamo in questo momento
 try:
-    # Esegue il comando 'git branch' in sottofondo e legge il nome
     branch = subprocess.check_output(
-        ["git", "rev-parse", "--abbrev-ref", "HEAD"]).decode("utf-8").strip()
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        stderr=subprocess.DEVNULL
+    ).decode("utf-8").strip()
 except Exception:
-    branch = "main"  # Fallback di sicurezza se Git dovesse fallire
+    branch = "main"  # Fallback di sicurezza se Git non risponde
 
-# 3. Autoscambio intelligente basato sul Branch!
+# 3. Selezione automatica del database in base al Branch
 if branch == "dev":
     DB_NAME = 'database_dev.db'
     os.environ['BEESY_ENV'] = 'development'
@@ -28,34 +27,10 @@ else:
 # 4. Creiamo il percorso globale ASSOLUTO
 DB_PATH = os.path.join(BASE_DIR, DB_NAME)
 
+
 # 5. Funzione di connessione universale
-
-
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-# --- GESTIONE AUTOMATICA DEL DATABASE (Main vs Dev) ---
-# Controlliamo se esiste il file sorgente .dev_mode nella cartella principale del progetto
-if os.path.exists(".dev_mode") or os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".dev_mode")):
-    DB_PATH = "database_dev.db"
-    print("🛠️ [MODE]: Sviluppo attivo. Utilizzo -> database_dev.db")
-else:
-    DB_PATH = "database.db"
-    print("🚀 [MODE]: Produzione attiva. Utilizzo -> database.db")
-# ------------------------------------------------------
-COLONNE_TRANSAZIONI = [
-    "id", "data", "descrizione", "categoria", "sottocategoria",
-    "importo", "controvalore_btc", "valore_btc_eur", "conto", "user_id", "note"
-]
-
-
-def get_db_connection():
-    # 'database.db' deve essere il nome esatto del tuo file
-    db_path = DB_PATH
-    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -257,7 +232,40 @@ def inizializza_db():
             prezzo_eur REAL NOT NULL
         )
     ''')
+    # ------------------------------------------------------
+    # NUOVA SEZIONE: PARACADUTE MULTI-VALUTA (EUR, USD, CHF, ecc.)
+    # ------------------------------------------------------
 
+    # 1. Preferenza valuta base per gli utenti
+    try:
+        cursor.execute(
+            "ALTER TABLE users ADD COLUMN base_currency TEXT DEFAULT 'EUR'")
+    except sqlite3.OperationalError:
+        pass
+
+    # 2. Supporto valuta originaria nelle transazioni classiche
+    colonne_multivaluta_transazioni = [
+        ('valuta', "TEXT DEFAULT 'EUR'"),
+        ('importo_valuta_base', "REAL"),
+        ('tasso_cambio', "REAL DEFAULT 1.0")
+    ]
+    for nome_col, tipo in colonne_multivaluta_transazioni:
+        try:
+            cursor.execute(
+                f'ALTER TABLE transazioni ADD COLUMN {nome_col} {tipo}')
+        except sqlite3.OperationalError:
+            pass
+
+    # Popoliamo retroattivamente importo_valuta_base per i vecchi record dove è NULL
+    cursor.execute(
+        "UPDATE transazioni SET importo_valuta_base = importo WHERE importo_valuta_base IS NULL")
+
+    # 3. Supporto valuta negli asset di investimento
+    try:
+        cursor.execute(
+            "ALTER TABLE assets_watch ADD COLUMN valuta TEXT DEFAULT 'EUR'")
+    except sqlite3.OperationalError:
+        pass
     # ALLA FINE DI TUTTO: Un solo commit e una sola chiusura
     conn.commit()
     conn.close()
@@ -545,7 +553,12 @@ def leggi_transazioni_filtrate_lightning(filtro_data, user_id):
 
 
 def salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
-                importo, controvalore_btc, valore_btc_eur, conto='BANCA', note=''):
+                importo, controvalore_btc=0, valore_btc_eur=0, conto='BANCA', note='',
+                valuta='EUR', importo_valuta_base=None, tasso_cambio=1.0):
+
+    # Se non viene passato un importo convertito, assumiamo valuta base (es. EUR == EUR)
+    if importo_valuta_base is None:
+        importo_valuta_base = float(importo)
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -561,10 +574,12 @@ def salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
             controvalore_btc,
             valore_btc_eur,
             conto,
-            note
-                
+            note,
+            valuta,
+            importo_valuta_base,
+            tasso_cambio
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         user_id,
         data,
@@ -575,7 +590,10 @@ def salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
         controvalore_btc,
         valore_btc_eur,
         conto,
-        note
+        note,
+        valuta,
+        float(importo_valuta_base),
+        float(tasso_cambio)
     ))
 
     conn.commit()
@@ -630,19 +648,47 @@ def elimina_transazione_da_db(id_transazione, user_id):
     conn.close()
 
 
-def modifica_transazione_db(id_transazione, campo, nuovo_valore, user_id):
-    campi_consentiti = {'data', 'descrizione', 'categoria', 'sottocategoria',
-                        'importo', 'controvalore_btc', 'valore_btc_eur', 'conto', 'note'}
-    if campo not in campi_consentiti:
-        raise ValueError("Campo non valido")
+def modifica_transazione_db(transazione_id, data, descrizione, categoria, sottocategoria,
+                            importo, controvalore_btc=0, valore_btc_eur=0, conto='BANCA', note='',
+                            valuta='EUR', importo_valuta_base=None, tasso_cambio=1.0):
+
+    if importo_valuta_base is None:
+        importo_valuta_base = float(importo)
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    if not verifica_ownership_transazione(id_transazione, user_id, 'transazioni'):
-        conn.close()
-        raise PermissionError(
-            f"Non hai il permesso di modificare questa transazione")
-    query = f'UPDATE transazioni SET {campo} = ? WHERE id = ?'
-    cursor.execute(query, (nuovo_valore, id_transazione))
+
+    cursor.execute('''
+        UPDATE transazioni
+        SET data = ?,
+            descrizione = ?,
+            categoria = ?,
+            sottocategoria = ?,
+            importo = ?,
+            controvalore_btc = ?,
+            valore_btc_eur = ?,
+            conto = ?,
+            note = ?,
+            valuta = ?,
+            importo_valuta_base = ?,
+            tasso_cambio = ?
+        WHERE id = ?
+    ''', (
+        data,
+        descrizione,
+        categoria,
+        sottocategoria,
+        float(importo),
+        controvalore_btc,
+        valore_btc_eur,
+        conto,
+        note,
+        valuta,
+        float(importo_valuta_base),
+        float(tasso_cambio),
+        transazione_id
+    ))
+
     conn.commit()
     conn.close()
 
@@ -844,21 +890,28 @@ def ripristina_database_completo(user_id, dati_json):
             print("DEBUG RIPRISTINO: Svuoto tabella globale prezzi_btc...")
             cursor.execute("DELETE FROM prezzi_btc")
 
-        # 2. IMPORT TRANSAZIONI EURO
+        # 2. IMPORT TRANSAZIONI EURO / MULTI-VALUTA
         transazioni_euro = dati_json.get(
             'euro') or dati_json.get('transazioni') or []
         print(
-            f"DEBUG RIPRISTINO: Inserimento {len(transazioni_euro)} transazioni Euro")
+            f"DEBUG RIPRISTINO: Inserimento {len(transazioni_euro)} transazioni")
         for t in transazioni_euro:
+            imp_orig = t['importo']
+            valuta = t.get('valuta', 'EUR')
+            imp_base = t.get('importo_valuta_base', imp_orig)
+            tasso = t.get('tasso_cambio', 1.0)
+
             cursor.execute('''
                 INSERT INTO transazioni (
                     data, descrizione, categoria, sottocategoria, importo, 
-                    controvalore_btc, valore_btc_eur, conto, note, user_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    controvalore_btc, valore_btc_eur, conto, note, user_id,
+                    valuta, importo_valuta_base, tasso_cambio
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                t['data'], t['descrizione'], t['categoria'], t['sottocategoria'], t['importo'],
+                t['data'], t['descrizione'], t['categoria'], t['sottocategoria'], imp_orig,
                 t.get('controvalore_btc', 0), t.get('valore_btc_eur', 0), t.get(
-                    'conto', 'BANCA'), t.get('note', ''), user_id
+                    'conto', 'BANCA'), t.get('note', ''), user_id,
+                valuta, imp_base, tasso
             ))
 
         # 3. IMPORT ONCHAIN
@@ -1203,69 +1256,75 @@ def get_bilancio_periodo(user_id, tipo_conto, mese=None, anno=None):
     return abs(float(totale_entrate)), abs(float(totale_spese))
 
 
-def registra_transazione_conto(user_id, data, descrizione, categoria, sottocategoria, importo, conto, controvalore_btc=None, valore_btc_eur=None, note=''):
+def registra_transazione_conto(user_id, data, descrizione, categoria, sottocategoria, importo, conto,
+                               controvalore_btc=None, valore_btc_eur=None, note='',
+                               valuta='EUR', importo_valuta_base=None, tasso_cambio=1.0):
     """
-    Gestisce automaticamente i trasferimenti BANCA ↔ CONTANTI.
-    Aggiornato con i nuovi nomi delle categorie.
+    Gestisce automaticamente i trasferimenti BANCA ↔ CONTANTI e Giroconti Multi-Valuta.
     """
+    if importo_valuta_base is None:
+        importo_valuta_base = float(importo)
+
+    # Helper per calcolare l'importo base quando cambiamo il segno (abs o negativo)
+    def calcola_base_proporzionale(imp_target):
+        if float(importo) == 0:
+            return 0.0
+        return (imp_target / float(importo)) * float(importo_valuta_base)
+
     # --- CASO 1: INVESTIMENTI (PAC o Versamenti grossi) ---
     if sottocategoria == "Acquisto Titoli/Fondi (Giroconto)":
         # 1. Togliamo i soldi dalla BANCA (Uscita reale)
         salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
-                    importo, controvalore_btc, valore_btc_eur, conto="BANCA", note=note)
+                    importo, controvalore_btc, valore_btc_eur, conto="BANCA", note=note,
+                    valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio)
         # 2. Li aggiungiamo al conto INVESTIMENTI (Aumento del fondo)
-        salva_su_db(user_id, data, f"Caricamento: {descrizione}", categoria, sottocategoria, abs(
-            importo), None, None, conto="INVESTIMENTI", note="Giroconto automatico")
+        imp_inv = abs(importo)
+        salva_su_db(user_id, data, f"Caricamento: {descrizione}", categoria, sottocategoria,
+                    imp_inv, None, None, conto="INVESTIMENTI", note="Giroconto automatico",
+                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_inv), tasso_cambio=tasso_cambio)
         return
 
     # --- CASO 2: PENSIONE COMPLEMENTARE ---
     if sottocategoria == "Versamento Pensione (Giroconto)":
         # 1. Uscita dalla BANCA
         salva_su_db(user_id, data, descrizione, categoria,
-                    sottocategoria, importo, None, None, conto="BANCA", note=note)
+                    sottocategoria, importo, None, None, conto="BANCA", note=note,
+                    valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio)
         # 2. Entrata nel conto PENSIONE
-        salva_su_db(user_id, data, f"Versamento: {descrizione}", categoria, sottocategoria, abs(
-            importo), None, None, conto="PENSIONE", note="Giroconto automatico")
+        imp_pen = abs(importo)
+        salva_su_db(user_id, data, f"Versamento: {descrizione}", categoria, sottocategoria,
+                    imp_pen, None, None, conto="PENSIONE", note="Giroconto automatico",
+                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_pen), tasso_cambio=tasso_cambio)
         return
 
     # 3. PRELIEVO (Soldi che escono dalla BANCA per andare nei CONTANTI)
-    # Usiamo i nuovi nomi: "Patrimonio & Finanze" e "Prelievo Contante"
     if categoria == "Patrimonio & Finanze" and sottocategoria == "Prelievo Contante" and importo < 0:
-        # Nota: Qui potresti voler concatenare la nota dell'utente a quella automatica
-        nota_giroconto = f"{note} (Giroconto)".strip()
-        # Togli dalla banca (segna la spesa reale)
         salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
-                    controvalore_btc, valore_btc_eur, conto="BANCA")
+                    controvalore_btc, valore_btc_eur, conto="BANCA", note=note,
+                    valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio)
 
-        # Aggiungi ai contanti (giroconto interno)
-        salva_su_db(user_id, data,
-                    "Giroconto: Prelievo da banca",
-                    "Patrimonio & Finanze",
-                    "Trasferimento",
-                    abs(importo),
-                    None, None,
-                    conto="CONTANTI")
+        imp_cnt = abs(importo)
+        salva_su_db(user_id, data, "Giroconto: Prelievo da banca", "Patrimonio & Finanze", "Trasferimento",
+                    imp_cnt, None, None, conto="CONTANTI",
+                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_cnt), tasso_cambio=tasso_cambio)
         return
 
-    # 2. DEPOSITO (Soldi contanti che versi in BANCA)
+    # 4. DEPOSITO (Soldi contanti che versi in BANCA)
     if categoria == "Patrimonio & Finanze" and sottocategoria == "Prelievo Contante" and importo > 0:
-        # Aggiungi alla banca
         salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
-                    controvalore_btc, valore_btc_eur, conto="BANCA")
+                    controvalore_btc, valore_btc_eur, conto="BANCA", note=note,
+                    valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio)
 
-        # Togli dai contanti
-        salva_su_db(user_id, data,
-                    "Giroconto: Versamento in banca",
-                    "Patrimonio & Finanze",
-                    "Trasferimento",
-                    -abs(importo),
-                    None, None,
-                    conto="CONTANTI")
+        imp_cnt = -abs(importo)
+        salva_su_db(user_id, data, "Giroconto: Versamento in banca", "Patrimonio & Finanze", "Trasferimento",
+                    imp_cnt, None, None, conto="CONTANTI",
+                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_cnt), tasso_cambio=tasso_cambio)
         return
 
     # Se non è un prelievo/deposito, salva normalmente sul conto selezionato
     salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
-                controvalore_btc, valore_btc_eur, conto=conto, note=note)
+                controvalore_btc, valore_btc_eur, conto=conto, note=note,
+                valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio)
 
 
 def get_transaction_drill_down(user_id, categoria, anno=None, mese=None):
