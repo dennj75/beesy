@@ -151,7 +151,8 @@ def inizializza_db():
         ('npub', 'TEXT'),
         ('encrypted_master_key', 'TEXT'),
         ('pubkey', 'TEXT'),
-        ('auth_type', "TEXT DEFAULT 'local'")
+        ('auth_type', "TEXT DEFAULT 'local'"),
+        ('default_currency', "TEXT DEFAULT 'EUR'")
     ]
 
     for nome_col, tipo in colonne_users:

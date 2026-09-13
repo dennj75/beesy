@@ -1954,6 +1954,28 @@ def api_drill_down():
         'onchain': [{'data': str(r['data']), 'descrizione': r['descrizione'], 'importo_btc': r['importo_btc']} for r in btc_rows]
     })
 
+@app.route('/impostazioni', methods=['GET', 'POST'])
+@login_required
+def impostazioni():
+    if request.method == 'POST':
+        nuova_valuta = request.form.get('default_currency', 'EUR')
+        
+        conn = get_db_connection()
+        conn.execute(
+            "UPDATE users SET default_currency = ? WHERE id = ?",
+            (nuova_valuta, current_user.id)
+        )
+        conn.commit()
+        conn.close()
+        
+        # Aggiorniamo la proprietà anche nell'oggetto dell'utente in sessione
+        current_user.default_currency = nuova_valuta
+        
+        flash(_('Impostazioni aggiornate con successo!'), 'success')
+        return redirect(url_for('impostazioni'))
+
+    return render_template('impostazioni.html')
+
 
 if __name__ == '__main__':
     # Registrazione blueprint auth
