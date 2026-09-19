@@ -204,17 +204,18 @@
           "
         >
           <div class="nav-dropdown-container">
-            <!-- MENU EURO -->
+            <!-- MENU ONCHAIN -->
             <div class="nav-dropdown">
-              <button class="nav-dropdown-btn" type="button">💶 ▾</button>
+              <button class="nav-dropdown-btn" type="button">₿🔗 ▾</button>
               <div class="nav-dropdown-content">
-                <a href="{{ url_for('transazioni') }}">📝 {{ _('FT Euro') }}</a>
-                <a href="{{ url_for('analytics', tipo='EURO') }}"
+                <a href="{{ url_for('transazioni_onchain') }}"
+                  >📝 {{ _('FT Onchain') }}</a
+                >
+                <a href="{{ url_for('analytics', tipo='ONCHAIN') }}"
                   >📊 {{ _('Statistiche') }}</a
                 >
               </div>
             </div>
-
             <!-- MENU LIGHTNING -->
             <div class="nav-dropdown">
               <button class="nav-dropdown-btn" type="button">⚡ ▾</button>
@@ -228,14 +229,12 @@
               </div>
             </div>
 
-            <!-- MENU ONCHAIN -->
+            <!-- MENU EURO -->
             <div class="nav-dropdown">
-              <button class="nav-dropdown-btn" type="button">₿🔗 ▾</button>
+              <button class="nav-dropdown-btn" type="button">💶 ▾</button>
               <div class="nav-dropdown-content">
-                <a href="{{ url_for('transazioni_onchain') }}"
-                  >📝 {{ _('FT Onchain') }}</a
-                >
-                <a href="{{ url_for('analytics', tipo='ONCHAIN') }}"
+                <a href="{{ url_for('transazioni') }}">📝 {{ _('FT Euro') }}</a>
+                <a href="{{ url_for('analytics', tipo='EURO') }}"
                   >📊 {{ _('Statistiche') }}</a
                 >
               </div>

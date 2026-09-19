@@ -30,7 +30,7 @@ DB_PATH = os.path.join(BASE_DIR, DB_NAME)
 
 # 5. Funzione di connessione universale
 def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=20.0)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -557,48 +557,49 @@ def salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
                 importo, controvalore_btc=0, valore_btc_eur=0, conto='BANCA', note='',
                 valuta='EUR', importo_valuta_base=None, tasso_cambio=1.0):
 
-    # Se non viene passato un importo convertito, assumiamo valuta base (es. EUR == EUR)
     if importo_valuta_base is None:
         importo_valuta_base = float(importo)
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute('''
-        INSERT INTO transazioni (
+    # Usiamo get_db_connection così sfrutta il timeout=20.0!
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO transazioni (
+                user_id,
+                data,
+                descrizione,
+                categoria,
+                sottocategoria,
+                importo,
+                controvalore_btc,
+                valore_btc_eur,
+                conto,
+                note,
+                valuta,
+                importo_valuta_base,
+                tasso_cambio
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
             user_id,
             data,
             descrizione,
             categoria,
             sottocategoria,
-            importo,
+            float(importo),
             controvalore_btc,
             valore_btc_eur,
             conto,
             note,
             valuta,
-            importo_valuta_base,
-            tasso_cambio
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        user_id,
-        data,
-        descrizione,
-        categoria,
-        sottocategoria,
-        float(importo),
-        controvalore_btc,
-        valore_btc_eur,
-        conto,
-        note,
-        valuta,
-        float(importo_valuta_base),
-        float(tasso_cambio)
-    ))
-
-    conn.commit()
-    conn.close()
+            float(importo_valuta_base),
+            float(tasso_cambio)
+        ))
+        conn.commit()
+    finally:
+        # Il blocco finally assicura la chiusura della connessione ANCHE in caso di errori
+        conn.close()
 
 
 def leggi_transazioni_da_db(user_id):
@@ -607,7 +608,7 @@ def leggi_transazioni_da_db(user_id):
     cursor.execute(
         '''SELECT 
             id, data, descrizione, categoria, sottocategoria, importo,
-            controvalore_btc, valore_btc_eur, conto, note
+            controvalore_btc, valore_btc_eur, conto, note, valuta, tasso_cambio, importo_valuta_base
         FROM transazioni 
         WHERE user_id = ? 
         ORDER BY data ASC''',
@@ -631,8 +632,10 @@ def leggi_transazioni_da_db(user_id):
             "controvalore_btc": controvalore_btc,
             "valore_btc_eur": valore_btc_eur,
             "conto": r[8],
-            "note": r[9]
-
+            "note": r[9],
+            "valuta": r[10] if r[10] else "EUR",
+            "tasso_cambio": r[11] if r[11] else 1.0,
+            "importo_valuta_base": r[12] if r[12] else r[5]
         })
     return transazioni
 
@@ -718,7 +721,9 @@ def leggi_transazioni_filtrate(filtro_data, user_id):
     conn.close()
     return righe
 
-# Funzioni utenti
+# ==========================================
+# 2. GESTIONE UTENTI & AUTH
+# ==========================================
 
 
 def crea_utente(username, email, password_hash):
@@ -753,7 +758,7 @@ def get_user_by_id(user_id):
     cursor = conn.cursor()
     cursor.execute('''
         SELECT id, username, email, password_hash, npub, 
-               encrypted_master_key, pubkey, auth_type 
+               encrypted_master_key, pubkey, auth_type, default_currency
         FROM users WHERE id = ?
     ''', (user_id,))
     row = cursor.fetchone()
@@ -848,6 +853,21 @@ def delete_user(user_id):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+
+def aggiorna_valuta_utente_db(user_id, nuova_valuta):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Usa 'users' e 'default_currency'
+    cursor.execute('''
+        UPDATE users 
+        SET default_currency = ? 
+        WHERE id = ?
+    ''', (nuova_valuta, user_id))
+
     conn.commit()
     conn.close()
 
@@ -1274,28 +1294,32 @@ def registra_transazione_conto(user_id, data, descrizione, categoria, sottocateg
 
     # --- CASO 1: INVESTIMENTI (PAC o Versamenti grossi) ---
     if sottocategoria == "Acquisto Titoli/Fondi (Giroconto)":
-        # 1. Togliamo i soldi dalla BANCA (Uscita reale)
+        imp_uscita_banca = -abs(importo)  # Force Uscita (Negativo)
+        imp_entrata_inv = abs(importo)  # Force Entrata (Positivo)
+        # 1. Togliamo i soldi dalla BANCA
         salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
-                    importo, controvalore_btc, valore_btc_eur, conto="BANCA", note=note,
-                    valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio)
-        # 2. Li aggiungiamo al conto INVESTIMENTI (Aumento del fondo)
-        imp_inv = abs(importo)
+                    imp_uscita_banca, controvalore_btc, valore_btc_eur, conto="BANCA", note=note,
+                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_uscita_banca), tasso_cambio=tasso_cambio)
+        # 2. Li aggiungiamo al conto INVESTIMENTI
         salva_su_db(user_id, data, f"Caricamento: {descrizione}", categoria, sottocategoria,
-                    imp_inv, None, None, conto="INVESTIMENTI", note="Giroconto automatico",
-                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_inv), tasso_cambio=tasso_cambio)
+                    imp_entrata_inv, None, None, conto="INVESTIMENTI", note="Giroconto automatico",
+                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_entrata_inv), tasso_cambio=tasso_cambio)
         return
 
     # --- CASO 2: PENSIONE COMPLEMENTARE ---
     if sottocategoria == "Versamento Pensione (Giroconto)":
-        # 1. Uscita dalla BANCA
+        imp_uscita_banca = -abs(importo)  # Force Uscita (Negativo)
+        imp_entrata_pen = abs(importo)  # Force Entrata (Positivo)
+
+        # 1. Uscita dalla BANCA (in ROSSO)
         salva_su_db(user_id, data, descrizione, categoria,
-                    sottocategoria, importo, None, None, conto="BANCA", note=note,
-                    valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio)
-        # 2. Entrata nel conto PENSIONE
-        imp_pen = abs(importo)
+                    sottocategoria, imp_uscita_banca, None, None, conto="BANCA", note=note,
+                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_uscita_banca), tasso_cambio=tasso_cambio)
+
+        # 2. Entrata nel conto PENSIONE (in VERDE)
         salva_su_db(user_id, data, f"Versamento: {descrizione}", categoria, sottocategoria,
-                    imp_pen, None, None, conto="PENSIONE", note="Giroconto automatico",
-                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_pen), tasso_cambio=tasso_cambio)
+                    imp_entrata_pen, None, None, conto="PENSIONE", note="Giroconto automatico",
+                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_entrata_pen), tasso_cambio=tasso_cambio)
         return
 
     # 3. PRELIEVO (Soldi che escono dalla BANCA per andare nei CONTANTI)

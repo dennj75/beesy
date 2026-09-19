@@ -1,30 +1,33 @@
-{% extends "base.html" %}
-{% block title %}{{ _('Impostazioni - ₿eesy') }}{% endblock %}
-
-{% block content %}
-<div class="container mt-4" style="max-width: 600px;">
+{% extends "base.html" %} {% block title %}{{ _('Impostazioni - ₿eesy') }}{%
+endblock %} {% block content %}
+<div class="container mt-4" style="max-width: 600px">
   <h1>⚙️ {{ _('Impostazioni Account') }}</h1>
-  <hr style="border-color: #444;" />
+  <hr style="border-color: #444" />
 
-  <form method="post" action="{{ url_for('impostazioni') }}">
+  <form action="{{ url_for('impostazioni') }}" method="POST">
     <div class="mb-4">
       <label for="default_currency" class="form-label fw-bold">
         🌐 {{ _('Valuta Predefinita per le Nuove Transazioni:') }}
       </label>
-      <select name="default_currency" id="default_currency" class="form-select bg-dark text-white border-secondary">
-        <option value="EUR" {% if current_user.default_currency == 'EUR' %}selected{% endif %}>EUR (€) - Euro</option>
-        <option value="USD" {% if current_user.default_currency == 'USD' %}selected{% endif %}>USD ($) - US Dollar</option>
-        <option value="CNY" {% if current_user.default_currency == 'CNY' %}selected{% endif %}>CNY (¥) - Yuan</option>
-        <option value="CHF" {% if current_user.default_currency == 'CHF' %}selected{% endif %}>CHF (Fr.) - Franco Svizzero</option>
-        <option value="GBP" {% if current_user.default_currency == 'GBP' %}selected{% endif %}>GBP (£) - Sterlina</option>
-        <option value="ALL" {% if current_user.default_currency == 'ALL' %}selected{% endif %}>ALL (Lek) - Lek Albanese</option>
+      {% set v = current_user.default_currency if current_user.default_currency
+      else 'EUR' %}
+
+      <select name="valuta" id="valuta" style="margin-left: 5px">
+        {% for codice, info in valute.items() %}
+        <option value="{{ codice }}" {{ 'selected' if v == codice else '' }}>
+          {{ codice }} ({{ info.simbolo }}) - {{ info.nome }}
+        </option>
+        {% endfor %}
       </select>
       <small class="text-muted d-block mt-2">
-        {{ _('Questa valuta verrà selezionata automaticamente quando inserisci una nuova transazione.') }}
+        {{ _('Questa valuta verrà selezionata automaticamente quando inserisci
+        una nuova transazione.') }}
       </small>
     </div>
 
-    <button type="submit" class="btn btn-primary">💾 {{ _('Salva Preferenze') }}</button>
+    <button type="submit" class="btn btn-primary">
+      💾 {{ _('Salva Preferenze') }}
+    </button>
   </form>
 </div>
 {% endblock %}

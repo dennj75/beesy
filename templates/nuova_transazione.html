@@ -75,28 +75,36 @@
         value="{{ transazione.importo if transazione else '' }}"
       />
 
+      {% set v = current_user.default_currency if current_user.default_currency else 'EUR' %}
+
       <select name="valuta" id="valuta" onchange="gestisciCampoTassoCambio()" style="margin-left: 5px;">
-        <option value="EUR" selected>EUR (€)</option>
-        <option value="USD">USD ($)</option>
-        <option value="CNY">CNY (¥)</option>
-        <option value="CHF">CHF (Fr.)</option>
-        <option value="GBP">GBP (£)</option>
-        <option value="ALL">ALL (Lek)</option>
+        {% for codice, info in valute.items() %}
+          <option value="{{ codice }}" {{ 'selected' if v == codice else '' }}>
+            {{ codice }} ({{ info.simbolo }}) - {{ info.nome }}
+          </option>
+        {% endfor %}
       </select>
-      <br /><br />
+      <br />
 
       <!-- CAMPO TASSO DI CAMBIO (Visibile solo se valuta != EUR) -->
-      <div id="box_tasso_cambio" style="display: none; margin-bottom: 15px;">
-        <label for="tasso_cambio">🔀 {{ _('Tasso di Cambio (Valuta/EUR):') }}</label>
-        <input
-          type="number"
-          id="tasso_cambio"
-          name="tasso_cambio"
-          step="0.0001"
-          value="1.0"
-        />
-        <small style="color: #888; display: block;">{{ _('Es. Se 1 EUR = 1.08 USD, inserisci 1.08') }}</small>
-      </div>
+      <div id="container_tasso_cambio" class="mb-3">
+  <label for="tasso_cambio" id="label_tasso_cambio" class="form-label fw-bold">
+    🔀 {{ _('Tasso di Cambio (Valuta/EUR):') }}
+  </label>
+
+  <input 
+    type="number" 
+    step="0.000001" 
+    name="tasso_cambio" 
+    id="tasso_cambio" 
+    class="form-control" 
+    value="{{ transazione.tasso_cambio if transazione and transazione.tasso_cambio else 1.0 }}" 
+  />
+
+  <small id="help_tasso_cambio" class="text-muted d-block mt-1">
+    {{ _('Es. Se 1 EUR = 1.08 USD, inserisci 1.08') }}
+  </small>
+</div>
 
       <label for="conto"> {{ _('Conto:') }}</label>
       <select name="conto" id="conto" required>
@@ -147,17 +155,37 @@
   }
 
   function gestisciCampoTassoCambio() {
-    const valuta = document.getElementById("valuta").value;
-    const boxTasso = document.getElementById("box_tasso_cambio");
-    const inputTasso = document.getElementById("tasso_cambio");
-
-    if (valuta === "EUR") {
-      boxTasso.style.display = "none";
-      inputTasso.value = "1.0";
+    const selectValuta = document.getElementById('valuta');
+    const containerTasso = document.getElementById('container_tasso_cambio'); // o il div che racchiude il campo
+    const labelTasso = document.getElementById('label_tasso_cambio');
+    const helpTasso = document.getElementById('help_tasso_cambio');
+    
+    if (!selectValuta) return;
+    
+    const valutaSelezionata = selectValuta.value;
+    
+    // Se la valuta è la valuta base dell'app (EUR), possiamo nascondere il campo o fissarlo a 1.0
+    if (valutaSelezionata === 'EUR') {
+        if (containerTasso) containerTasso.style.display = 'none';
     } else {
-      boxTasso.style.display = "block";
+        if (containerTasso) containerTasso.style.display = 'block';
+        
+        // Aggiorniamo l'etichetta in modo dinamico
+        if (labelTasso) {
+            labelTasso.innerText = `🔀 Tasso di Cambio (${valutaSelezionata} / EUR):`;
+        }
+        
+        // Aggiorniamo il testo di esempio in modo dinamico
+        if (helpTasso) {
+            helpTasso.innerText = `Es. Quanti ${valutaSelezionata} servono per 1 EUR (es. 1 EUR = ... ${valutaSelezionata})`;
+        }
     }
-  }
+}
+
+// Esegui la funzione anche al caricamento della pagina per impostare l'etichetta corretta subito
+document.addEventListener('DOMContentLoaded', function() {
+    gestisciCampoTassoCambio();
+});
 
   function applicaBlindatura() {
     const sottocategoria = document.getElementById("sottocategoria").value;

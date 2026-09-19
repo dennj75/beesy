@@ -4,12 +4,13 @@ block content %}
 <p class="description">
   {{ _('Qui puoi monitorare le tue entrate e uscite finanziarie.') }}
 </p>
+
 <div
   class="card shadow-sm mb-4"
   style="
     border-left: 5px solid #2ecc71;
-    background-color: #1e1e1e !important; /* Colore scuro per card */
-    color: #ecf0f1 !important; /* Testo chiaro per card */
+    background-color: #1e1e1e !important;
+    color: #ecf0f1 !important;
     margin-top: 20px;
   "
 >
@@ -49,6 +50,7 @@ block content %}
     </div>
   </div>
 </div>
+
 <div class="balances-grid">
   <div class="balance-card onchain-card">
     <a href="{{ url_for('transazioni_onchain') }}">
@@ -96,17 +98,7 @@ block content %}
       💰 {{ _('Saldo:') }} {{
       "{:,}".format(saldo_totale_satoshi|int).replace(",",".") }} SATS
     </p>
-   
     <p class="saldo-secondario">{{ "%.2f"|format(saldo_eur_lightning) }} €</p>
-     <!--
-    <a
-      href="{{ url_for('importa_blink') }}"
-      class="btn btn-sm btn-outline-warning"
-      style="text-decoration: none; font-size: 0.8rem"
-    >
-      📥 {{ _('Importa CSV BLINK') }}
-    </a>
-  -->
   </div>
 
   <div class="balance-card tracker-euro-card">
@@ -148,37 +140,28 @@ block content %}
     </div>
   </div>
 </div>
-<!-- Puoi semplicemente rimuovere o commentare questo blocco 
-<div class="dropdown">
-  <button class="dropbtn">➕ {{ _('Inserisci nuova transazione') }}</button>
-  <div class="dropdown-content">
-    <a href="/nuova_transazione_onchain"
-      >{{ _('Nuova transazione On-chain (₿)') }}</a
-    >
 
-    <a href="/nuova_transazione_lightning"
-      >{{ _('Nuova transazione Lightning (⚡️)') }}</a
-    >
-    <a href="/nuova_transazione">{{ _('Nuova transazione Euro (€)') }}</a>
-    <hr style="margin: 5px 0; border-color: #444" />
-    <a href="{{ url_for('importa_csv') }}" style="color: #ffc107"
-      >📥 {{ _('Importa file CSV (Banca)') }}</a
-    >
-  </div>
-  -->
-</div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <div class="container mt-4">
   <div class="row">
     <div class="col-md-8 mx-auto">
       <div class="card shadow p-3 mb-5 bg-dark text-white rounded">
-        <div class="card-body">
-          <h5 class="card-title text-center">
+        <div class="card-body text-center">
+          <h5 class="card-title mb-4">
             {{ _('Ripartizione del tuo Capitale') }}
           </h5>
 
-          <div class="dashboard-chart-container">
+          <!-- Div contenitore con dimensioni controllate per evitare deformazioni -->
+          <div
+            style="
+              position: relative;
+              margin: auto;
+              height: 320px;
+              width: 100%;
+              max-width: 380px;
+            "
+          >
             <canvas id="chartPatrimonio"></canvas>
           </div>
 
@@ -192,6 +175,7 @@ block content %}
     </div>
   </div>
 </div>
+
 <hr class="main-separator" />
 <h2>💝 {{ _('Supporta il progetto') }}</h2>
 
@@ -234,11 +218,12 @@ block content %}
     />
   </div>
 </div>
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
       const ctx = document.getElementById('chartPatrimonio').getContext('2d');
       new Chart(ctx, {
-          type: 'doughnut', // Un bel grafico a "ciambella"
+          type: 'doughnut',
           data: {
               labels: {{ labels_grafico | tojson }},
               datasets: [{
@@ -247,21 +232,23 @@ block content %}
                       '#007bff', // Blu per Banca
                       '#28a745', // Verde per Contanti
                       '#ffc107', // Giallo/Oro per Lightning
-                      '#f39c12'   // Arancione Bitcoin per On-chain
+                      '#f39c12'  // Arancione Bitcoin per On-chain
                   ],
-                  hoverOffset: 4,
+                  hoverOffset: 6,
                   borderWidth: 2,
-                  borderColor: '#ffffff'
+                  borderColor: '#1e1e1e'
               }]
           },
           options: {
               responsive: true,
+              maintainAspectRatio: false,
               plugins: {
                   legend: {
                       position: 'bottom',
                       labels: {
-                          padding: 20,
-                          font: { size: 14 }
+                          padding: 15,
+                          color: '#ffffff',
+                          font: { size: 13 }
                       }
                   },
                   tooltip: {
@@ -273,16 +260,13 @@ block content %}
                                 currency: 'EUR'
                               }).format(context.parsed);
 
-                              // Recuperiamo il valore extra (BTC/SATS) dal nostro array Python
                               const extraData = {{ extra_data | tojson }};
                               let valoreExtra = extraData[context.dataIndex];
 
-                              // Creiamo un array di righe per il tooltip
                               return [
                                 label + ": " + valoreEur,
                                 "   " + valoreExtra
                             ];
-
                           }
                       }
                   }

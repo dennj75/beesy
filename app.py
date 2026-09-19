@@ -2,7 +2,7 @@
 
 from werkzeug.utils import secure_filename
 from utils.security import decrypt_master_key, encrypt_data, decrypt_data
-from utils.helpers import normalizza_importo
+from utils.helpers import normalizza_importo, formatta_importo, VALUTE_SUPPORTATE
 from models import User
 from utils.import_manager import anteprima_importazione_csv, anteprima_importazione_blink_csv
 from utils.export import (
@@ -12,7 +12,7 @@ from utils.export import (
 )
 from utils.crypto import ottieni_valore_btc_eur, euro_to_btc, _carica_storico_btc_eur, aggiorna_prezzo_bitcoin
 from db.db_utils import (
-    DB_PATH, inizializza_db, get_db_connection, get_user_by_id, inizializza_db, salva_su_db, leggi_transazioni_da_db,
+    DB_PATH, inizializza_db, get_db_connection, get_user_by_id, aggiorna_valuta_utente_db, inizializza_db, salva_su_db, leggi_transazioni_da_db,
     elimina_transazione_da_db, modifica_transazione_db, get_transazioni_con_saldo,
     salva_su_db_lightning, leggi_transazioni_da_db_lightning, modifica_transazione_db_lightning,
     elimina_transazione_da_db_lightning, get_transazioni_con_saldo_lightning,
@@ -147,6 +147,8 @@ LISTA_CATEGORIE_UNICHE = [
 app = Flask(__name__)
 app.config['DB_PATH'] = DB_PATH
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'default-key-per-test')
+
+app.jinja_env.filters['formatta_importo'] = formatta_importo
 
 # Cookie & CSRF Settings
 app.config['WTF_CSRF_ENABLED'] = True
@@ -534,6 +536,7 @@ def nuova_transazione():
     # Se GET, mostra il form
     return render_template(
         'nuova_transazione.html',
+        valute=VALUTE_SUPPORTATE,
         transazione=[None, None, None, '', '', '', None, None],
         categorie=list(CATEGORIE.keys()),
         categorie_json=json.dumps(CATEGORIE))
@@ -674,6 +677,7 @@ def modifica_transazione_eur(id_transazione):
     return render_template(
         'modifica_transazione.html',
         transazione=transazione_dict,
+        valute=VALUTE_SUPPORTATE,
         categorie=list(CATEGORIE.keys()),
         categorie_json=json.dumps(CATEGORIE)
     )
@@ -1954,27 +1958,24 @@ def api_drill_down():
         'onchain': [{'data': str(r['data']), 'descrizione': r['descrizione'], 'importo_btc': r['importo_btc']} for r in btc_rows]
     })
 
+
 @app.route('/impostazioni', methods=['GET', 'POST'])
 @login_required
 def impostazioni():
     if request.method == 'POST':
-        nuova_valuta = request.form.get('default_currency', 'EUR')
-        
-        conn = get_db_connection()
-        conn.execute(
-            "UPDATE users SET default_currency = ? WHERE id = ?",
-            (nuova_valuta, current_user.id)
-        )
-        conn.commit()
-        conn.close()
-        
-        # Aggiorniamo la proprietà anche nell'oggetto dell'utente in sessione
-        current_user.default_currency = nuova_valuta
-        
-        flash(_('Impostazioni aggiornate con successo!'), 'success')
-        return redirect(url_for('impostazioni'))
+        nuova_valuta = request.form.get('valuta')
 
-    return render_template('impostazioni.html')
+        if nuova_valuta in VALUTE_SUPPORTATE:
+            # 1. Salva la modifica su SQLite persistentemente
+            aggiorna_valuta_utente_db(current_user.id, nuova_valuta)
+
+            # 2. Aggiorna l'oggetto in sessione per la risposta immediata
+            current_user.default_currency = nuova_valuta
+
+            flash(_("Valuta predefinita aggiornata con successo!"), "success")
+            return redirect(url_for('impostazioni'))
+
+    return render_template('impostazioni.html', valute=VALUTE_SUPPORTATE)
 
 
 if __name__ == '__main__':

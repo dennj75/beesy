@@ -73,13 +73,7 @@
           <td>{{ traduci(t.sottocategoria) }}</td>
 
           <td class="{% if t.importo >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}">
-            {% if t.valuta == 'USD' %}${{ "%.2f"|format(t.importo) }}
-            {% elif t.valuta == 'GBP' %}£{{ "%.2f"|format(t.importo) }}
-            {% elif t.valuta == 'CNY' %}¥{{ "%.2f"|format(t.importo) }}
-            {% elif t.valuta == 'CHF' %}{{ "%.2f"|format(t.importo) }} CHF
-            {% elif t.valuta == 'ALL' %}{{ "%.2f"|format(t.importo) }} Lek
-            {% else %}{{ "%.2f"|format(t.importo) }} €
-            {% endif %}
+            {{ t.importo | formatta_importo(t.valuta) }}
 
             {% if t.valuta and t.valuta != 'EUR' %}
               <br><small style="color: #888;">({{ "%.2f"|format(t.importo_valuta_base) }} €)</small>

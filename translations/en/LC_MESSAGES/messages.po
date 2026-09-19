@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-09 15:03+0200\n"
-"PO-Revision-Date: 2026-09-09 15:20+0200\n"
+"POT-Creation-Date: 2026-09-19 23:18+0200\n"
+"PO-Revision-Date: 2026-09-19 23:26+0200\n"
 "Last-Translator: \n"
 "Language-Team: en <LL@li.org>\n"
 "Language: en\n"
@@ -335,38 +335,42 @@ msgstr "Emergencies"
 msgid "Sostituzione tech"
 msgstr "Tech replacement"
 
-#: app.py:411
+#: app.py:413
 msgid "Disponibilità (Banca/Contanti)"
 msgstr "Availability (Bank/Cash)"
 
-#: app.py:412
+#: app.py:414
 msgid "Investimenti/Pensione"
 msgstr "Investments/Pension"
 
-#: app.py:413
+#: app.py:415
 msgid "Lightning"
 msgstr "Lightning"
 
-#: app.py:414
+#: app.py:416
 msgid "On-chain"
 msgstr "On-chain"
 
-#: app.py:1378
+#: app.py:1414
 msgid "Statistiche Euro (€)"
 msgstr "Statistics Euro (€)"
 
-#: app.py:1379
+#: app.py:1415
 msgid "Statistiche Lightning (⚡)"
 msgstr "Statistics Lightning (⚡️)"
 
-#: app.py:1380
+#: app.py:1416
 msgid "Statistiche On-chain (₿)"
 msgstr "Statistics On-chain (₿)"
 
-#: app.py:1389 templates/analytics.html:1 templates/base.html:211
-#: templates/base.html:224 templates/base.html:237
+#: app.py:1425 templates/analytics.html:1 templates/base.html:215
+#: templates/base.html:227 templates/base.html:238
 msgid "Statistiche"
 msgstr "Statistics"
+
+#: app.py:1975
+msgid "Valuta predefinita aggiornata con successo!"
+msgstr "Default currency successfully updated!"
 
 #: templates/analytics.html:22
 msgid "Uscite"
@@ -563,7 +567,7 @@ msgstr "On-chain Bitcoin transactions🔗"
 msgid "Descrizione"
 msgstr "Description"
 
-#: templates/analytics.html:566
+#: templates/analytics.html:566 templates/transazioni.html:58
 msgid "Importo"
 msgstr "Amount"
 
@@ -659,7 +663,7 @@ msgid ""
 "inserisci la password. Se il server\n"
 "        venisse compromesso, i tuoi backup"
 msgstr ""
-"Enter your password. If the server\n"
+"enter your password. If the server\n"
 "is compromised, your backups"
 
 #: templates/backup_confirm.html:52
@@ -707,7 +711,7 @@ msgid ""
 "ogni tre mesi facendo un test di ripristino\n"
 "    (dopo aver salvato il database"
 msgstr ""
-"Every three months, perform a recovery test\n"
+"every three months, perform a recovery test\n"
 "(after saving the database)"
 
 #: templates/backup_confirm.html:69
@@ -726,35 +730,35 @@ msgstr "Total Backup (JSON)"
 msgid "Ripristino Dati"
 msgstr "Data Recovery"
 
-#: templates/base.html:179
+#: templates/base.html:180
 msgid "Impostazioni"
 msgstr "Settings"
 
-#: templates/base.html:181
+#: templates/base.html:183
 msgid "Logout"
 msgstr "Logout"
 
-#: templates/base.html:186
+#: templates/base.html:188
 msgid "Sei DAVVERO sicuro?"
 msgstr "Are you REALLY sure?"
 
-#: templates/base.html:188
+#: templates/base.html:190
 msgid "Elimina account"
 msgstr "Delete account"
 
-#: templates/base.html:209
-msgid "FT Euro"
-msgstr "FT 💶 Euro"
-
-#: templates/base.html:221
-msgid "FT Lightning"
-msgstr "Lightning "
-
-#: templates/base.html:234
+#: templates/base.html:212
 msgid "FT Onchain"
 msgstr "On-chain"
 
-#: templates/base.html:306 templates/login.html:411
+#: templates/base.html:224
+msgid "FT Lightning"
+msgstr "Lightning  "
+
+#: templates/base.html:236
+msgid "FT Euro"
+msgstr "FT 💶 Euro"
+
+#: templates/base.html:307 templates/login.html:411
 msgid "F.A.Q."
 msgstr "F.A.Q."
 
@@ -778,14 +782,12 @@ msgstr ""
 msgid ""
 "Senza la tua password o la tua firma Nostr, il file risulta del\n"
 "          tutto indecifrabile. Questo garantisce che, anche se perdi una\n"
-"          chiavetta USB o il file finisce in mani sbagliate, nessuno potrà "
-"mai\n"
+"          chiavetta USB o il file finisce in mani sbagliate, nessuno potrà mai\n"
 "          accedere alle tue transazioni."
 msgstr ""
-"Without your password or Nostr signature, the file is completely "
-"indecipherable. This ensures that, even if you lose a USB drive or the file "
-"falls into the wrong hands, no one will ever be able to access your "
-"transactions."
+"Without your password or Nostr signature, the file is completely indecipherable. "
+"This ensures that, even if you lose a USB drive or the file falls into the wrong "
+"hands, no one will ever be able to access your transactions."
 
 #: templates/faq.html:43
 msgid "Come faccio un backup manuale del database \"al volo\"?"
@@ -851,8 +853,7 @@ msgstr ""
 msgid ""
 "Cosa succede se Beesy va offline? Posso leggere i miei backup\n"
 "          senza l'app?"
-msgstr ""
-"What happens if Beesy goes offline? Can I read my backups without the app?"
+msgstr "What happens if Beesy goes offline? Can I read my backups without the app?"
 
 #: templates/faq.html:134
 #, python-format
@@ -905,8 +906,7 @@ msgstr "Mandatory Security Update"
 #: templates/force_password_reset.html:36
 msgid "Ciao <strong>{{ username }}</strong>, abbiamo rafforzato i requisiti di"
 msgstr ""
-"Hello <strong>{{ username }}</strong>, we have strengthened the requirements "
-"for"
+"Hello <strong>{{ username }}</strong>, we have strengthened the requirements for"
 
 #: templates/force_password_reset.html:37
 msgid "sicurezza. Per continuare, devi impostare subito una nuova password:"
@@ -956,7 +956,7 @@ msgstr "Import Preview - ₿eesy"
 msgid "Anteprima Importazione"
 msgstr "Import Preview"
 
-#: templates/importa_anteprima.html:16 templates/transazioni.html:58
+#: templates/importa_anteprima.html:16
 msgid "Importo (€)"
 msgstr "New amount €"
 
@@ -1040,6 +1040,30 @@ msgid ""
 "        cancellato dal server immediatamente dopo l'analisi."
 msgstr "The file will be deleted from the server immediately after analysis."
 
+#: templates/impostazioni.html:1
+msgid "Impostazioni - ₿eesy"
+msgstr "Settings - ₿eesy"
+
+#: templates/impostazioni.html:4
+msgid "Impostazioni Account"
+msgstr "Account Settings"
+
+#: templates/impostazioni.html:10
+msgid "Valuta Predefinita per le Nuove Transazioni:"
+msgstr "Default Currency for New Transactions:"
+
+#: templates/impostazioni.html:23
+msgid ""
+"Questa valuta verrà selezionata automaticamente quando inserisci\n"
+"        una nuova transazione."
+msgstr ""
+"This currency will be selected automatically when you enter\n"
+"a new transaction."
+
+#: templates/impostazioni.html:29
+msgid "Salva Preferenze"
+msgstr "Save Preferences"
+
 #: templates/index.html:1 templates/index.html:3
 msgid "Dashboard"
 msgstr "Dashboard"
@@ -1064,7 +1088,7 @@ msgstr "Savings & Future:"
 msgid "Titoli:"
 msgstr "Titles:"
 
-#: templates/index.html:39 templates/index.html:125
+#: templates/index.html:39 templates/index.html:128
 msgid "Pensione:"
 msgstr "Pension:"
 
@@ -1076,7 +1100,7 @@ msgstr "Net Worth Totale (EUR):"
 msgid "TRACKER ₿itcoin on-chain🔗"
 msgstr "TRACKER ₿itcoin on-chain🔗"
 
-#: templates/index.html:62 templates/index.html:86 templates/index.html:130
+#: templates/index.html:62 templates/index.html:86 templates/index.html:133
 msgid "Analisi"
 msgstr "Output Analysis"
 
@@ -1088,63 +1112,63 @@ msgstr "Balance:"
 msgid "TRACKER Lightning Network⚡️"
 msgstr "TRACKER Lightning Network⚡️"
 
-#: templates/index.html:105
+#: templates/index.html:107
 msgid "Importa CSV BLINK"
 msgstr "Import CSV Bank"
 
-#: templates/index.html:112
+#: templates/index.html:115
 msgid "TRACKER €"
 msgstr "TRACKER €"
 
-#: templates/index.html:116
+#: templates/index.html:119
 msgid "Banca:"
 msgstr "Bank:"
 
-#: templates/index.html:119
+#: templates/index.html:122
 msgid "Contanti:"
 msgstr "Cash:"
 
-#: templates/index.html:122
+#: templates/index.html:125
 msgid "Investimenti:"
 msgstr "Investment Performance:"
 
-#: templates/index.html:134
+#: templates/index.html:137
 msgid "Saldo"
 msgstr "Balance"
 
-#: templates/index.html:143
+#: templates/index.html:146
 msgid "Importa CSV Banca"
 msgstr "Import CSV Bank"
 
-#: templates/index.html:150
+#: templates/index.html:153
 msgid "Inserisci nuova transazione"
 msgstr "Enter new transaction"
 
-#: templates/index.html:153
+#: templates/index.html:156
 msgid "Nuova transazione On-chain (₿)"
 msgstr "New On-chain Transaction (₿)"
 
-#: templates/index.html:157
+#: templates/index.html:160
 msgid "Nuova transazione Lightning (⚡️)"
 msgstr "New Lightning transaction (⚡️)"
 
-#: templates/index.html:159
+#: templates/index.html:162
 msgid "Nuova transazione Euro (€)"
 msgstr "New Euro transaction (€)"
 
-#: templates/index.html:162
+#: templates/index.html:165
 msgid "Importa file CSV (Banca)"
 msgstr "Import CSV file (Bank)"
 
-#: templates/index.html:175
+#: templates/index.html:178
 msgid "Ripartizione del tuo Capitale"
 msgstr "Breakdown of your Capital"
 
-#: templates/index.html:184
+#: templates/index.html:187
 msgid "I controvalori in BTC/SATS sono calcolati"
 msgstr "The equivalent values ​​in BTC/SATS are calculated."
 
-#: templates/index.html:184
+#: templates/index.html:187
 msgid ""
 "in base\n"
 "            al prezzo attuale di mercato."
@@ -1152,7 +1176,7 @@ msgstr ""
 "based on\n"
 "the current market price."
 
-#: templates/index.html:193 templates/login.html:173
+#: templates/index.html:196 templates/login.html:173
 msgid "Supporta il progetto"
 msgstr "Support the project"
 
@@ -1201,80 +1225,88 @@ msgstr "Install Alby or nos2x on your browser desktop!"
 msgid "Errore desktop: "
 msgstr "Desktop error: "
 
-#: templates/modifica_transazione.html:1
-msgid "Modifica Transazione €- ₿eesy"
-msgstr "Edit Transaction €- ₿eesy"
+#: templates/modifica_transazione.html:2
+msgid "Modifica Transazione - ₿eesy"
+msgstr "Edit Transaction - ₿eesy"
 
-#: templates/modifica_transazione.html:3
+#: templates/modifica_transazione.html:4
 msgid "Modifica Transazione"
 msgstr "Edit Transaction"
 
-#: templates/modifica_transazione.html:8
+#: templates/modifica_transazione.html:10
 #: templates/nuova_transazione_lightning.html:8
 #: templates/nuova_transazione_onchain.html:8
 msgid "Data:"
 msgstr "Date:"
 
-#: templates/modifica_transazione.html:11 templates/nuova_transazione.html:15
+#: templates/modifica_transazione.html:13 templates/nuova_transazione.html:16
 #: templates/nuova_transazione_lightning.html:14
 #: templates/nuova_transazione_onchain.html:14
 msgid "Descrizione:"
 msgstr "Description:"
 
-#: templates/modifica_transazione.html:14 templates/nuova_transazione.html:24
+#: templates/modifica_transazione.html:16 templates/nuova_transazione.html:25
 #: templates/nuova_transazione_lightning.html:17
 #: templates/nuova_transazione_onchain.html:17
 msgid "Categoria:"
 msgstr "Category:"
 
-#: templates/modifica_transazione.html:16
+#: templates/modifica_transazione.html:18
 #: templates/modifica_transazione_lightning.html:19
 #: templates/modifica_transazione_onchain.html:19
-#: templates/nuova_transazione.html:31
+#: templates/nuova_transazione.html:32
 #: templates/nuova_transazione_lightning.html:24
 #: templates/nuova_transazione_onchain.html:19
 msgid "Seleziona Categoria"
 msgstr "Select Category"
 
-#: templates/modifica_transazione.html:22 templates/nuova_transazione.html:53
+#: templates/modifica_transazione.html:24 templates/nuova_transazione.html:55
 #: templates/nuova_transazione_lightning.html:39
 #: templates/nuova_transazione_onchain.html:34
 msgid "Sottocategoria:"
 msgstr "Subcategory:"
 
-#: templates/modifica_transazione.html:25 templates/nuova_transazione.html:65
-msgid "Importo (€):"
-msgstr "Amount (€):"
+#: templates/modifica_transazione.html:28 templates/nuova_transazione.html:68
+msgid "Importo:"
+msgstr "Amount:"
 
-#: templates/modifica_transazione.html:28 templates/nuova_transazione.html:75
+#: templates/modifica_transazione.html:52 templates/nuova_transazione.html:92
+msgid "Tasso di Cambio (Valuta/EUR):"
+msgstr "Exchange Rate (Currency/EUR):"
+
+#: templates/modifica_transazione.html:65 templates/nuova_transazione.html:105
+msgid "Es. Se 1 EUR = 1.08 USD, inserisci 1.08"
+msgstr "E.g. If 1 EUR = 1.08 USD, enter 1.08"
+
+#: templates/modifica_transazione.html:69 templates/nuova_transazione.html:109
 msgid "Conto:"
 msgstr "Account:"
 
-#: templates/modifica_transazione.html:30 templates/nuova_transazione.html:77
-#: templates/transazioni.html:93
+#: templates/modifica_transazione.html:71 templates/nuova_transazione.html:111
+#: templates/transazioni.html:95
 msgid "Banca"
 msgstr "Bank"
 
-#: templates/modifica_transazione.html:31 templates/nuova_transazione.html:78
-#: templates/transazioni.html:15 templates/transazioni.html:95
+#: templates/modifica_transazione.html:72 templates/nuova_transazione.html:112
+#: templates/transazioni.html:15 templates/transazioni.html:97
 msgid "Contanti"
 msgstr "Cash"
 
-#: templates/modifica_transazione.html:32 templates/nuova_transazione.html:79
-#: templates/transazioni.html:18 templates/transazioni.html:97
+#: templates/modifica_transazione.html:73 templates/nuova_transazione.html:113
+#: templates/transazioni.html:18 templates/transazioni.html:99
 msgid "Investimenti"
 msgstr "Investments"
 
-#: templates/modifica_transazione.html:33 templates/nuova_transazione.html:80
-#: templates/transazioni.html:21 templates/transazioni.html:99
+#: templates/modifica_transazione.html:74 templates/nuova_transazione.html:114
+#: templates/transazioni.html:21 templates/transazioni.html:101
 msgid "Pensione"
 msgstr "Pension"
 
-#: templates/modifica_transazione.html:37 templates/nuova_transazione.html:84
+#: templates/modifica_transazione.html:78 templates/nuova_transazione.html:119
 msgid "Note (opzionale)"
 msgstr "Notes (optional)"
 
-#: templates/modifica_transazione.html:41
+#: templates/modifica_transazione.html:83
 #: templates/modifica_transazione_lightning.html:31
 #: templates/modifica_transazione_onchain.html:42
 msgid "Salva Modifiche"
@@ -1320,39 +1352,39 @@ msgstr "Amount fee (₿itcoin)"
 msgid "Torna alle transazioni On-Chain"
 msgstr "Return to On-Chain Transactions (₿)"
 
-#: templates/nuova_transazione.html:1
-msgid "Nuova transazione € - ₿eesy"
-msgstr "New transaction € - ₿eesy"
+#: templates/nuova_transazione.html:2
+msgid "Nuova transazione - ₿eesy"
+msgstr "New transaction - ₿eesy"
 
-#: templates/nuova_transazione.html:4
-msgid "Nuova transazione €"
-msgstr "New Euro transaction (€)"
+#: templates/nuova_transazione.html:5
+msgid "Nuova transazione"
+msgstr "New transaction"
 
-#: templates/nuova_transazione.html:6
+#: templates/nuova_transazione.html:7
 msgid "Data (YYYY-MM-DD):"
 msgstr "Date (YYYY-MM-DD):"
 
-#: templates/nuova_transazione.html:60
+#: templates/nuova_transazione.html:62
 msgid "Seleziona Sottocategoria"
 msgstr "Select Subcategory"
 
-#: templates/nuova_transazione.html:89
+#: templates/nuova_transazione.html:125
 #: templates/nuova_transazione_lightning.html:53
 #: templates/nuova_transazione_onchain.html:51
 msgid "Aggiungi"
 msgstr "Add"
 
-#: templates/nuova_transazione.html:92
+#: templates/nuova_transazione.html:128
 msgid "Torna alle transazioni"
 msgstr "Return to transactions"
 
-#: templates/nuova_transazione.html:93
+#: templates/nuova_transazione.html:129
 #: templates/nuova_transazione_lightning.html:61
 #: templates/nuova_transazione_onchain.html:55
 msgid "Torna alla Home"
 msgstr "Return to Home"
 
-#: templates/nuova_transazione.html:115
+#: templates/nuova_transazione.html:151
 #: templates/nuova_transazione_lightning.html:81
 #: templates/nuova_transazione_onchain.html:78
 msgid "Nessuna sottocategoria"
@@ -1619,12 +1651,12 @@ msgstr "Notes"
 msgid "Azioni"
 msgstr "Actions"
 
-#: templates/transazioni.html:119 templates/transazioni_lightning.html:72
+#: templates/transazioni.html:121 templates/transazioni_lightning.html:72
 #: templates/transazioni_onchain.html:88
 msgid "Elimina"
 msgstr "Delete"
 
-#: templates/transazioni.html:124 templates/transazioni_lightning.html:74
+#: templates/transazioni.html:126 templates/transazioni_lightning.html:74
 #: templates/transazioni_onchain.html:93
 msgid "Modifica"
 msgstr "Edit"
@@ -1771,3 +1803,6 @@ msgstr "fee"
 
 #~ msgid "plusvalenze investimenti"
 #~ msgstr "capital gains on investments"
+
+#~ msgid "Importo (€):"
+#~ msgstr "Amount (€):"
