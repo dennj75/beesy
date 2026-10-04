@@ -1,81 +1,117 @@
-{% extends "base.html" %} {% block title %}{{ _('Transazioni Lightning - ₿eesy') }}{% endblock %} {% block content %}
-    <h1>⚡ {{ _('Transazioni Lightning ⚡') }} </h1>
-  <!-- 🔹 Saldo SATOSHI -->
-  <p class="saldo-totale">
-    💰 {{ _('Saldo Lightning') }}: {{ "{:,}".format(saldo_totale_satoshi|int).replace(",", ".") }} SATS
-  </p>
+{% extends "base.html" %} {% block title %}{{ _('Transazioni Lightning - ₿eesy')
+}}{% endblock %} {% block content %}
+<h1>⚡ {{ _('Transazioni Lightning ⚡') }}</h1>
 
-  <!-- 🔹 Controvalore totale in EUR (opzionale) -->
-  {% if transazioni_lightning %}
-    {% set totale_eur = transazioni_lightning | map(attribute='controvalore_eur') | sum %}
-    <p class="saldo-totale">💶 {{ _('Controvalore Totale') }}: {{ "%.2f"|format(totale_eur) }} €</p>
-  {% endif %}
+<!-- 🔹 Saldo Satoshi in Arancione Bitcoin (#f39c12) -->
+<p class="saldo-principale" style="color: #f39c12; font-weight: bold">
+  💰 {{ _('Lightning Balance:') }} {{
+  "{:,}".format(saldo_totale_satoshi|int).replace(",", ".") }} SATS
+</p>
 
-  <div class="csv-buttons">
-    <a href="{{ url_for('scarica_csv_lightning') }}">
-      <button type="button" class="csv-button">📥 {{ _('Esporta CSV') }}</button>
-    </a>
-    <a href="{{ url_for('scarica_csv_per_mese_lightning') }}">
-      <button type="button" class="csv-button">📥 {{ _('Esporta CSV per mese') }}</button>
-    </a>
-  </div>
-  
-  <p>
-    <a href="{{ url_for('nuova_transazione_lightning') }}">➕ {{ _('Aggiungi una nuova transazione Lightning') }} </a>
-  </p>
+<!-- 🔹 Controvalore Totale (Verde se >= 0, Rosso se < 0) -->
+{% if transazioni_lightning %}
+<p class="saldo-totale" style="color: {% if totale_controvalore >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}; font-weight: bold;">
+  💶 {{ _('Controvalore Totale') }}: {{ "%.2f"|format(totale_controvalore) }} {{
+  simbolo_valuta }}
+</p>
+{% endif %}
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <ul>
-        {% for category, message in messages %}
-          {% if 'lightning' in category %}
-            <li class="{{ category }}">{{ message }}</li>
-          {% endif %}
-        {% endfor %}
-      </ul>
-    {% endif %}
-  {% endwith %}
-  <div class="table-responsive-custom">
+<div class="csv-buttons">
+  <a href="{{ url_for('scarica_csv_lightning') }}">
+    <button type="button" class="csv-button">📥 {{ _('Esporta CSV') }}</button>
+  </a>
+  <a href="{{ url_for('scarica_csv_per_mese_lightning') }}">
+    <button type="button" class="csv-button">
+      📥 {{ _('Esporta CSV per mese') }}
+    </button>
+  </a>
+</div>
+
+<p>
+  <a href="{{ url_for('nuova_transazione_lightning') }}"
+    >➕ {{ _('Aggiungi una nuova transazione Lightning') }}
+  </a>
+</p>
+
+{% with messages = get_flashed_messages(with_categories=true) %} {% if messages
+%}
+<ul>
+  {% for category, message in messages %} {% if 'lightning' in category %}
+  <li class="{{ category }}">{{ message }}</li>
+  {% endif %} {% endfor %}
+</ul>
+{% endif %} {% endwith %}
+
+<div class="table-responsive-custom" >
   <table border="1">
-    <thead><tr>
-      <th>{{ _('ID') }}</th>
-      <th>{{ _('Data') }}</th>
-      <th>{{ _('Wallet') }}</th>
-      <th>{{ _('Descrizione') }}</th>
-      <th>{{ _('Categoria') }}</th>
-      <th>{{ _('Sottocategoria') }}</th>
-      <th>{{ _('Satoshi') }}</th>
-      <th>{{ _('Controvalore €') }}</th>
-      <th>{{ _('Valore BTC/€') }}</th>
-      <th>{{ _('Azioni') }}</th>
-    </thead></tr>
-    <tbody>{% for t in transazioni_lightning %}
-    <tr>
-      <td>{{ t["id"] }}</td>
-      <td>{{ t["data"] }}</td>
-      <td>{{ t["wallet"] }}</td>
-      <td>{{ t["descrizione"] }}</td>
+    <thead>
+      <tr>
+        <th>{{ _('ID') }}</th>
+        <th>{{ _('Data') }}</th>
+        <th>{{ _('Wallet') }}</th>
+        <th>{{ _('Descrizione') }}</th>
+        <th>{{ _('Categoria') }}</th>
+        <th>{{ _('Sottocategoria') }}</th>
+        <th>{{ _('Satoshi') }}</th>
+        <th>
+          {{ _('Controvalore') }} ({{ current_user.default_currency |
+          currency_symbol }})
+        </th>
+        <th>{{ _('Valore BTC') }}/{{ current_user.default_currency }}</th>
+        <th>{{ _('Azioni') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in transazioni_lightning %}
+      <tr>
+        <td>{{ t["id"] }}</td>
+        <td>{{ t["data"] }}</td>
+        <td>{{ t["wallet"] }}</td>
+        <td>{{ t["descrizione"] }}</td>
 
-      <!-- Categoria e Sottocategoria -->
-      <td>{{ traduci(t["categoria"]) }}</td>
-      <td>{{ traduci(t["sottocategoria"]) }}</td>
+        <!-- Categoria e Sottocategoria -->
+        <td>{{ traduci(t["categoria"]) }}</td>
+        <td>{{ traduci(t["sottocategoria"]) }}</td>
 
-      <td class="{% if t["satoshi"]|float >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}">
-        {{ "{:,}".format(t["satoshi"]).replace(",", ".") }}
-      </td>
+        <!-- Satoshi in Arancione Bitcoin senza mai il decimal .0 -->
+        <td style="color: #f39c12; font-weight: bold">
+          {{ "{:,}".format(t["satoshi"]|int).replace(",", ".") }}
+        </td>
 
-      <td>{{ "%.2f"|format(t["controvalore_eur"]) }}</td>
-      <td>{{ "%.2f"|format(t["valore_btc_eur"]) }}</td>
-      
-      <td>
-        <form method="post" action="{{ url_for('elimina_transazione_web_lightning', id_transazione=t['id']) }}" style="display:inline">
-          <button type="submit" onclick="return confirm('Sei sicuro di voler eliminare questa transazione Lightning?');">🗑️ {{ _('Elimina') }}</button>
-        </form>
-        <a href="{{ url_for('modifica_transazione_web_lightning', id_transazione=t['id']) }}">✏️ {{ _('Modifica') }}</a>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
+        <!-- Controvalore Verde se >= 0, Rosso se < 0 -->
+        <td
+          style="color: {% if (t.controvalore_eur|float) >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}; font-weight: bold;"
+        >
+          {{ "%.2f"|format(t.controvalore_eur|float) }} {{ simbolo_valuta }}
+        </td>
+
+        <td>{{ "%.2f"|format(t["valore_btc_eur"] or 0) }}</td>
+
+        <td>
+          <form
+            method="post"
+            action="{{ url_for('elimina_transazione_web_lightning', id_transazione=t['id']) }}"
+            style="display: inline"
+          >
+            <button
+              type="submit"
+              onclick="
+                return confirm(
+                  'Sei sicuro di voler eliminare questa transazione Lightning?',
+                );
+              "
+            >
+              🗑️ {{ _('Elimina') }}
+            </button>
+          </form>
+          <a
+            href="{{ url_for('modifica_transazione_web_lightning', id_transazione=t['id']) }}"
+            >✏️ {{ _('Modifica') }}</a
+          >
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
   </table>
 </div>
 {% endblock %}

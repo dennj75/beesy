@@ -1,173 +1,199 @@
 {% extends "base.html" %} 
-{% block title %}{{ _('Modifica Transazione - ₿eesy') }}{% endblock %} 
+{% block title %}{{ _('Modifica transazione - ₿eesy') }}{% endblock %} 
 {% block content %}
-  <h1>✏️ {{ _('Modifica Transazione') }}</h1>
 
-  <form method="post" 
-        action="{{ url_for('modifica_transazione_eur', id_transazione=transazione['id']) }}" 
-        onsubmit="document.querySelector('select[name=\'conto\']').disabled = false;">
-    
-    <label>{{ _('Data:') }}</label>
-    <input type="date" name="data" value="{{ transazione['data'] }}" required><br><br>
+<h1>✏️ {{ _('Modifica transazione') }}</h1>
+<form method="post" action="{{ url_for('modifica_transazione_eur', id_transazione=transazione.id) }}" onsubmit="document.querySelector('select[name=\'conto\']').disabled = false;">
+  <label for="data">📅 {{ _('Data (YYYY-MM-DD):') }}</label>
+  <input
+    type="date"
+    id="data"
+    name="data"
+    required
+    value="{{ transazione.data }}"
+  /><br /><br />
 
-    <label>{{ _('Descrizione:') }}</label>
-    <input type="text" name="descrizione" value="{{ transazione['descrizione'] }}" required><br><br>
+  <label for="descrizione">📝 {{ _('Descrizione:') }}</label>
+  <input
+    type="text"
+    id="descrizione"
+    name="descrizione"
+    required
+    value="{{ transazione.descrizione }}"
+  /><br /><br />
 
-    <label>{{ _('Categoria:') }}</label>
-    <select name="categoria" id="categoria" onchange="popolaSottocategoria()" required>
-      <option value="">-- {{ _('Seleziona Categoria') }} --</option>
-      {% for cat in categorie %}
-        <option value="{{ cat }}" {% if transazione['categoria'] == cat %}selected{% endif %}>{{ cat }}</option>
+  <label>{{ _('Categoria:') }}</label>
+  <select
+    name="categoria"
+    id="categoria"
+    onchange="popolaSottocategoria()"
+    required
+  >
+    <option value="">-- {{ _('Seleziona Categoria') }} --</option>
+
+    {% for cat in categorie %}
+      <option
+        value="{{ cat }}"
+        {{ 'selected' if transazione.categoria == cat else '' }}
+      >
+        {{ traduci(cat) }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <script>
+    const mappaTraduzioniSottocategorie = {
+      {% for macro, sottocat_list in CATEGORIE.items() %}
+        {% for sotto in sottocat_list %}
+          "{{ sotto }}": "{{ traduci(sotto) }}",
+        {% endfor %}
       {% endfor %}
-    </select><br><br>
+    };
+  </script>
+  <br /><br />
 
-    <label>{{ _('Sottocategoria:') }}</label>
-    <select name="sottocategoria" id="sottocategoria" required></select><br><br>
+  <label>{{ _('Sottocategoria:') }}</label>
+  <select name="sottocategoria" id="sottocategoria" required>
+    <option value="{{ transazione.sottocategoria }}">
+      {{ traduci(transazione.sottocategoria) }}
+    </option>
+  </select>
+  <br /><br />
 
-    <!-- SEZIONE IMPORTO E SELEZIONE VALUTA -->
-    <label for="importo">💸 {{ _('Importo:') }} </label>
-    <input
-      type="number"
-      id="importo"
-      name="importo"
-      step="0.01"
-      required
-      value="{{ transazione['importo'] }}"
+  <!-- SEZIONE IMPORTO E SELEZIONE VALUTA -->
+  <label for="importo">💸 {{ _('Importo:') }} </label>
+  <input
+    type="text"
+    id="importo"
+    name="importo"
+    step="0.01"
+    required
+    value="{{ transazione.importo }}"
+  />
+
+  {% set valuta_utente = current_user.default_currency if current_user.default_currency else 'EUR' %}
+
+  <select name="valuta" id="valuta" onchange="gestisciCampoTassoCambio()" style="margin-left: 5px;">
+    {% for codice, info in valute.items() %}
+      <option value="{{ codice }}" {{ 'selected' if transazione.valuta == codice else '' }}>
+        {{ codice }} ({{ info.simbolo }}) - {{ info.nome }}
+      </option>
+    {% endfor %}
+  </select>
+  <br /><br />
+
+  <!-- CAMPO TASSO DI CAMBIO -->
+  <div id="container_tasso_cambio" class="mb-3" style="display: none;">
+    <label for="tasso_cambio" id="label_tasso_cambio" class="form-label fw-bold">
+      🔀 {{ _('Tasso di Cambio:') }}
+    </label>
+
+    <input 
+      type="number" 
+      step="0.000001" 
+      name="tasso_cambio" 
+      id="tasso_cambio" 
+      class="form-control" 
+      placeholder="{{ _('Lascia vuoto per ricalcolare il tasso automatico') }}"
+      value="{{ transazione.tasso_cambio if transazione.tasso_cambio else '' }}" 
     />
 
-    {% set v = transazione.valuta if transazione.valuta else 'EUR' %}
+    <small id="help_tasso_cambio" class="text-muted d-block mt-1"></small>
+  </div>
 
-    <select name="valuta" id="valuta" onchange="gestisciCampoTassoCambio()" style="margin-left: 5px;">
-        {% for codice, info in valute.items() %}
-            <option value="{{ codice }}" {{ 'selected' if v == codice else '' }}>
-                {{ codice }} ({{ info.simbolo }}) - {{ info.nome }}
-            </option>
-        {% endfor %}
-    </select>
-    <br />
+  <label for="conto"> {{ _('Conto:') }}</label>
+  <select name="conto" id="conto" required>
+    <option value="BANCA" {{ 'selected' if transazione.conto == 'BANCA' else '' }}>🏦 {{ _('Banca') }}</option>
+    <option value="CONTANTI" {{ 'selected' if transazione.conto == 'CONTANTI' else '' }}>💶 {{ _('Contanti') }}</option>
+    <option value="INVESTIMENTI" {{ 'selected' if transazione.conto == 'INVESTIMENTI' else '' }}>📈 {{ _('Investimenti') }}</option>
+    <option value="PENSIONE" {{ 'selected' if transazione.conto == 'PENSIONE' else '' }}>👴 {{ _('Pensione') }}</option>
+  </select>
+  <br /><br />
 
-    <!-- CAMPO TASSO DI CAMBIO (Visibile solo se valuta != EUR) -->
-    <div id="container_tasso_cambio" class="mb-3">
-        <label for="tasso_cambio" id="label_tasso_cambio" class="form-label fw-bold">
-            🔀 {{ _('Tasso di Cambio (Valuta/EUR):') }}
-        </label>
+  <div class="mb-3">
+    <label class="form-label" style="color: #888;">{{ _('Note (opzionale)') }}</label>
+    <textarea name="note" class="form-control" rows="2" 
+              style="background-color: #222; border-color: #444; color: #eee;">{{ transazione.note if transazione.note else '' }}</textarea>
+  </div>
+  <br /><br />
 
-        <input 
-            type="number" 
-            step="0.000001" 
-            name="tasso_cambio" 
-            id="tasso_cambio" 
-            class="form-control" 
-            value="{{ transazione.tasso_cambio if transazione and transazione.tasso_cambio else 1.0 }}" 
-        />
+  <button type="submit">💾 {{ _('Salva Modifiche') }}</button>
+</form>
 
-        <small id="help_tasso_cambio" class="text-muted d-block mt-1">
-            {{ _('Es. Se 1 EUR = 1.08 USD, inserisci 1.08') }}
-        </small>
-    </div>
-    <br />
-    <label>{{ _('Conto:') }}</label>
-    <select name="conto" required>
-      <option value="BANCA" {% if transazione['conto'] == "BANCA" %}selected{% endif %}>🏦 {{ _('Banca') }}</option>
-      <option value="CONTANTI" {% if transazione['conto'] == "CONTANTI" %}selected{% endif %}>💶 {{ _('Contanti') }}</option>
-      <option value="INVESTIMENTI" {% if transazione['conto'] == "INVESTIMENTI" %}selected{% endif %}>📈 {{ _('Investimenti') }}</option>
-      <option value="PENSIONE" {% if transazione['conto'] == "PENSIONE" %}selected{% endif %}>👴 {{ _('Pensione') }}</option>
-    </select><br><br>
-
-    <div class="mb-3">
-      <label class="form-label" style="color: #888;">{{ _('Note (opzionale)') }}</label>
-      <textarea name="note" class="form-control" rows="2" 
-                style="background-color: #222; border-color: #444; color: #eee;">{{ transazione.get('note', '') }}</textarea>
-    </div>
-
-    <button type="submit">✅ {{ _('Salva Modifiche') }}</button>
-  </form>
+<p><a href="{{ url_for('transazioni') }}">⬅️ {{ _('Torna alle transazioni') }}</a></p>
 
 <script>
-    const categorie = {{ categorie_json | safe }};
-    const categoriaAttuale = "{{ transazione['categoria'] }}";
-    const sottocategoriaAttuale = "{{ transazione['sottocategoria'] }}";
+  const categorie = {{ categorie_json | safe }};
+  const sottocategoriaAttuale = "{{ transazione.sottocategoria }}";
+  const valutaUtente = "{{ valuta_utente }}";
 
-    function popolaSottocategoria() {
-        const categoriaSel = document.getElementById("categoria").value;
-        const sottoSel = document.getElementById("sottocategoria");
-        sottoSel.innerHTML = "";
+  function popolaSottocategoria() {
+    const categoriaSelezionata = document.getElementById("categoria").value;
+    const sottoSel = document.getElementById("sottocategoria");
+    sottoSel.innerHTML = "";
 
-        if (categorie[categoriaSel]) {
-            categorie[categoriaSel].forEach(sotto => {
-                const opt = document.createElement("option");
-                opt.value = sotto;
-                opt.text = sotto;
-                if (sotto === sottocategoriaAttuale) opt.selected = true;
-                sottoSel.appendChild(opt);
-            });
-        } else {
-            const opt = document.createElement("option");
-            opt.value = "";
-            opt.text = "-- Nessuna sottocategoria --";
-            sottoSel.appendChild(opt);
-        }
-        applicaBlindatura();
+    if (categorie[categoriaSelezionata]) {
+      categorie[categoriaSelezionata].forEach(sotto => {
+        const opt = document.createElement("option");
+        opt.value = sotto;
+        opt.text = mappaTraduzioniSottocategorie[sotto] || sotto;
+        if (sotto === sottocategoriaAttuale) opt.selected = true;
+        sottoSel.appendChild(opt);
+      });
+    } else {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.text = "-- {{ _('Nessuna sottocategoria') }} --"; 
+      sottoSel.appendChild(opt);
     }
+    applicaBlindatura();
+  }
 
-    function gestisciCampoTassoCambio() {
-        const selectValuta = document.getElementById('valuta');
-        const containerTasso = document.getElementById('container_tasso_cambio'); // o il div che racchiude il campo
-        const labelTasso = document.getElementById('label_tasso_cambio');
-        const helpTasso = document.getElementById('help_tasso_cambio');
+  function gestisciCampoTassoCambio() {
+    const selectValuta = document.getElementById('valuta');
+    const containerTasso = document.getElementById('container_tasso_cambio');
+    const labelTasso = document.getElementById('label_tasso_cambio');
+    const helpTasso = document.getElementById('help_tasso_cambio');
     
-        if (!selectValuta) return;
+    if (!selectValuta) return;
     
-        const valutaSelezionata = selectValuta.value;
+    const valutaSelezionata = selectValuta.value;
     
-        // Se la valuta è la valuta base dell'app (EUR), possiamo nascondere il campo o fissarlo a 1.0
-        if (valutaSelezionata === 'EUR') {
-            if (containerTasso) containerTasso.style.display = 'none';
-        } else {
-            if (containerTasso) containerTasso.style.display = 'block';
+    if (valutaSelezionata === valutaUtente) {
+        if (containerTasso) containerTasso.style.display = 'none';
+    } else {
+        if (containerTasso) containerTasso.style.display = 'block';
         
-            // Aggiorniamo l'etichetta in modo dinamico
-            if (labelTasso) {
-                labelTasso.innerText = `🔀 Tasso di Cambio (${valutaSelezionata} / EUR):`;
-            }
+        if (labelTasso) {
+            labelTasso.innerText = `🔀 Tasso di Cambio (${valutaSelezionata} ➔ ${valutaUtente}):`;
+        }
         
-            // Aggiorniamo il testo di esempio in modo dinamico
-            if (helpTasso) {
-                helpTasso.innerText = `Es. Quanti ${valutaSelezionata} servono per 1 EUR (es. 1 EUR = ... ${valutaSelezionata})`;
-            }
+        if (helpTasso) {
+            helpTasso.innerText = `Moltiplicatore per convertire ${valutaSelezionata} in ${valutaUtente}. Lascia vuoto per calcolarlo automaticamente.`;
         }
     }
+  }
 
+  function applicaBlindatura() {
+    const sottocategoria = document.getElementById("sottocategoria").value;
+    const contoSelect = document.querySelector("select[name='conto']");
 
-    // Esegui la funzione anche al caricamento della pagina per impostare l'etichetta corretta subito
-    document.addEventListener('DOMContentLoaded', function() {
-        gestisciCampoTassoCambio();
-    });
-
-    function applicaBlindatura() {
-        const sottocategoria = document.getElementById("sottocategoria").value;
-        const contoSelect = document.querySelector("select[name='conto']");
-        
-        if (!contoSelect) return;
-
-        contoSelect.disabled = false;
-        
-        if (sottocategoria === "Versamento Pensione (Giroconto)") {
-            contoSelect.value = "PENSIONE";
-            contoSelect.disabled = true;
-        } else if (sottocategoria === "Acquisto Titoli/Fondi (Giroconto)") {
-            contoSelect.value = "INVESTIMENTI";
-            contoSelect.disabled = true;
-        } else if (sottocategoria === "Prelievo Contante") {
-            contoSelect.value = "CONTANTI";
-            contoSelect.disabled = true;
-        }
+    contoSelect.disabled = false;
+    
+    if (sottocategoria === "Versamento Pensione (Giroconto)") {
+        contoSelect.value = "PENSIONE";
+        contoSelect.disabled = true;
+    } else if (sottocategoria === "Acquisto Titoli/Fondi (Giroconto)") {
+        contoSelect.value = "INVESTIMENTI";
+        contoSelect.disabled = true;
     }
+  }
 
-    document.addEventListener("DOMContentLoaded", () => {
-        popolaSottocategoria();
-        gestisciCampoTassoCambio(false);
-        document.getElementById("sottocategoria").addEventListener("change", applicaBlindatura);
-    });
+  document.addEventListener("DOMContentLoaded", () => {
+    popolaSottocategoria();
+    gestisciCampoTassoCambio();
+  });
+
+  document.getElementById("sottocategoria").addEventListener("change", applicaBlindatura);
 </script>
 {% endblock %}

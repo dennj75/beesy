@@ -13,7 +13,7 @@
                     <tr>
                         <th>{{ _('Data') }}</th>
                         <th>{{ _('Descrizione') }}</th>
-                        <th>{{ _('Importo (€)') }}</th>
+                        <th>{{ _('Importo ({{ current_user.default_currency | currency_symbol }})') }}</th>
                         <th>{{ _('Controvalore BTC') }}</th>
                         <th>{{ _('Categoria') }}</th>
                         <th>{{ _('Sottocategoria') }}</th>
@@ -25,7 +25,7 @@
                         <td>{{ t.data }}<input type="hidden" name="data_{{ loop.index }}" value="{{ t.data }}"></td>
                         <td class="small">{{ t.descrizione }}<input type="hidden" name="desc_{{ loop.index }}" value="{{ t.descrizione }}"></td>
                         <td class="{{ 'text-success' if t.importo > 0 else 'text-danger' }} fw-bold">
-                            {{ t.importo }} €
+                            {{ t.importo }} {{ current_user.default_currency | currency_symbol }}
                             <input type="hidden" name="importo_{{ loop.index }}" value="{{ t.importo }}">
                         </td>
                         <td class="text-info small">{{ t.btc_equiv }}<input type="hidden" name="btc_{{ loop.index }}" value="{{ t.btc_equiv }}"></td>

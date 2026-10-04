@@ -2,14 +2,14 @@
 content %}
       <h1>🔗 {{ _('Transazioni ₿itcoin On-chain 🔗') }}</h1>
       <!-- 🔹 Saldo SATOSHI -->
-    <p class="saldo-totale">
+    <p class="saldo-totale" style="color: #f39c12; font-weight: bold">
       💰 {{ _('Saldo ₿itcoin On-chain🔗') }}: {{ "%.8f"|format(saldo_totale_btc) }} BTC
     </p>
     <!-- 🔹 Controvalore totale in EUR (opzionale) -->
     {% if transazioni_onchain %} {% set totale_eur = transazioni_onchain |
     map(attribute="controvalore_eur") | sum %}
-    <p class="saldo-totale">
-      💶 {{ _('Controvalore Totale') }}: {{ "%.2f"|format(totale_eur) }} €
+    <p class="saldo-totale" style="color: {% if totale_eur >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}; font-weight: bold;">
+      💶 {{ _('Controvalore Totale') }}: {{ "%.2f"|format(totale_eur) }} {{ current_user.default_currency | currency_symbol }}
     </p>
     {% endif %}
 
@@ -48,8 +48,8 @@ content %}
         <th>{{ _('TransactionID') }}</th>
         <th>{{ _('Importo BTC') }}</th>
         <th>{{ _('fee') }}</th>
-        <th>{{ _('Controvalore €') }}</th>
-        <th>{{ _('Valore BTC/€') }}</th>
+        <th>{{ _('Controvalore') }} ({{ current_user.default_currency | currency_symbol }})</th>
+        <th>{{ _('Valore BTC') }}/{{ current_user.default_currency | currency_symbol }}</th>
         <th>{{ _('Azioni') }}</th>
       </tr>
       </thead>
@@ -63,17 +63,19 @@ content %}
         <td>{{ traduci(t["sottocategoria"]) }}</td>
         <td>{{ t["transactionID"] }}</td>
         <td
-          class="{% if t["importo_btc"] >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+          style="color: #f39c12; font-weight: bold"
         >
           {{ '%.8f' % t["importo_btc"] if t["importo_btc"] is not none else '0.00000000' }}
         </td>
         <td
-          class="{% if t["fee"] >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+          style="color: #f39c12; font-weight: bold"
         >
           {{ '%.8f' % t["fee"] if t["fee"] is not none else '0.00000000' }}
         </td>
 
-        <td>{{ "%.2f"|format(t["controvalore_eur"]) }}</td>
+        <td style="color: {% if (t.controvalore_eur|float) >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}; font-weight: bold;"
+        >
+        {{ "%.2f"|format(t["controvalore_eur"]) }}</td>
         <td>{{ "%.2f"|format(t["valore_btc_eur"]) }}</td>
         <td>
           <form

@@ -1,53 +1,40 @@
-{% extends "base.html" %} {% block title %}{{ _('Statistiche') }}{% endblock %}
+{% extends "base.html" %} 
+{% block title %}{{ _('Statistiche') }}{% endblock %}
+
 {% block content %}
 
+<!-- KPI SUMMARY CARDS -->
 <div class="row mb-4">
   <div class="col-md-4">
-    <div
-      class="card text-center shadow p-3 mb-2"
-      style="background-color: #1a1a1a; border-left: 5px solid #2ecc71"
-    >
+    <div class="card text-center shadow p-3 mb-2" style="background-color: #1a1a1a; border-left: 5px solid #2ecc71;">
       <h6 style="color: #888">📥 {{ _('Entrate') }}</h6>
       <h3 style="color: #2ecc71">
-        {{ "%.2f"|format(tot_entrate) if tipo != 'ONCHAIN' else
-        "%.8f"|format(tot_entrate) }}
+        {{ "%.2f"|format(tot_entrate) if tipo != 'ONCHAIN' else "%.8f"|format(tot_entrate) }}
       </h3>
     </div>
   </div>
   <div class="col-md-4">
-    <div
-      class="card text-center shadow p-3 mb-2"
-      style="background-color: #1a1a1a; border-left: 5px solid #e74c3c"
-    >
+    <div class="card text-center shadow p-3 mb-2" style="background-color: #1a1a1a; border-left: 5px solid #e74c3c;">
       <h6 style="color: #888">📤 {{ _('Uscite') }}</h6>
       <h3 style="color: #e74c3c">
-        {{ "%.2f"|format(tot_spese) if tipo != 'ONCHAIN' else
-        "%.8f"|format(tot_spese) }}
+        {{ "%.2f"|format(tot_spese) if tipo != 'ONCHAIN' else "%.8f"|format(tot_spese) }}
       </h3>
     </div>
   </div>
   <div class="col-md-4">
-    <div
-      class="card text-center shadow p-3 mb-2"
-      style="background-color: #1a1a1a; border-left: 5px solid #f39c12"
-    >
+    <div class="card text-center shadow p-3 mb-2" style="background-color: #1a1a1a; border-left: 5px solid #f39c12;">
       <h6 style="color: #888">⚖️ {{ _('Delta (Bilancio)') }}</h6>
-      <h3
-        style="{% if delta >= 0 %}color: #2ecc71;{% else %}color: #e74c3c;{% endif %}"
-      >
-        {{ "%.2f"|format(delta) if tipo != 'ONCHAIN' else "%.8f"|format(delta)
-        }}
+      <h3 style="{% if delta >= 0 %}color: #2ecc71;{% else %}color: #e74c3c;{% endif %}">
+        {{ "%.2f"|format(delta) if tipo != 'ONCHAIN' else "%.8f"|format(delta) }}
       </h3>
     </div>
   </div>
 </div>
 
+<!-- SAVINGS RATE -->
 <div class="row mb-4">
   <div class="col-12">
-    <div
-      class="card shadow p-3"
-      style="background-color: #1a1a1a; border-top: 3px solid #3498db"
-    >
+    <div class="card shadow p-3" style="background-color: #1a1a1a; border-top: 3px solid #3498db">
       <div class="d-flex justify-content-between align-items-center flex-wrap">
         <h6 style="color: #888; margin: 0">
           {{ _('📈 Savings Rate (Efficienza del Risparmio)') }}
@@ -57,20 +44,26 @@
         </span>
       </div>
       <div class="progress mt-3" style="height: 10px; background-color: #333">
+        {% set progress_width = [0, [savings_rate, 100]|min]|max %}
         <div
           class="progress-bar"
           role="progressbar"
-          style="width: {{ savings_rate if savings_rate > 0 else 0 }}%; background-color: #3498db;"
+          style="width: {{ progress_width }}%; background-color: #3498db;"
           aria-valuenow="{{ savings_rate }}"
           aria-valuemin="0"
           aria-valuemax="100"
         ></div>
       </div>
       <p style="font-size: 0.8rem; color: #666; margin-top: 10px">
-        {% if savings_rate >= 50 %} 🚀 {{ _('Livello Leggenda!') }} {% elif
-        savings_rate >= 20 %} ✅ {{ _('Ottimo lavoro!') }} {% elif savings_rate
-        > 0 %} ⚠️ {{ _('Buono, ma ottimizzabile.') }} {% else %} 🚨 {{
-        _('Deficit mensile.') }} {% endif %}
+        {% if savings_rate >= 50 %}
+          🚀 {{ _('Livello Leggenda!') }}
+        {% elif savings_rate >= 20 %}
+          ✅ {{ _('Ottimo lavoro!') }}
+        {% elif savings_rate > 0 %}
+          ⚠️ {{ _('Buono, ma ottimizzabile.') }}
+        {% else %}
+          🚨 {{ _('Deficit mensile.') }}
+        {% endif %}
       </p>
     </div>
   </div>
@@ -79,70 +72,32 @@
 <div class="container mt-4">
   <h1 class="main-title text-center">{{ titolo_pagina }}</h1>
 
+  <!-- BADGE FILTRO SELEZIONATO -->
   <div class="d-flex justify-content-center flex-wrap gap-3 mb-4">
     {% if mese_selezionato %}
-    <div
-      class="badge p-3 shadow-sm"
-      style="
-        background-color: #1a1a1a;
-        border: 1px solid #f39c12;
-        border-radius: 10px;
-      "
-    >
-      <span style="color: #888; font-size: 0.8rem; display: block"
-        >{{ _('VISTA MENSILE') }}</span
-      >
-      <span style="color: #f39c12; font-size: 1.1rem; font-weight: bold"
-        >{{ mese_selezionato }}</span
-      >
+    <div class="badge p-3 shadow-sm" style="background-color: #1a1a1a; border: 1px solid #f39c12; border-radius: 10px;">
+      <span style="color: #888; font-size: 0.8rem; display: block">{{ _('VISTA MENSILE') }}</span>
+      <span style="color: #f39c12; font-size: 1.1rem; font-weight: bold">{{ mese_selezionato }}</span>
     </div>
     {% elif anno_selezionato %}
-    <div
-      class="badge p-3 shadow-sm"
-      style="
-        background-color: #1a1a1a;
-        border: 1px solid #3498db;
-        border-radius: 10px;
-      "
-    >
-      <span style="color: #888; font-size: 0.8rem; display: block"
-        >{{ _('VISTA ANNUALE') }}</span
-      >
-      <span style="color: #3498db; font-size: 1.1rem; font-weight: bold"
-        >{{ anno_selezionato }}</span
-      >
+    <div class="badge p-3 shadow-sm" style="background-color: #1a1a1a; border: 1px solid #3498db; border-radius: 10px;">
+      <span style="color: #888; font-size: 0.8rem; display: block">{{ _('VISTA ANNUALE') }}</span>
+      <span style="color: #3498db; font-size: 1.1rem; font-weight: bold">{{ anno_selezionato }}</span>
     </div>
     {% else %}
-    <div
-      class="badge p-3 shadow-sm"
-      style="
-        background-color: #1a1a1a;
-        border: 1px solid #2ecc71;
-        border-radius: 10px;
-      "
-    >
-      <span style="color: #2ecc71; font-size: 1.1rem; font-weight: bold"
-        >📊 {{ _('Totale Storico') }}</span
-      >
+    <div class="badge p-3 shadow-sm" style="background-color: #1a1a1a; border: 1px solid #2ecc71; border-radius: 10px;">
+      <span style="color: #2ecc71; font-size: 1.1rem; font-weight: bold">📊 {{ _('Totale Storico') }}</span>
     </div>
     {% endif %}
   </div>
 
+  <!-- FORM FILTRI E PULSANTI -->
   <div class="row mb-5">
     <div class="col-md-10 mx-auto text-center">
-      <form
-        id="filterForm"
-        method="GET"
-        action="{{ url_for('analytics', tipo=tipo) }}"
-        class="mb-4"
-      >
-        <div
-          class="d-flex justify-content-center align-items-end flex-wrap gap-2 mb-4"
-        >
+      <form id="filterForm" method="GET" action="{{ url_for('analytics', tipo=tipo) }}" class="mb-4">
+        <div class="d-flex justify-content-center align-items-end flex-wrap gap-2 mb-4">
           <div class="text-start">
-            <label style="color: #888; font-size: 0.7rem; margin-left: 5px"
-              >{{ _('Mese specifico') }}</label
-            >
+            <label style="color: #888; font-size: 0.7rem; margin-left: 5px">{{ _('Mese specifico') }}</label>
             <input
               type="month"
               name="mese"
@@ -157,9 +112,7 @@
             {{ _('oppure') }}
           </div>
           <div class="text-start">
-            <label style="color: #888; font-size: 0.7rem; margin-left: 5px"
-              >{{ _('Solo Anno') }}</label
-            >
+            <label style="color: #888; font-size: 0.7rem; margin-left: 5px">{{ _('Solo Anno') }}</label>
             <input
               type="number"
               name="anno"
@@ -173,141 +126,75 @@
           </div>
         </div>
 
-        <!-- Wrapper compatto e centrato per i bottoni -->
-<div class="d-flex justify-content-center align-items-center flex-wrap gap-2 mx-auto my-3" style="max-width: 500px;">
-    
-    <button
-        type="submit"
-        class="tracker-button"
-        style="padding: 6px 16px; width: auto; font-size: 0.9rem;"
-    >
-        🔍 {{ _('Filtra') }}
-    </button>
-
-    <a
-        href="{{ url_for('analytics', tipo=tipo) }}"
-        class="tracker-button"
-        style="
-            padding: 6px 16px;
-            width: auto;
-            font-size: 0.9rem;
-            background-color: #444;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-        "
-    >
-        🔄 {{ _('Reset') }}
-    </a>
-
-    <button
-        type="button"
-        onclick="window.print()"
-        class="tracker-button"
-        style="padding: 6px 16px; width: auto; font-size: 0.9rem; background-color: #3498db;"
-    >
-        📄 {{ _('Esporta Report') }}
-    </button>
-
-</div>
+        <div class="d-flex justify-content-center align-items-center flex-wrap gap-2 mx-auto my-3" style="max-width: 500px;">
+          <button type="submit" class="tracker-button" style="padding: 6px 16px; width: auto; font-size: 0.9rem;">
+            🔍 {{ _('Filtra') }}
+          </button>
+          <a href="{{ url_for('analytics', tipo=tipo) }}" class="tracker-button" style="padding: 6px 16px; width: auto; font-size: 0.9rem; background-color: #444; text-decoration: none; display: inline-flex; align-items: center;">
+            🔄 {{ _('Reset') }}
+          </a>
+          <button type="button" onclick="window.print()" class="tracker-button" style="padding: 6px 16px; width: auto; font-size: 0.9rem; background-color: #3498db;">
+            📄 {{ _('Esporta Report') }}
+          </button>
+        </div>
       </form>
     </div>
   </div>
 
-  <h2 class="text-center mb-4" style="color: #e74c3c">
-    {{ _('Analisi Uscite') }}
-  </h2>
-  <div
-    class="card shadow p-4 mb-5"
-    style="background-color: #1a1a1a !important; border: 1px solid #333"
-  >
+  <!-- GRAFICO USCITE -->
+  <h2 class="text-center mb-4" style="color: #e74c3c">{{ _('Analisi Uscite') }}</h2>
+  <div class="card shadow p-4 mb-5" style="background-color: #1a1a1a !important; border: 1px solid #333">
     <div class="card-body">
       {% if labels_spese %}
       <canvas id="chartAnalytics"></canvas>
       {% else %}
-      <p class="text-center" style="color: #888; padding: 50px">
-        📭 {{ _('Nessuna spesa registrata.') }}
-      </p>
+      <p class="text-center" style="color: #888; padding: 50px">📭 {{ _('Nessuna spesa registrata.') }}</p>
       {% endif %}
     </div>
   </div>
 
-  <h2 class="text-center mb-4" style="color: #2ecc71">
-    {{ _('Analisi Entrate') }}
-  </h2>
-  <div
-    class="card shadow p-4 mb-5"
-    style="background-color: #1a1a1a !important; border: 1px solid #333"
-  >
+  <!-- GRAFICO ENTRATE -->
+  <h2 class="text-center mb-4" style="color: #2ecc71">{{ _('Analisi Entrate') }}</h2>
+  <div class="card shadow p-4 mb-5" style="background-color: #1a1a1a !important; border: 1px solid #333">
     <div class="card-body">
       {% if labels_entrate %}
       <canvas id="chartEntrate"></canvas>
       {% else %}
-      <p class="text-center" style="color: #888; padding: 50px">
-        📭 {{ _('Nessuna entrata registrata.') }}
-      </p>
+      <p class="text-center" style="color: #888; padding: 50px">📭 {{ _('Nessuna entrata registrata.') }}</p>
       {% endif %}
     </div>
   </div>
 </div>
 
+<!-- FORM NUOVO ASSET (SOLO EURO) -->
 {% if tipo == 'EURO' %}
 <div class="container mb-4">
-  <div
-    class="card shadow p-4"
-    style="background-color: #1a1a1a; border: 1px solid #3498db"
-  >
+  <div class="card shadow p-4" style="background-color: #1a1a1a; border: 1px solid #3498db">
     <h4 style="color: #3498db">➕ {{ _('Aggiungi Nuovo Investimento') }}</h4>
     <form action="{{ url_for('add_asset') }}" method="POST" class="row g-3">
       <div class="col-md-4">
-        <input
-          type="text"
-          name="nome_asset"
-          class="form-control bg-dark text-white"
-          placeholder="{{ _('Nome (es. Buono Postale)') }}"
-          required
-        />
+        <input type="text" name="nome_asset" class="form-control bg-dark text-white" placeholder="{{ _('Nome (es. Buono Postale)') }}" required />
       </div>
       <div class="col-md-3">
-        <input
-          type="number"
-          step="0.01"
-          name="capitale_investito"
-          class="form-control bg-dark text-white"
-          placeholder="{{ _('Capitale Investito €') }}"
-          required
-        />
+        <input type="number" step="0.01" name="capitale_investito" class="form-control bg-dark text-white" placeholder="{{ _('Capitale Investito') }} {{ current_user.default_currency | currency_symbol }}" required />
       </div>
       <div class="col-md-3">
-        <input
-          type="number"
-          step="0.01"
-          name="valore_attuale"
-          class="form-control bg-dark text-white"
-          placeholder="{{ _('Valore Iniziale €') }}"
-          required
-        />
+        <input type="number" step="0.01" name="valore_attuale" class="form-control bg-dark text-white" placeholder="{{ _('Valore Iniziale') }} {{ current_user.default_currency | currency_symbol }}" required />
       </div>
       <div class="col-md-2">
-        <button type="submit" class="btn btn-primary w-100">
-          {{ _('Salva') }}
-        </button>
+        <button type="submit" class="btn btn-primary w-100">{{ _('Salva') }}</button>
       </div>
     </form>
   </div>
 </div>
 {% endif %}
 
+<!-- TABELLA PERFORMANCE INVESTIMENTI -->
 <div class="container mb-5">
-  <h2 class="text-center mb-4" style="color: #3498db">
-    {{ _('Performance Investimenti') }}
-  </h2>
-  <div
-    class="card shadow p-4"
-    style="background-color: #1a1a1a; border: 1px solid #333"
-  >
+  <h2 class="text-center mb-4" style="color: #3498db">{{ _('Performance Investimenti') }}</h2>
+  <div class="card shadow p-4" style="background-color: #1a1a1a; border: 1px solid #333">
     <div class="table-responsive">
-      <table class="table table-dark table-hover">
+      <table class="table table-dark table-hover mb-0 align-middle">
         <thead>
           <tr>
             <th>{{ _('Asset') }}</th>
@@ -320,93 +207,59 @@
           </tr>
         </thead>
         <tbody>
-          {% if tipo == 'EURO' %} {% for asset in investimenti_fiat %}
-          <tr>
-            <td>
-              <form
-                action="{{ url_for('modifica_asset', asset_id=asset['id']) }}"
-                method="POST"
-                class="d-flex align-items-center m-0"
-              >
-                <input
-                  type="text"
-                  name="nuovo_nome"
-                  value="{{ asset['nome_asset'] }}"
-                  class="form-control form-control-sm bg-dark text-white border-0 p-1"
-                  style="
-                    background: #222 !important;
-                    font-weight: bold;
-                    min-width: 150px;
-                    border-radius: 4px;
-                  "
-                  title="Modifica il nome e clicca sul dischetto o premi Invio"
-                  required
-                />
-                <button
-                  type="submit"
-                  class="btn btn-sm p-0 ms-2 bg-transparent border-0"
-                  title="Conferma cambio nome"
-                  style="font-size: 0.9rem"
-                >
-                  💾
-                </button>
-              </form>
-            </td>
-            <td>{{ "%.2f"|format(asset['capitale_investito']) }} €</td>
-            <td>{{ "%.2f"|format(asset['valore_attuale']) }} €</td>
-            {% set rend = asset['valore_attuale'] - asset['capitale_investito']
-            %} {% set perc = (rend / asset['capitale_investito'] * 100) if
-            asset['capitale_investito'] > 0 else 0 %}
-            <td
-              style="color: {% if rend >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}"
-            >
-              {{ "%+.2f"|format(rend) }} € ({{ "%+.1f"|format(perc) }}%)
-            </td>
-            <td>
-              <form
-                action="{{ url_for('update_asset_value') }}"
-                method="POST"
-                class="d-flex align-items-center m-0"
-                style="max-width: 180px"
-              >
-                <input
-                  type="hidden"
-                  name="asset_id"
-                  value="{{ asset['id'] }}"
-                />
-                <input
-                  type="number"
-                  step="0.01"
-                  name="nuovo_valore"
-                  class="form-control form-control-sm bg-dark text-white me-2"
-                  placeholder="{{ _('Nuovo importo €') }}"
-                  required
-                />
-                <button
-                  type="submit"
-                  class="btn btn-sm btn-outline-info"
-                  title="{{ _('Salva rilevazione mese') }}"
-                >
-                  💾
-                </button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %} {% else %}
-          <tr>
-            <td>
-              {{ 'Bitcoin On-chain' if tipo == 'ONCHAIN' else 'Lightning (Sats)'
-              }}
-            </td>
-            <td>{{ "%.2f"|format(costo_storico_eur) }} €</td>
-            <td>{{ "%.2f"|format(valore_attuale_eur) }} €</td>
-            <td
-              style="color: {% if rendimento >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}"
-            >
-              {{ "%+.2f"|format(rendimento) }} € ({{ "%+.1f"|format(percentuale)
-              }}%)
-            </td>
-          </tr>
+          {% if tipo == 'EURO' %}
+            {% for asset in investimenti_fiat %}
+            <tr>
+              <td>
+                <form action="{{ url_for('modifica_asset', asset_id=asset['id']) }}" method="POST" class="d-flex align-items-center m-0">
+                  <input
+                    type="text"
+                    name="nuovo_nome"
+                    value="{{ asset['nome_asset'] }}"
+                    class="form-control form-control-sm bg-dark text-white border-0 p-1"
+                    style="background: #222 !important; font-weight: bold; min-width: 150px; border-radius: 4px;"
+                    title="{{ _('Modifica il nome e clicca sul dischetto o premi Invio') }}"
+                    required
+                  />
+                  <button type="submit" class="btn btn-sm p-0 ms-2 bg-transparent border-0" title="{{ _('Conferma cambio nome') }}" aria-label="{{ _('Salva nome') }}">
+                    💾
+                  </button>
+                </form>
+              </td>
+              <td>{{ "%.2f"|format(asset['capitale_investito']) }} {{ current_user.default_currency | currency_symbol }}</td>
+              <td>{{ "%.2f"|format(asset['valore_attuale']) }} {{ current_user.default_currency | currency_symbol }}</td>
+              {% set rend = asset['valore_attuale'] - asset['capitale_investito'] %}
+              {% set perc = (rend / asset['capitale_investito'] * 100) if asset['capitale_investito'] > 0 else 0 %}
+              <td style="color: {% if rend >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}">
+                {{ "%+.2f"|format(rend) }} {{ current_user.default_currency | currency_symbol }} ({{ "%+.1f"|format(perc) }}%)
+              </td>
+              <td>
+                <form action="{{ url_for('update_asset_value') }}" method="POST" class="d-flex align-items-center m-0" style="max-width: 180px">
+                  <input type="hidden" name="asset_id" value="{{ asset['id'] }}" />
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="nuovo_valore"
+                    class="form-control form-control-sm bg-dark text-white me-2"
+                    placeholder="{{ _('Nuovo importo') }} {{ current_user.default_currency | currency_symbol }}"
+                    required
+                  />
+                  <button type="submit" class="btn btn-sm btn-outline-info" title="{{ _('Salva rilevazione mese') }}" aria-label="{{ _('Salva valore') }}">
+                    💾
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td>{{ 'Bitcoin On-chain' if tipo == 'ONCHAIN' else 'Lightning (Sats)' }}</td>
+              <td>{{ "%.2f"|format(costo_storico_eur) }} {{ current_user.default_currency | currency_symbol }}</td>
+              <td>{{ "%.2f"|format(valore_attuale_eur) }} {{ current_user.default_currency | currency_symbol }}</td>
+              <td style="color: {% if rendimento >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}">
+                {{ "%+.2f"|format(rendimento) }} {{ current_user.default_currency | currency_symbol }} ({{ "%+.1f"|format(percentuale) }}%)
+              </td>
+            </tr>
           {% endif %}
         </tbody>
       </table>
@@ -414,26 +267,13 @@
   </div>
 </div>
 
+<!-- GRAFICO STORICO & TABELLA CRONOLOGIA -->
 <div class="container mb-5 pb-5">
   <div class="row">
-    <div
-      class="{% if tipo == 'EURO' %}col-md-7{% else %}col-md-12{% endif %} mb-4"
-    >
-      <div
-        class="card shadow p-4"
-        style="
-          background-color: #1a1a1a;
-          border: 1px solid #333;
-          min-height: 380px;
-        "
-      >
-        <h4
-          style="color: {% if tipo == 'EURO' %}#3498db{% else %}#f39c12{% endif %}"
-          class="mb-4"
-        >
-          📈 {% if tipo == 'EURO' %}{{ _('Andamento Patrimoniale Euro') }}{%
-          else %}{{ _('Saldo Storico Patrimoniale (Controvalore €)') }}{% endif
-          %}
+    <div class="{% if tipo == 'EURO' %}col-md-7{% else %}col-md-12{% endif %} mb-4">
+      <div class="card shadow p-4" style="background-color: #1a1a1a; border: 1px solid #333; min-height: 380px;">
+        <h4 style="color: {% if tipo == 'EURO' %}#3498db{% else %}#f39c12{% endif %}" class="mb-4">
+          📈 {% if tipo == 'EURO' %}{{ _('Andamento Patrimoniale Euro') }}{% else %}{{ _('Saldo Storico Patrimoniale (Controvalore') }} {{ simbolo_valuta }}){% endif %}
         </h4>
         <div style="position: relative; height: 280px; width: 100%">
           <canvas id="chartStoricoPatrimonio"></canvas>
@@ -443,29 +283,12 @@
 
     {% if tipo == 'EURO' %}
     <div class="col-md-5 mb-4">
-      <div
-        class="card shadow p-4"
-        style="
-          background-color: #1a1a1a;
-          border: 1px solid #333;
-          min-height: 380px;
-        "
-      >
+      <div class="card shadow p-4" style="background-color: #1a1a1a; border: 1px solid #333; min-height: 380px;">
         <h4 class="text-danger mb-3">⏳ {{ _('Storico Rilevazioni Mese') }}</h4>
-
-        <!-- WRAPPER ISOLATO TABELLA -->
-        <div
-          class="historical-surveys-wrapper p-2 rounded"
-          style="background-color: #121212; border: 1px solid #2a2a2a"
-        >
-          <div
-            class="table-responsive"
-            style="max-height: 260px; overflow-y: auto"
-          >
-            <table
-              class="table table-dark table-sm table-hover mb-0 align-middle"
-              style="table-layout: fixed; width: 100%"
-            >
+        
+        <div class="historical-surveys-wrapper p-2 rounded" style="background-color: #121212; border: 1px solid #2a2a2a">
+          <div class="table-responsive" style="max-height: 260px; overflow-y: auto">
+            <table class="table table-dark table-sm table-hover mb-0 align-middle" style="table-layout: fixed; width: 100%">
               <thead>
                 <tr>
                   <th style="width: 25%">{{ _('Data') }}</th>
@@ -475,66 +298,40 @@
                 </tr>
               </thead>
               <tbody>
-                {% if cronologia_fiat %} {% for hist in cronologia_fiat %}
-                <tr>
-                  <!-- 1. DATA: Evita di andare a capo -->
-                  <td
-                    class="small text-muted align-middle text-nowrap"
-                    style="width: 28%"
-                  >
-                    {{ hist['data_rilevazione'][:10] }}
-                  </td>
-
-                  <!-- 2. ASSET: Troncamento forzato con i tre puntini (...) -->
-                  <td class="align-middle" style="width: 38%; max-width: 0">
-                    <div
-                      class="text-info fw-bold small text-truncate"
-                      style="width: 100%; display: block"
-                      title="{{ hist['nome_asset'] }}"
-                    >
-                      {{ hist['nome_asset'] }}
-                    </div>
-                  </td>
-
-                  <!-- 3. VALORE: Evita di andare a capo ed è allineato a destra -->
-                  <td
-                    class="small fw-bold align-middle text-nowrap text-end"
-                    style="width: 24%"
-                  >
-                    {{ "%.2f"|format(hist['valore_rilevato']) }} €
-                  </td>
-
-                  <!-- 4. AZIONE ELIMINA -->
-                  <td class="align-middle text-center" style="width: 10%">
-                    <form
-                      action="{{ url_for('elimina_cronologia', history_id=hist['id'], tipo='EURO') }}"
-                      method="POST"
-                      onsubmit="return confirm('{{ _('Sicuro di voler eliminare questa rilevazione?') }}');"
-                      class="m-0 p-0"
-                    >
-                      <button
-                        type="submit"
-                        class="btn btn-sm p-0 border-0 bg-transparent text-danger fw-bold"
-                        title="{{ _('Elimina errore') }}"
-                        style="line-height: 1"
-                      >
-                        ✖
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-                {% endfor %} {% else %}
-                <tr>
-                  <td colspan="4" class="text-muted text-center small py-3">
-                    {{ _('Nessuna rilevazione salvata finora.') }}
-                  </td>
-                </tr>
+                {% if cronologia_fiat %}
+                  {% for hist in cronologia_fiat %}
+                  <tr>
+                    <td class="small text-muted align-middle text-nowrap" style="width: 28%">
+                      {{ hist['data_rilevazione'][:10] }}
+                    </td>
+                    <td class="align-middle" style="width: 38%; max-width: 0">
+                      <div class="text-info fw-bold small text-truncate" style="width: 100%; display: block" title="{{ hist['nome_asset'] }}">
+                        {{ hist['nome_asset'] }}
+                      </div>
+                    </td>
+                    <td class="small fw-bold align-middle text-nowrap text-end" style="width: 24%">
+                      {{ "%.2f"|format(hist['valore_rilevato']) }} {{ current_user.default_currency | currency_symbol }}
+                    </td>
+                    <td class="align-middle text-center" style="width: 10%">
+                      <form action="{{ url_for('elimina_cronologia', history_id=hist['id'], tipo='EURO') }}" method="POST" onsubmit="return confirm('{{ _('Sicuro di voler eliminare questa rilevazione?') }}');" class="m-0 p-0">
+                        <button type="submit" class="btn btn-sm p-0 border-0 bg-transparent text-danger fw-bold" title="{{ _('Elimina errore') }}" aria-label="{{ _('Elimina') }}" style="line-height: 1">
+                          ✖
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="4" class="text-muted text-center small py-3">
+                      {{ _('Nessuna rilevazione salvata finora.') }}
+                    </td>
+                  </tr>
                 {% endif %}
               </tbody>
             </table>
           </div>
         </div>
-        <!-- FINE WRAPPER ISOLATO -->
       </div>
     </div>
     {% endif %}
@@ -542,20 +339,10 @@
 </div>
 
 <!-- =========================================================
-     MODAL DRILL-DOWN ANALYTICS
+     MODAL DRILL-DOWN ANALYTICS (Dimensionata LG per migliore leggibilità)
      ========================================================= -->
-
-<div
-  id="modalDettagli"
-  class="modal fade"
-  tabindex="-1"
-  aria-labelledby="drillDownModalLabel"
-  aria-hidden="true"
-  data-bs-backdrop="static"
->
-  <!-- Dizionario i18n per JavaScript -->
-  <div
-    id="i18n-drilldown"
+<div id="modalDettagli" class="modal fade" tabindex="-1" aria-labelledby="drillDownModalLabel" aria-hidden="true" data-bs-backdrop="static">
+  <div id="i18n-drilldown"
     data-title-prefix="{{ _('Dettaglio Categoria:') }}"
     data-loading="{{ _('Caricamento in corso...') }}"
     data-fiat-title="{{ _('💶 Transazioni Fiat (EUR)') }}"
@@ -571,55 +358,25 @@
     style="display: none"
   ></div>
 
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content bg-dark text-white border-secondary">
-
-      <!-- HEADER -->
-      <div
-        class="modal-header border-secondary d-flex justify-content-between align-items-center"
-      >
-        <h5
-          class="modal-title mb-0"
-          id="modalDettagliTitolo"
-        >
-          🔍
-          <span id="i18nModalPrefix">
-            {{ _('Dettaglio Categoria:') }}
-          </span>
-
-          <span
-            id="modalCategoriaNome"
-            class="text-warning"
-          ></span>
+      <div class="modal-header border-secondary d-flex justify-content-between align-items-center">
+        <h5 class="modal-title mb-0" id="modalDettagliTitolo">
+          🔍 <span id="i18nModalPrefix">{{ _('Dettaglio Categoria:') }}</span>
+          <span id="modalCategoriaNome" class="text-warning"></span>
         </h5>
-
-        <!-- X -->
-        <button
-          type="button"
-          class="btn-close btn-close-white"
-          data-bs-dismiss="modal"
-          aria-label="{{ _('Chiudi') }}"
-        ></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="{{ _('Chiudi') }}"></button>
       </div>
 
-
-      <!-- BODY -->
       <div class="modal-body">
         <div id="modalDettagliContenuto"></div>
       </div>
 
-
-      <!-- FOOTER -->
       <div class="modal-footer border-secondary">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          data-bs-dismiss="modal"
-        >
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
           {{ _('Chiudi') }}
         </button>
       </div>
-
     </div>
   </div>
 </div>
@@ -642,6 +399,17 @@
     const annoFiltroCorrente = "{{ anno_selezionato if anno_selezionato else '' }}";
     const meseFiltroCorrente = "{{ mese_selezionato if mese_selezionato else '' }}";
 
+    // Funzione di utilità per l'escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // --- GRAFICO SPESE ---
         {% if labels_spese %}
@@ -650,7 +418,7 @@
             const labelsSpeseOriginali = {{ labels_spese | tojson }};
             const labelsSpeseTradotte = labelsSpeseOriginali.map(cat => mappaTraduzioniGrafici[cat] || cat);
 
-            // Calcolo dinamico dell'altezza minima in base al numero di categorie (30px per barra)
+            // Calcolo dinamico dell'altezza minima in base al numero di categorie
             const minHeightDynamic = Math.max(300, labelsSpeseOriginali.length * 30);
             canvasSpese.parentElement.style.minHeight = `${minHeightDynamic}px`;
 
@@ -668,20 +436,15 @@
                 options: {
                     indexAxis: 'y',
                     responsive: true,
-                    maintainAspectRatio: false, // <-- AGGIUNTO: Permette al grafico di rispettare i vincoli CSS
+                    maintainAspectRatio: false,
                     onHover: (event, chartElement) => {
                         event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
                     },
                     plugins: { legend: { display: false } },
-                    onClick: (event, elements, chart) => {
+                    onClick: (event, elements) => {
                         if (elements && elements.length > 0) {
                             const index = elements[0].index;
                             const categoriaDb = labelsSpeseOriginali[index];
-                            const categoriaVisualizzata = labelsSpeseTradotte[index];
-
-                            console.log(`Cliccato su: ${categoriaVisualizzata} (DB: ${categoriaDb})`);
-
-                            // Passiamo categoria, tipo 'spese', ed eventuali filtri anno/mese
                             apriDrillDown(categoriaDb, 'spese', annoFiltroCorrente, meseFiltroCorrente);
                         }
                     },
@@ -719,14 +482,10 @@
                         event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
                     },
                     plugins: { legend: { position: 'bottom', labels: { color: '#eee' } } },
-                    onClick: (event, elements, chart) => {
+                    onClick: (event, elements) => {
                         if (elements && elements.length > 0) {
                             const index = elements[0].index;
                             const categoriaDb = labelsEntrateOriginali[index];
-
-                            console.log(`[Entrate] Cliccato su: ${labelsEntrateTradotte[index]} (DB: ${categoriaDb})`);
-
-                            // Passiamo categoria, tipo 'entrate', ed eventuali filtri anno/mese
                             apriDrillDown(categoriaDb, 'entrate', annoFiltroCorrente, meseFiltroCorrente);
                         }
                     }
@@ -751,11 +510,7 @@
                 const valoriData = {{ valori_fiat | tojson | safe if valori_fiat else '[]' }};
 
                 if (!dateLabels || dateLabels.length === 0) {
-                    ctx.clearRect(0, 0, canvasStorico.width, canvasStorico.height);
-                    ctx.font = "14px sans-serif";
-                    ctx.fillStyle = "#888";
-                    ctx.textAlign = "center";
-                    ctx.fillText("Nessuno storico disponibile per il periodo selezionato.", canvasStorico.width / 2, canvasStorico.height / 2);
+                    renderNoDataMessage(ctx, canvasStorico);
                 } else {
                     window.myLineChart = new Chart(ctx, {
                         type: 'line',
@@ -791,11 +546,7 @@
                 const datiQuantitaBtc = {{ saldi_btc | tojson | safe if saldi_btc else '[]' }};
 
                 if (!etichetteDate || etichetteDate.length === 0) {
-                    ctx.clearRect(0, 0, canvasStorico.width, canvasStorico.height);
-                    ctx.font = "14px sans-serif";
-                    ctx.fillStyle = "#888";
-                    ctx.textAlign = "center";
-                    ctx.fillText("Nessuno storico disponibile per il periodo selezionato.", canvasStorico.width / 2, canvasStorico.height / 2);
+                    renderNoDataMessage(ctx, canvasStorico);
                 } else {
                     window.myLineChart = new Chart(ctx, {
                         type: 'line',
@@ -844,12 +595,19 @@
         }
     });
 
+    function renderNoDataMessage(ctx, canvas) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = "14px sans-serif";
+        ctx.fillStyle = "#888";
+        ctx.textAlign = "center";
+        ctx.fillText("Nessuno storico disponibile per il periodo selezionato.", canvas.width / 2, canvas.height / 2);
+    }
+
     // 2. FUNZIONE DRILL-DOWN GLOBALE
     function apriDrillDown(categoria, tipoMovimento, anno = '', mese = '') {
         const contenitore = document.getElementById('modalDettagliContenuto');
         const titoloModal = document.getElementById('modalDettagliTitolo');
 
-        // Recupera le traduzioni dall'HTML
         const i18nEl = document.getElementById('i18n-drilldown');
         const t = i18nEl ? i18nEl.dataset : {};
 
@@ -864,7 +622,7 @@
 
         if (titoloModal) {
             const prefix = t.titlePrefix || 'Dettaglio Categoria:';
-            titoloModal.innerHTML = `🔍 ${prefix} <span class="text-warning">${categoria}</span>`;
+            titoloModal.innerHTML = `🔍 ${prefix} <span class="text-warning">${escapeHtml(categoria)}</span>`;
         }
 
         if (contenitore) {
@@ -872,14 +630,12 @@
             contenitore.innerHTML = `<p class="text-center text-muted">${loadingText}</p>`;
         }
 
-        // Mostra Modal Bootstrap
         const modalElement = document.getElementById('modalDettagli');
         if (modalElement) {
             const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
             modalInstance.show();
         }
 
-        // Costruzione URL con parametri
         let params = new URLSearchParams();
         if (categoria) params.append('categoria', categoria);
         if (tipoMovimento) params.append('tipo_movimento', tipoMovimento);
@@ -887,7 +643,6 @@
         if (mese) params.append('mese', mese);
 
         let url = `/api/analytics/drill-down?${params.toString()}`;
-        console.log("🚀 Chiamata Drill-Down inviata a:", url);
 
         fetch(url)
             .then(response => {
@@ -896,14 +651,13 @@
             })
             .then(data => {
                 if (!contenitore) return;
-                contenitore.innerHTML = '';
 
-                let htmlGenerato = '';
+                let htmlChunks = [];
 
                 // --- 1. TABELLA EURO ---
                 if (data.euro && data.euro.length > 0) {
-                    htmlGenerato += `<h5 class="mt-2">${t.fiatTitle || '💶 Transazioni Fiat (EUR)'}</h5>`;
-                    htmlGenerato += `
+                    htmlChunks.push(`<h5 class="mt-2">${t.fiatTitle || '💶 Transazioni Fiat (EUR)'}</h5>`);
+                    htmlChunks.push(`
                     <div class="table-responsive mb-4">
                         <table class="table table-dark table-striped align-middle mb-0" style="width:100%;">
                             <thead>
@@ -913,21 +667,21 @@
                                     <th style="width: 25%;" class="text-end">${t.colAmount || 'Importo'}</th>
                                 </tr>
                             </thead>
-                            <tbody>`;
+                            <tbody>`);
                     data.euro.forEach(tr => {
-                        htmlGenerato += `<tr>
-                            <td class="small">${tr.data}</td>
-                            <td class="small text-break">${tr.descrizione}</td>
+                        htmlChunks.push(`<tr>
+                            <td class="small">${escapeHtml(tr.data)}</td>
+                            <td class="small text-break">${escapeHtml(tr.descrizione)}</td>
                             <td class="text-end fw-bold text-success small">€ ${parseFloat(tr.importo).toFixed(2)}</td>
-                        </tr>`;
+                        </tr>`);
                     });
-                    htmlGenerato += '</tbody></table></div>';
+                    htmlChunks.push('</tbody></table></div>');
                 }
 
                 // --- 2. TABELLA LIGHTNING ---
                 if (data.lightning && data.lightning.length > 0) {
-                    htmlGenerato += `<h5 class="mt-2">${t.lnTitle || '⚡ Transazioni Lightning Network'}</h5>`;
-                    htmlGenerato += `
+                    htmlChunks.push(`<h5 class="mt-2">${t.lnTitle || '⚡ Transazioni Lightning Network'}</h5>`);
+                    htmlChunks.push(`
                     <div class="table-responsive mb-4">
                         <table class="table table-dark table-striped align-middle mb-0" style="width:100%;">
                             <thead>
@@ -937,21 +691,21 @@
                                     <th style="width: 30%;" class="text-end">${t.colSats || 'Satoshi'}</th>
                                 </tr>
                             </thead>
-                            <tbody>`;
+                            <tbody>`);
                     data.lightning.forEach(tr => {
-                        htmlGenerato += `<tr>
-                            <td class="small">${tr.data}</td>
-                            <td class="small text-break">${tr.descrizione}</td>
-                            <td class="text-end fw-bold text-success small">⚡ ${tr.satoshi}</td>
-                        </tr>`;
+                        htmlChunks.push(`<tr>
+                            <td class="small">${escapeHtml(tr.data)}</td>
+                            <td class="small text-break">${escapeHtml(tr.descrizione)}</td>
+                            <td class="text-end fw-bold text-success small">⚡ ${escapeHtml(tr.satoshi)}</td>
+                        </tr>`);
                     });
-                    htmlGenerato += '</tbody></table></div>';
+                    htmlChunks.push('</tbody></table></div>');
                 }
 
                 // --- 3. TABELLA ONCHAIN ---
                 if (data.onchain && data.onchain.length > 0) {
-                    htmlGenerato += `<h5 class="mt-2">${t.btcTitle || '🔗 Transazioni Bitcoin On-Chain'}</h5>`;
-                    htmlGenerato += `
+                    htmlChunks.push(`<h5 class="mt-2">${t.btcTitle || '🔗 Transazioni Bitcoin On-Chain'}</h5>`);
+                    htmlChunks.push(`
                     <div class="table-responsive mb-4">
                         <table class="table table-dark table-striped align-middle mb-0" style="width:100%;">
                             <thead>
@@ -961,23 +715,23 @@
                                     <th style="width: 30%;" class="text-end">${t.colBtc || 'BTC'}</th>
                                 </tr>
                             </thead>
-                            <tbody>`;
+                            <tbody>`);
                     data.onchain.forEach(tr => {
-                        htmlGenerato += `<tr>
-                            <td class="small">${tr.data}</td>
-                            <td class="small text-break">${tr.descrizione}</td>
-                            <td class="text-end fw-bold text-success small">₿ ${tr.importo_btc}</td>
-                        </tr>`;
+                        htmlChunks.push(`<tr>
+                            <td class="small">${escapeHtml(tr.data)}</td>
+                            <td class="small text-break">${escapeHtml(tr.descrizione)}</td>
+                            <td class="text-end fw-bold text-success small">₿ ${escapeHtml(tr.importo_btc)}</td>
+                        </tr>`);
                     });
-                    htmlGenerato += '</tbody></table></div>';
+                    htmlChunks.push('</tbody></table></div>');
                 }
 
-                if (!htmlGenerato) {
+                if (htmlChunks.length === 0) {
                     const noDataText = t.noData || 'Nessuna transazione trovata per questa categoria nel periodo selezionato.';
-                    htmlGenerato = `<p class="text-center text-warning mb-0 p-3">${noDataText}</p>`;
+                    contenitore.innerHTML = `<p class="text-center text-warning mb-0 p-3">${noDataText}</p>`;
+                } else {
+                    contenitore.innerHTML = htmlChunks.join('');
                 }
-
-                contenitore.innerHTML = htmlGenerato;
             })
             .catch(error => {
                 console.error("❌ Errore durante il recupero dei dati:", error);

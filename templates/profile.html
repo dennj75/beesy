@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Profilo Utente') }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5" style="max-width: 800px;">
+  <h1 class="main-title mb-4">👤 {{ _('Profilo Utente') }}</h1>
+
+  <!-- CARD 1: INFORMAZIONI GENERALI -->
+  <div class="card bg-dark text-white shadow mb-4" style="border-left: 5px solid #3498db;">
+    <div class="card-body p-4">
+      <h4 class="card-title mb-3">⚙️ {{ _('Informazioni Personali') }}</h4>
+      <form method="POST" action="{{ url_for('auth.profile') }}">
+        <input type="hidden" name="action" value="update_info">
+        
+        <div class="mb-3">
+          <label class="form-label text-muted">{{ _('Nome Utente') }}</label>
+          <input type="text" class="form-control bg-secondary text-white" value="{{ current_user.username }}" disabled readonly>
+          <small class="text-muted">{{ _('Il nome utente non può essere modificato.') }}</small>
+        </div>
+
+        <div class="mb-3">
+          <label for="email" class="form-label">{{ _('Indirizzo Email') }}</label>
+          <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email or '' }}" placeholder="es. user@example.com">
+        </div>
+
+        <div class="mb-3">
+  <label for="default_currency" class="form-label fw-bold">🌐 {{ _('Valuta Predefinita') }}</label>
+  {% set v = current_user.default_currency if current_user.default_currency else 'EUR' %}
+  
+  <select class="form-select" id="default_currency" name="default_currency">
+    {% for codice, info in valute.items() %}
+    <option value="{{ codice }}" {{ 'selected' if v == codice else '' }}>
+      {{ codice }} ({{ info.simbolo }}) - {{ info.nome }}
+    </option>
+    {% endfor %}
+  </select>
+  <small class="text-muted d-block mt-1">
+    {{ _('Questa valuta verrà usata come preferita e per le nuove transazioni.') }}
+  </small>
+</div>
+
+        <button type="submit" class="btn btn-primary mt-2">💾 {{ _('Salva Modifiche') }}</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- CARD 2: CAMBIO PASSWORD -->
+  <div class="card bg-dark text-white shadow mb-4" style="border-left: 5px solid #e74c3c;">
+    <div class="card-body p-4">
+      <h4 class="card-title mb-3">🔒 {{ _('Sicurezza e Password') }}</h4>
+      <form method="POST" action="{{ url_for('auth.profile') }}">
+        <input type="hidden" name="action" value="change_password">
+
+        <div class="mb-3">
+          <label for="old_password" class="form-label">{{ _('Password Attuale') }}</label>
+          <input type="password" class="form-control" id="old_password" name="old_password" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="new_password" class="form-label">{{ _('Nuova Password') }}</label>
+          <input type="password" class="form-control" id="new_password" name="new_password" required>
+          <small class="text-muted">
+            {{ _('Minimo 12 caratteri, almeno una maiuscola, un numero e un carattere speciale.') }}
+          </small>
+        </div>
+
+        <div class="mb-3">
+          <label for="confirm_password" class="form-label">{{ _('Conferma Nuova Password') }}</label>
+          <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+        </div>
+
+        <button type="submit" class="btn btn-danger mt-2">🔑 {{ _('Aggiorna Password') }}</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

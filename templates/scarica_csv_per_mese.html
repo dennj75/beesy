@@ -1,5 +1,6 @@
-{% extends "base.html" %} {% block title %}{{ _('Scarica CSV per mese € -
-₿eesy') }}{% endblock %} {% block content %}
+{% extends "base.html" %} {% block title %}{{ _('Scarica CSV per mese {{
+current_user.default_currency | currency_symbol }} - ₿eesy') }}{% endblock %} {%
+block content %}
 
 <h1>📥 {{ _('Scarica CSV per mese') }}</h1>
 <form method="post" action="/scarica-csv-mese">

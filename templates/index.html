@@ -23,28 +23,30 @@ block content %}
       <div class="col-md-4 border-end border-dark">
         <span class="text-muted">{{ _('Liquidità Spendibile:') }}</span>
         <h3 class="fw-bold text-white mb-1">
-          {{ "%.2f"|format(liquidita_totale) }} €
+          {{ "%.2f"|format(liquidita_totale) }} {{ current_user.default_currency | currency_symbol }}
         </h3>
         <small class="text-muted">
-          🏦 {{ "%.2f"|format(banca) }}€ | 💼 {{ "%.2f"|format(contanti) }}€
+          🏦 {{ "%.2f"|format(banca) }}{{ current_user.default_currency | currency_symbol }} | 💼 {{ "%.2f"|format(contanti) }}{{ current_user.default_currency | currency_symbol }}
         </small>
       </div>
 
       <div class="col-md-4 border-end border-dark">
         <span class="text-muted">{{ _('Risparmi & Futuro:') }}</span>
         <h3 class="fw-bold text-info mb-1">
-          {{ "%.2f"|format(patrimonio_investito) }} €
+          {{ "%.2f"|format(patrimonio_investito) }} {{ current_user.default_currency | currency_symbol }}
         </h3>
         <small class="text-muted">
-          📈 {{ _('Titoli:') }} {{ "%.2f"|format(s_inv) }}€ | 👴 {{
-          _('Pensione:') }} {{ "%.2f"|format(s_pen) }}€
+          📈 {{ _('Titoli:') }} {{ "%.2f"|format(s_inv) }}{{ current_user.default_currency | currency_symbol }} | 👴 {{
+          _('Pensione:') }} {{ "%.2f"|format(s_pen) }}{{ current_user.default_currency | currency_symbol }}
         </small>
       </div>
 
       <div class="col-md-4">
-        <span class="text-muted">{{ _('Net Worth Totale (EUR):') }}</span>
+        <span class="text-muted">
+          {{ _('Net Worth Totale (%(simbolo)s):', simbolo=(current_user.default_currency | currency_symbol)) }}
+        </span>
         <h2 class="fw-bold text-success">
-          {{ "%.2f"|format(net_worth_totale) }} €
+          {{ "%.2f"|format(net_worth_totale) }} {{ current_user.default_currency | currency_symbol }}
         </h2>
       </div>
     </div>
@@ -66,67 +68,68 @@ block content %}
     <p
       style="font-size: 0.9rem; margin-top: 10px; color: {% if rendimento_onchain >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}"
     >
-      📈 {{ _('Rendimento') }} {{ "%+.2f"|format(rendimento_onchain) }}€ ({{
+      📈 {{ _('Rendimento') }} {{ "%+.2f"|format(rendimento_onchain) }}{{ current_user.default_currency | currency_symbol }} ({{
       "%+.1f"|format(percentuale_onchain) }}%)
     </p>
     <hr class="separator" />
     <p class="saldo-principale">
       💰 {{ _('Saldo:') }} {{ "%.8f"|format(saldo_totale_btc) }} BTC
     </p>
-    <p class="saldo-secondario">{{ "%.2f"|format(saldo_eur_onchain) }} €</p>
+    <p class="saldo-secondario">{{ "%.2f"|format(saldo_eur_onchain) }} {{ current_user.default_currency | currency_symbol }}</p>
   </div>
 
   <div class="balance-card lightning-card">
-    <a href="{{ url_for('transazioni_lightning') }}">
-      <button type="button" class="tracker-button lightning-button">
-        📄 {{ _('TRACKER Lightning Network⚡️') }}
-      </button>
-    </a>
-    <a
-      href="{{ url_for('analytics', tipo='LIGHTNING') }}"
-      style="color: #f39c12; text-decoration: none"
-      >📊 {{ _('Analisi') }}⚡</a
-    >
-    <p
-      style="font-size: 0.9rem; margin-top: 10px; color: {% if rendimento_lightning >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}"
-    >
-      📈 {{ _('Rendimento') }} {{ "%+.2f"|format(rendimento_lightning) }}€ ({{
-      "%+.1f"|format(percentuale_lightning) }}%)
-    </p>
-    <hr class="separator" />
-    <p class="saldo-principale">
-      💰 {{ _('Saldo:') }} {{
-      "{:,}".format(saldo_totale_satoshi|int).replace(",",".") }} SATS
-    </p>
-    <p class="saldo-secondario">{{ "%.2f"|format(saldo_eur_lightning) }} €</p>
-  </div>
+  <a href="{{ url_for('transazioni_lightning') }}">
+    <button type="button" class="tracker-button lightning-button">
+      📄 {{ _('TRACKER Lightning Network⚡️') }}
+    </button>
+  </a>
+  <a
+    href="{{ url_for('analytics', tipo='LIGHTNING') }}"
+    style="color: #f39c12; text-decoration: none"
+    >📊 {{ _('Analisi') }}⚡</a
+  >
+  <p
+    style="font-size: 0.9rem; margin-top: 10px; color: {% if rendimento_lightning >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}"
+  >
+    📈 {{ _('Rendimento') }} {{ "%+.2f"|format(rendimento_lightning) }}{{ simbolo_valuta.simbolo if simbolo_valuta is mapping else simbolo_valuta }} ({{ "%+.1f"|format(percentuale_lightning) }}%)
+  </p>
+  <hr class="separator" />
+  <p class="saldo-principale">
+    💰 {{ _('Saldo:') }} {{ "{:,}".format(saldo_totale_satoshi|int).replace(",", ".") }} SATS
+  </p>
+  <p class="saldo-secondario">
+    {{ "%.2f"|format(valore_attuale_lightning) }} {{ simbolo_valuta.simbolo if simbolo_valuta is mapping else simbolo_valuta }}
+  </p>
+</div>
 
   <div class="balance-card tracker-euro-card">
     <a href="{{ url_for('transazioni') }}">
       <button type="button" class="tracker-button tracker-euro-button">
-        📄 {{ _('TRACKER €') }}
+        📄 {{ _('TRACKER %(simbolo)s', simbolo=(current_user.default_currency | currency_symbol)) }}
       </button>
     </a>
     <p class="saldo-detail">
-      🏦 {{ _('Banca:') }} {{ "%.2f"|format(banca) }} €
+      🏦 {{ _('Banca:') }} {{ "%.2f"|format(banca) }} {{ current_user.default_currency | currency_symbol }}
     </p>
     <p class="saldo-detail">
-      💼 {{ _('Contanti:') }} {{ "%.2f"|format(contanti) }} €
+      💼 {{ _('Contanti:') }} {{ "%.2f"|format(contanti) }} {{ current_user.default_currency | currency_symbol }}
     </p>
     <p class="saldo-detail">
-      📈 {{ _('Investimenti:') }} {{ "%.2f"|format(s_inv) }} €
+      📈 {{ _('Investimenti:') }} {{ "%.2f"|format(s_inv) }} {{ current_user.default_currency | currency_symbol }}
     </p>
     <p class="saldo-detail">
-      👴 {{ _('Pensione:') }} {{ "%.2f"|format(s_pen) }} €
+      👴 {{ _('Pensione:') }} {{ "%.2f"|format(s_pen) }} {{ current_user.default_currency | currency_symbol }}
     </p>
     <a
       href="{{ url_for('analytics', tipo='EURO') }}"
       style="color: #f39c12; text-decoration: none"
-      >📊 {{ _('Analisi') }} €</a
+      >📊 {{ _('Analisi') }} {{ current_user.default_currency | currency_symbol }}</a
     >
     <hr class="separator" />
     <p class="saldo-principale">
-      💰 {{ _('Saldo') }} {{ "%.2f"|format(saldo_totale_eur) }} €
+  💰 {{ _('Saldo') }} {{ "%.2f"|format(saldo_totale_eur) }} {{ current_user.default_currency | currency_symbol }}
+</p>
     </p>
     <p class="saldo-secondario">{{ "%.8f"|format(saldo_btc_da_eur) }} BTC</p>
     <div style="margin-top: 10px">
