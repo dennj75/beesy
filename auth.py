@@ -3,9 +3,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, UserMixin, current_user
-from db.db_utils import crea_utente, get_user_by_username, get_user_by_id, update_user_password_hash
+from flask_babel import _
+from db.db_utils import DB_PATH, crea_utente, get_user_by_username, get_user_by_id, update_user_password_hash
 from app import app, login_manager
 from models import User
+from utils.helpers import VALUTE_SUPPORTATE
 from utils.security import generate_master_key, encrypt_master_key, decrypt_master_key
 import re
 import sqlite3
@@ -132,7 +134,7 @@ def login():
             enc_m_key = encrypt_master_key(m_key, password, user.username)
 
             # Salviamo nel DB usando sqlite3 direttamente (come fai in elimina_utente)
-            conn = sqlite3.connect('database.db')
+            conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             cursor.execute("UPDATE users SET encrypted_master_key = ? WHERE id = ?",
                            (enc_m_key, user.id))
@@ -205,7 +207,7 @@ def force_password_reset():
         m_key = generate_master_key()  # Generiamo una nuova per la nuova password
         enc_m_key = encrypt_master_key(m_key, new_password, user.username)
 
-        conn = sqlite3.connect('database.db')
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("UPDATE users SET encrypted_master_key = ? WHERE id = ?",
                        (enc_m_key, user.id))
@@ -235,7 +237,7 @@ def logout():
 @auth_bp.route('/elimina_utente/<int:user_id>', methods=['POST'])
 def elimina_utente(user_id):
     # Il resto del codice rimane uguale
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
     conn.commit()
@@ -243,3 +245,94 @@ def elimina_utente(user_id):
     logout_user()  # Ti consiglio di aggiungerlo così pulisce la sessione
     flash("Utente eliminato correttamente", "success")
     return redirect(url_for('home'))
+
+
+@auth_bp.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        # 1. AGGIORNAMENTO DATI BASE (Email e Valuta Predefinita)
+        if action == 'update_info':
+            email = request.form.get('email', '').strip()
+            default_currency = request.form.get('default_currency', 'EUR')
+
+            # STAMPA DI DEBUG NEL TERMINALE DI VS CODE:
+            print(
+                f"DEBUG PROFILE UPDATE: email={email}, valuta_ricevuta={default_currency}, user_id={current_user.id}")
+
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE users 
+                SET email = ?, default_currency = ? 
+                WHERE id = ?
+            """, (email, default_currency, current_user.id))
+            conn.commit()
+            conn.close()
+
+            # Aggiorniamo l'oggetto utente corrente in sessione
+            current_user.email = email
+            current_user.default_currency = default_currency
+
+            flash(_('Informazioni del profilo aggiornate con successo!'), 'success')
+            return redirect(url_for('auth.profile'))
+
+        # 2. CAMBIO PASSWORD (SENZA PERDERE LA MASTER KEY)
+        elif action == 'change_password':
+            old_password = request.form.get('old_password')
+            new_password = request.form.get('new_password')
+            confirm_password = request.form.get('confirm_password')
+
+            # Verifichiamo prima la vecchia password
+            if not check_password_hash(current_user.password_hash, old_password):
+                flash(_('La password attuale non è corretta.'), 'error')
+                return redirect(url_for('auth.profile'))
+
+            # Verifichiamo che le nuove password coincidano
+            if new_password != confirm_password:
+                flash(_('Le nuove password non coincidono.'), 'error')
+                return redirect(url_for('auth.profile'))
+
+            # Verifichiamo i requisiti di complessità
+            is_valid, error_msg = check_password_complexity(new_password)
+            if not is_valid:
+                flash(error_msg, 'error')
+                return redirect(url_for('auth.profile'))
+
+            try:
+                # A. Decifriamo la Master Key esistente usando la VECCHIA password
+                m_key = decrypt_master_key(
+                    current_user.encrypted_master_key, old_password, current_user.username)
+
+                # B. Ricifriamo la STESSA Master Key usando la NUOVA password
+                new_enc_m_key = encrypt_master_key(
+                    m_key, new_password, current_user.username)
+
+                # C. Aggiorniamo il database con la nuova password hash e la nuova chiave cifrata
+                new_pw_hash = generate_password_hash(new_password)
+
+                conn = sqlite3.connect(DB_PATH)
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE users 
+                    SET password_hash = ?, encrypted_master_key = ? 
+                    WHERE id = ?
+                """, (new_pw_hash, new_enc_m_key, current_user.id))
+                conn.commit()
+                conn.close()
+
+                # Aggiorniamo l'oggetto utente in sessione
+                current_user.password_hash = new_pw_hash
+                current_user.encrypted_master_key = new_enc_m_key
+
+                flash(
+                    _('Password aggiornata con successo! La tua Master Key è stata preservata.'), 'success')
+            except Exception as e:
+                flash(
+                    _('Errore durante la ri-cifratura della Master Key: ') + str(e), 'error')
+
+            return redirect(url_for('auth.profile'))
+
+    return render_template('profile.html', valute=VALUTE_SUPPORTATE)

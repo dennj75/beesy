@@ -20,6 +20,12 @@ This project is an **EXPERIMENTAL EDUCATIONAL LABORATORY**.
 
 ## 🌟 Key Features
 
+### 💱 Foreign Currency and Exchange Rate Management
+
+- **Dedicated Settings Panel**: Dynamic management of foreign currencies (AUD, USD, GBP, JPY, CHF, BRL, etc.).
+- **Automatic Conversion**: Support for historical and real-time exchange rates for fiduciary and savings transactions (e.g., pension funds, securities).
+- **Multi-Currency Integration**: Transaction entry and automatic calculation of equivalent value in EUR and Bitcoin (both On-Chain and Lightning).
+
 - 🌍 **Internationalization (i18n):** Multi-language localization engine powered by Flask-Babel / GNU gettext. Fully supports English, Chinese and Italian language profiles.
 - 📊 **Advanced Analytics & Drill-Down:** Integrated dashboards powered by Chart.js. Track income, expenses, and savings efficiency with category-level drill-down modal views across Fiat (EUR), Lightning, and On-Chain transactions.
 - **📱 Mobile Success & Portability:** Full mobile compatibility tested via ngrok. 100% success rate on mobile database restoration, allowing you to manage your finances on the go without a central server.
@@ -147,7 +153,7 @@ We implemented a robust backup system to ensure you never lose your data:
 - [x] Parachute Offline Test: Independent recovery CLI tool (test_backup.py).
 - [x] **Multi-language Support (i18n):** Translating the interface into English and Chinese to reach the global Bitcoin community. 🌍
 - [x] **Detailed History:** Transaction drill-down within the Analytics page.
-- [ ] **Multi-currency support:** Beyond EUR (USD, CHF, etc.).
+- [x] **Multi-currency support:** Beyond EUR (USD, CHF, etc.).
 - [ ] **Docker Support:** One-click deployment for Umbrel/Raspberry Pi.
 
 ---

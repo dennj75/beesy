@@ -12,28 +12,31 @@ class User(UserMixin):
         self.npub = npub
         self.pubkey = pubkey
         self.auth_type = auth_type
-        self.default_currency = default_currency
+        self.default_currency = default_currency or 'EUR'
 
     @staticmethod
     def from_db_row(row):
         if not row:
             return None
 
-        # Supporto sia per sqlite3.Row (accesso per nome colonna) sia per tupla classica (accesso per indice)
+        # Se la riga è un oggetto sqlite3.Row (accesso per nome colonna)
         if hasattr(row, 'keys'):
             return User(
                 id=row['id'],
                 username=row['username'],
                 email=row['email'],
                 password_hash=row['password_hash'],
+                encrypted_master_key=row['encrypted_master_key'] if 'encrypted_master_key' in row.keys(
+                ) else None,
                 npub=row['npub'] if 'npub' in row.keys() else None,
-                encrypted_master_key=row['encrypted_master_key'] if 'encrypted_master_key' in row.keys() else None,
                 pubkey=row['pubkey'] if 'pubkey' in row.keys() else None,
-                auth_type=row['auth_type'] if 'auth_type' in row.keys() else 'local',
-                default_currency=row['default_currency'] if 'default_currency' in row.keys() else 'EUR'
+                auth_type=row['auth_type'] if 'auth_type' in row.keys(
+                ) else 'local',
+                default_currency=row['default_currency'] if 'default_currency' in row.keys(
+                ) and row['default_currency'] else 'EUR'
             )
 
-        # Gestione tramite indici numerici (se la riga è una tupla standard)
+        # Se la riga è una tupla pura ordinata da SELECT id, username, email, password_hash, npub, encrypted_master_key, pubkey, auth_type, default_currency
         return User(
             id=row[0],
             username=row[1],

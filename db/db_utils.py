@@ -237,12 +237,12 @@ def inizializza_db():
     # NUOVA SEZIONE: PARACADUTE MULTI-VALUTA (EUR, USD, CHF, ecc.)
     # ------------------------------------------------------
 
-    # 1. Preferenza valuta base per gli utenti
-    try:
-        cursor.execute(
-            "ALTER TABLE users ADD COLUMN base_currency TEXT DEFAULT 'EUR'")
-    except sqlite3.OperationalError:
-        pass
+    # 1. Preferenza valuta base per gli utenti (Usiamo 'default_currency' già presente in colonne_users)
+    # try:
+    #     cursor.execute(
+    #         "ALTER TABLE users ADD COLUMN base_currency TEXT DEFAULT 'EUR'")
+    # except sqlite3.OperationalError:
+    #     pass
 
     # 2. Supporto valuta originaria nelle transazioni classiche
     colonne_multivaluta_transazioni = [
@@ -381,71 +381,93 @@ def leggi_transazioni_filtrate_onchain(filtro_data, user_id):
 # --- SPOSTA QUESTE NEI TUOI UTILS ---
 
 def get_transazioni_con_saldo(user_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # Leggiamo TUTTE le transazioni EUR (Banca, Contanti, Investimenti, Pensione)
-    # Assicurati che la query non escluda i nuovi conti!
+    # Aggiunto id nelle colonne selezionate!
     cursor.execute("""
-        SELECT * FROM transazioni 
-        WHERE user_id = ? 
-        AND UPPER(conto) IN ('BANCA', 'CONTANTI', 'INVESTIMENTI', 'PENSIONE')
-        ORDER BY data DESC, id DESC
+        SELECT id, data, descrizione, categoria, sottocategoria, importo, 
+               conto, controvalore_btc, valore_btc_eur, note
+        FROM transazioni
+        WHERE user_id = ?
     """, (user_id,))
 
     rows = cursor.fetchall()
-    transazioni = [dict(row) for row in rows]
+    conn.close()
 
-    # Inizializziamo i saldi
     banca = 0.0
     contanti = 0.0
     saldo_investimenti = 0.0
     saldo_pensione = 0.0
     saldo_btc_da_eur = 0.0
 
-    for t in transazioni:
-        importo = t['importo'] or 0.0
-        conto = t['conto'].upper() if t['conto'] else ""
+    for r in rows:
+        c = (r['conto'] or '').strip().upper()
+        cat = (r['categoria'] or '').strip().lower()
+        subcat = (r['sottocategoria'] or '').strip().lower()
+        imp = float(r['importo'] or 0.0)
 
-        # Sommiamo nei cassetti giusti
-        if conto == 'BANCA':
-            banca += importo
-        elif conto == 'CONTANTI':
-            contanti += importo
-        elif conto == 'INVESTIMENTI':
-            saldo_investimenti += importo
-        elif conto == 'PENSIONE':
-            saldo_pensione += importo
+        # 1. Gestione BANCA
+        if c == 'BANCA':
+            if cat == 'entrate':
+                banca += abs(imp)
+            else:
+                banca -= abs(imp)
 
-        if t.get('controvalore_btc'):
-            saldo_btc_da_eur += float(t['controvalore_btc'])
+        # 2. Gestione CONTANTI
+        elif c == 'CONTANTI':
+            if cat == 'entrate' or 'trasferimento' in subcat or 'giroconto' in subcat or 'prelievo' in subcat:
+                contanti += abs(imp)
+            else:
+                contanti -= abs(imp)
 
-    saldo_totale_eur = banca + contanti + \
-        saldo_investimenti + saldo_pensione
+        # 3. Gestione INVESTIMENTI & PENSIONE
+        elif c == 'INVESTIMENTI':
+            saldo_investimenti += abs(imp)
+        elif c == 'PENSIONE':
+            saldo_pensione += abs(imp)
 
-    conn.close()
+        # 4. Controvalore BTC
+        if r['controvalore_btc']:
+            saldo_btc_da_eur += float(r['controvalore_btc'] or 0.0)
 
-    return transazioni, banca, contanti, saldo_investimenti, saldo_pensione, saldo_totale_eur, saldo_btc_da_eur
+    saldo_totale_eur = banca + contanti + saldo_investimenti + saldo_pensione
+
+    return rows, banca, contanti, saldo_investimenti, saldo_pensione, saldo_totale_eur, saldo_btc_da_eur
 
 
 def get_transazioni_con_saldo_lightning(user_id):
-    """Recupera transazioni Lightning e calcola i saldi."""
+    """Recupera transazioni Lightning e calcola i saldi reali rispettando i segni del DB."""
     transazioni = leggi_transazioni_da_db_lightning(user_id)
 
-    saldo_satoshi = sum(float(t['satoshi'])
-                        for t in transazioni if t.get('satoshi'))
-    saldo_eur = sum(float(t['controvalore_eur'])
-                    for t in transazioni if t.get('controvalore_eur'))
+    saldo_satoshi = 0
+    saldo_eur = 0.0
+
+    for t in transazioni:
+        # Leggiamo il valore così com'è (supportando sia positivi che negativi registrati)
+        sats = int(t.get('satoshi', 0) or 0)
+        eur = float(t.get('controvalore_eur', 0) or 0)
+
+        saldo_satoshi += sats
+        saldo_eur += eur
 
     return transazioni, saldo_satoshi, saldo_eur
 
 
 def get_transazioni_con_saldo_onchain(user_id):
-    """Recupera transazioni On-chain e calcola il saldo BTC."""
+    """Recupera transazioni On-chain e calcola il saldo reale BTC rispettando i segni del DB e le fee."""
     transazioni = leggi_transazioni_da_db_onchain(user_id)
-    saldo_btc = sum(float(t['importo_btc'])
-                    for t in transazioni if t.get('importo_btc'))
+
+    saldo_btc = 0.0
+
+    for t in transazioni:
+        importo = float(t.get('importo_btc', 0) or 0)
+        fee = float(t.get('fee', 0) or 0)
+
+        saldo_btc += importo
+        # Le fee On-Chain sono sempre un costo in uscita
+        saldo_btc -= abs(fee)
 
     return transazioni, saldo_btc
 
@@ -611,7 +633,7 @@ def leggi_transazioni_da_db(user_id):
             controvalore_btc, valore_btc_eur, conto, note, valuta, tasso_cambio, importo_valuta_base
         FROM transazioni 
         WHERE user_id = ? 
-        ORDER BY data ASC''',
+        ORDER BY data DESC, id DESC''',
         (user_id,)
     )
     righe = cursor.fetchall()
@@ -872,8 +894,8 @@ def aggiorna_valuta_utente_db(user_id, nuova_valuta):
     conn.close()
 
 
-def ripristina_database_completo(user_id, dati_json):
-    """Svuota le tabelle dell'utente e inserisce i dati dal backup gestendo in modo sicuro la pulizia."""
+def ripristino_database_completo(user_id, dati_json):
+    """Svuota le tabelle dell'utente e inserisce i dati dal backup gestendo in modo sicuro la pulizia e la multivaluta."""
     import sqlite3
     from flask import current_app
 
@@ -885,6 +907,18 @@ def ripristina_database_completo(user_id, dati_json):
     cursor = conn.cursor()
 
     try:
+        # 0. RIPRISTINO / AGGIORNAMENTO VALUTA UTENTE (Se presente nei metadata)
+        metadata = dati_json.get('metadata', {})
+        valuta_backup = metadata.get('default_currency')
+        if valuta_backup:
+            try:
+                cursor.execute(
+                    "UPDATE user SET default_currency = ? WHERE id = ?", (valuta_backup, user_id))
+                print(
+                    f"DEBUG RIPRISTINO: Impostata valuta utente a {valuta_backup}")
+            except Exception as e:
+                print(f"⚠️ Nota: Impossibile aggiornare la valuta utente: {e}")
+
         # 1. PULIZIA TOTALE TABELLE UTENTE (Con protezione se manca la colonna user_id)
         tabelle_utente = [
             "transazioni", "transazioni_onchain", "transazioni_lightning",
@@ -895,7 +929,6 @@ def ripristina_database_completo(user_id, dati_json):
 
         for tab in tabelle_utente:
             try:
-                # Prova a cancellare filtrando per utente
                 cursor.execute(
                     f"DELETE FROM {tab} WHERE user_id = ?", (user_id,))
             except sqlite3.OperationalError as e:
@@ -911,13 +944,14 @@ def ripristina_database_completo(user_id, dati_json):
             print("DEBUG RIPRISTINO: Svuoto tabella globale prezzi_btc...")
             cursor.execute("DELETE FROM prezzi_btc")
 
-        # 2. IMPORT TRANSAZIONI EURO / MULTI-VALUTA
+        # 2. IMPORT TRANSAZIONI EURO / MULTI-VALUTA (Con fallback di sicurezza)
         transazioni_euro = dati_json.get(
             'euro') or dati_json.get('transazioni') or []
         print(
-            f"DEBUG RIPRISTINO: Inserimento {len(transazioni_euro)} transazioni")
+            f"DEBUG RIPRISTINO: Inserimento {len(transazioni_euro)} transazioni fiat")
         for t in transazioni_euro:
             imp_orig = t['importo']
+            # Se il vecchio backup non ha il campo valuta, mettiamo EUR di default
             valuta = t.get('valuta', 'EUR')
             imp_base = t.get('importo_valuta_base', imp_orig)
             tasso = t.get('tasso_cambio', 1.0)
@@ -997,9 +1031,7 @@ def ripristina_database_completo(user_id, dati_json):
                             'capitale_investito', 0), a.get('valore_attuale', 0), a.get('data_aggiornamento')
                     ))
 
-        # =====================================================================
-        # 6. IMPORT ASSETS HISTORY (Rilevazioni Storiche) - CORRETTO CON ASSET_ID
-        # =====================================================================
+        # 6. IMPORT ASSETS HISTORY (Rilevazioni Storiche)
         assets_hist = dati_json.get('assets_history', [])
         print(
             f"DEBUG RIPRISTINO: Inserimento {len(assets_hist)} rilevazioni storiche")
@@ -1009,14 +1041,10 @@ def ripristina_database_completo(user_id, dati_json):
             has_user_id = "user_id" in colonne_hist
 
             for h in assets_hist:
-                # 1. Recuperiamo i dati fondamentali dal backup
                 valore_rilevato = h.get(
                     'valore_rilevato') or h.get('valore', 0)
                 data_rilev = h.get('data_rilevazione') or h.get('data')
 
-                # 2. STRATEGIA DI RECUPERO DEL COLLEGAMENTO:
-                # Se nel backup abbiamo l'asset_id originale, lo usiamo.
-                # Altrimenti, se abbiamo solo il nome, cerchiamo il nuovo ID dal DB.
                 id_asset_corretto = h.get('asset_id')
 
                 if not id_asset_corretto:
@@ -1031,7 +1059,6 @@ def ripristina_database_completo(user_id, dati_json):
                         if res:
                             id_asset_corretto = res[0]
 
-                # 3. Se abbiamo trovato l'ID dell'asset, inseriamo lo storico!
                 if id_asset_corretto:
                     if has_user_id:
                         cursor.execute('''
@@ -1043,9 +1070,6 @@ def ripristina_database_completo(user_id, dati_json):
                             INSERT INTO assets_history (asset_id, valore_rilevato, data_rilevazione) 
                             VALUES (?, ?, ?)
                         ''', (id_asset_corretto, valore_rilevato, data_rilev))
-                else:
-                    print(
-                        f"⚠️ Salto riga storico: Impossibile associare la rilevazione del valore {valore_rilevato}")
 
         # 7. IMPORT MAPPING CATEGORIE
         mapping_cat = dati_json.get('mapping_categorie', [])
@@ -1128,9 +1152,7 @@ def pulisci_mese(mese_input):
 
 def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
     import sqlite3
-    import datetime
 
-    # Assicurati che DB_PATH sia definita o usa il tuo percorso
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -1148,7 +1170,6 @@ def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
     filtro_tempo = ""
     parametri = [user_id]
 
-    # Stessa identica logica vincente delle entrate
     if mese and '-' in str(mese):
         filtro_tempo = "AND data LIKE ?"
         parametri.append(f"{mese.strip()}%")
@@ -1159,11 +1180,13 @@ def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
         filtro_tempo = "AND data LIKE ?"
         parametri.append(f"{str(anno).strip()}%")
 
+    # Escludiamo Entrate, la macro-categoria Patrimonio & Finanze, e sottocategorie contenenti Giroconto
     query = f"""
-        SELECT categoria, ABS(SUM({colonna_valore})) as totale 
+        SELECT categoria, SUM(ABS({colonna_valore})) as totale 
         FROM {tabella} 
         WHERE user_id=? 
-        AND categoria != 'Entrate' 
+        AND LOWER(TRIM(categoria)) NOT IN ('entrate', 'patrimonio & finanze', 'patrimonio e finanze')
+        AND LOWER(sottocategoria) NOT LIKE '%giroconto%'
         {filtro_tempo}
         GROUP BY categoria
         ORDER BY totale DESC
@@ -1182,7 +1205,6 @@ def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
 
 def get_entrate_per_sottocategoria(user_id, tipo_conto, mese=None, anno=None):
     import sqlite3
-    import datetime
 
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -1201,7 +1223,6 @@ def get_entrate_per_sottocategoria(user_id, tipo_conto, mese=None, anno=None):
     filtro_tempo = ""
     parametri = [user_id]
 
-    # Applichiamo la stessa logica funzionante del bilancio periodico
     if mese and '-' in str(mese):
         filtro_tempo = "AND data LIKE ?"
         parametri.append(f"{mese.strip()}%")
@@ -1213,10 +1234,10 @@ def get_entrate_per_sottocategoria(user_id, tipo_conto, mese=None, anno=None):
         parametri.append(f"{str(anno).strip()}%")
 
     query = f"""
-        SELECT sottocategoria, ABS(SUM({colonna_valore})) as totale 
+        SELECT sottocategoria, SUM(ABS({colonna_valore})) as totale 
         FROM {tabella} 
         WHERE user_id=? 
-        AND categoria = 'Entrate' 
+        AND LOWER(TRIM(categoria)) = 'entrate' 
         {filtro_tempo}
         GROUP BY sottocategoria
         ORDER BY totale DESC
@@ -1235,7 +1256,6 @@ def get_entrate_per_sottocategoria(user_id, tipo_conto, mese=None, anno=None):
 
 def get_bilancio_periodo(user_id, tipo_conto, mese=None, anno=None):
     import sqlite3
-    import datetime
 
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -1251,30 +1271,51 @@ def get_bilancio_periodo(user_id, tipo_conto, mese=None, anno=None):
     filtro_tempo = ""
     parametri = [user_id]
 
-    # Se l'HTML ti manda il mese (che arriva come "2026-04")
     if mese and '-' in str(mese):
         filtro_tempo = "AND data LIKE ?"
         parametri.append(f"{mese.strip()}%")
-    # Se per qualche motivo arriva solo il numero del mese (es. "04") e c'è l'anno separato
     elif mese and anno:
         filtro_tempo = "AND data LIKE ?"
         parametri.append(f"{str(anno).strip()}-{str(mese).strip().zfill(2)}%")
-    # Se viene filtrato solo l'anno intero (es. "2026")
     elif anno:
         filtro_tempo = "AND data LIKE ?"
         parametri.append(f"{str(anno).strip()}%")
 
-    query_entrate = f"SELECT SUM({colonna}) FROM {tabella} WHERE user_id=? AND categoria LIKE 'Entrate' {filtro_tempo}"
+    # Query diretta sulle entrate
+    query_entrate = f"""
+        SELECT COALESCE(SUM(ABS({colonna})), 0.0) 
+        FROM {tabella} 
+        WHERE user_id=? AND LOWER(TRIM(categoria)) = 'entrate' {filtro_tempo}
+    """
     cursor.execute(query_entrate, parametri)
-    totale_entrate = cursor.fetchone()[0] or 0
+    totale_entrate = cursor.fetchone()[0]
 
-    query_spese = f"SELECT SUM({colonna}) FROM {tabella} WHERE user_id=? AND categoria NOT LIKE 'Entrate' {filtro_tempo}"
+    # Query diretta sulle uscite (escludendo Entrate, Patrimonio & Finanze e Giroconti)
+    query_spese = f"""
+        SELECT COALESCE(SUM(ABS({colonna})), 0.0) 
+        FROM {tabella} 
+        WHERE user_id=? 
+        AND LOWER(TRIM(categoria)) NOT IN ('entrate', 'patrimonio & finanze', 'patrimonio e finanze')
+        AND LOWER(sottocategoria) NOT LIKE '%giroconto%'
+        {filtro_tempo}
+    """
     cursor.execute(query_spese, parametri)
-    totale_spese = cursor.fetchone()[0] or 0
+    totale_spese = cursor.fetchone()[0]
+
+    # Gestione delle Fee On-chain
+    if tipo_conto == 'ONCHAIN':
+        query_fee = f"""
+            SELECT COALESCE(SUM(ABS(fee)), 0.0) 
+            FROM transazioni_onchain 
+            WHERE user_id=? {filtro_tempo}
+        """
+        cursor.execute(query_fee, parametri)
+        totale_fee = cursor.fetchone()[0]
+        totale_spese += totale_fee
 
     conn.close()
 
-    return abs(float(totale_entrate)), abs(float(totale_spese))
+    return float(totale_entrate), float(totale_spese)
 
 
 def registra_transazione_conto(user_id, data, descrizione, categoria, sottocategoria, importo, conto,

@@ -74,6 +74,17 @@ def genera_stringa_backup_json(user_id=None):
     cursor = conn.cursor()
 
     try:
+        # Recuperiamo la valuta predefinita dell'utente dalla tabella utenti (se esiste)
+        valuta_utente_pref = "EUR"
+        try:
+            cursor.execute(
+                "SELECT default_currency FROM user WHERE id = ?", (user_id,))
+            res_user = cursor.fetchone()
+            if res_user and "default_currency" in res_user.keys() and res_user["default_currency"]:
+                valuta_utente_pref = res_user["default_currency"]
+        except Exception:
+            pass
+
         # Eseguiamo query dirette per essere sicuri al 100% di dove viene messo il "user_id"
         euro_data = cursor.execute(
             "SELECT * FROM transazioni WHERE user_id = ?", (user_id,)).fetchall()
@@ -106,7 +117,8 @@ def genera_stringa_backup_json(user_id=None):
             "metadata": {
                 "user_id": user_id,
                 "data_backup": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "versione_beesy": "1.2"
+                "versione_beesy": "1.3",
+                "default_currency": valuta_utente_pref  # <--- Salvata nel backup!
             },
             "euro": [dict(r) for r in euro_data],
             "onchain": [dict(r) for r in onchain_data],

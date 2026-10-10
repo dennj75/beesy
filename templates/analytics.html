@@ -345,7 +345,7 @@
   <div id="i18n-drilldown"
     data-title-prefix="{{ _('Dettaglio Categoria:') }}"
     data-loading="{{ _('Caricamento in corso...') }}"
-    data-fiat-title="{{ _('💶 Transazioni Fiat (EUR)') }}"
+    data-fiat-title="{{ _('Transazioni Fiat') }}"
     data-ln-title="{{ _('⚡ Transazioni Lightning Network') }}"
     data-btc-title="{{ _('🔗 Transazioni Bitcoin On-Chain') }}"
     data-col-date="{{ _('Data') }}"
@@ -570,19 +570,29 @@
                             maintainAspectRatio: false,
                             plugins: {
                                 legend: { display: false },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            let index = context.dataIndex;
-                                            let valBtc = datiQuantitaBtc[index];
-                                            if (tipoAmbiente === 'LIGHTNING') {
+                                  tooltip: {
+                                      callbacks: {
+                                          label: function(context) {
+                                              let index = context.dataIndex;
+                                              let valBtc = datiQuantitaBtc[index];
+                                              
+                                              // Recuperiamo la valuta e il simbolo direttamente da Jinja o fallback
+                                              let valutaUtente = "{{ current_user.default_currency if current_user.default_currency else 'EUR' }}";
+
+                                              // Formattazione nativa con valuta e simbolo dinamico
+                                              let valoreValuta = new Intl.NumberFormat(undefined, {
+                                                style: 'currency',
+                                                currency: valutaUtente,
+                                              }).format(datiControvaloreEur[index]);
+
+                                              if (tipoAmbiente === 'LIGHTNING') {
                                                 let sats = Math.round(valBtc * 100000000);
-                                                return ` Valore: ${datiControvaloreEur[index]} € (${sats.toLocaleString()} sats)`;
+                                                return `Valore: ${valoreValuta} (${sats.toLocaleString()} sats)`;
+                                              }
+                                              return `Valore: ${valoreValuta} (${valBtc.toFixed(8)} BTC)`;
                                             }
-                                            return ` Valore: ${datiControvaloreEur[index]} € (${valBtc.toFixed(8)} BTC)`;
+                                          }
                                         }
-                                    }
-                                }
                             },
                             scales: {
                                 x: { grid: { color: '#2a2a2a' }, ticks: { color: '#aaa' } },
@@ -654,30 +664,43 @@
 
                 let htmlChunks = [];
 
-                // --- 1. TABELLA EURO ---
+                // --- 1. TABELLA EURO (MULTIVALUTA) ---
                 if (data.euro && data.euro.length > 0) {
-                    htmlChunks.push(`<h5 class="mt-2">${t.fiatTitle || '💶 Transazioni Fiat (EUR)'}</h5>`);
-                    htmlChunks.push(`
-                    <div class="table-responsive mb-4">
-                        <table class="table table-dark table-striped align-middle mb-0" style="width:100%;">
-                            <thead>
-                                <tr>
-                                    <th style="width: 30%;">${t.colDate || 'Data'}</th>
-                                    <th style="width: 45%;">${t.colDesc || 'Descrizione'}</th>
-                                    <th style="width: 25%;" class="text-end">${t.colAmount || 'Importo'}</th>
-                                </tr>
-                            </thead>
-                            <tbody>`);
-                    data.euro.forEach(tr => {
-                        htmlChunks.push(`<tr>
-                            <td class="small">${escapeHtml(tr.data)}</td>
-                            <td class="small text-break">${escapeHtml(tr.descrizione)}</td>
-                            <td class="text-end fw-bold text-success small">€ ${parseFloat(tr.importo).toFixed(2)}</td>
-                        </tr>`);
-                    });
-                    htmlChunks.push('</tbody></table></div>');
-                }
+                // Recuperiamo simbolo e codice valuta inviati dal backend (con fallback sicuri)
+                const simbolo = data.simbolo_valuta || '€';
+                const valuta = data.valuta_utente || 'EUR';
 
+                // Costruisce il titolo una volta sola con icona, testo tradotto e codice valuta
+                const testoBase = t.fiatTitle || 'Transazioni Fiat';
+                const titoloFiat = `💶 ${testoBase} (${valuta})`;
+
+                htmlChunks.push(`<h5 class="mt-2">${escapeHtml(titoloFiat)}</h5>`);
+                htmlChunks.push(`
+                <div class="table-responsive mb-4">
+                  <table class="table table-dark table-striped align-middle mb-0" style="width:100%;">
+                    <thead>
+                      <tr>
+                        <th style="width: 30%;">${t.colDate || 'Data'}</th>
+                        <th style="width: 45%;">${t.colDesc || 'Descrizione'}</th>
+                        <th style="width: 25%;" class="text-end">${t.colAmount || 'Importo'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>`);
+
+                data.euro.forEach(tr => {
+                  const importoVal = parseFloat(tr.importo);
+                  // Mantiene il colore verde per le entrate e rosso/standard per i valori negativi
+                  const classeColore = importoVal >= 0 ? 'text-success' : 'text-danger';
+
+                  htmlChunks.push(`<tr>
+                    <td class="small">${escapeHtml(tr.data)}</td>
+                    <td class="small text-break">${escapeHtml(tr.descrizione)}</td>
+                    <td class="text-end fw-bold ${classeColore} small">${simbolo} ${importoVal.toFixed(2)}</td>
+                  </tr>`);
+                });
+                htmlChunks.push('</tbody></table></div>');
+               }
+                    
                 // --- 2. TABELLA LIGHTNING ---
                 if (data.lightning && data.lightning.length > 0) {
                     htmlChunks.push(`<h5 class="mt-2">${t.lnTitle || '⚡ Transazioni Lightning Network'}</h5>`);

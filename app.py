@@ -18,7 +18,7 @@ from db.db_utils import (
     elimina_transazione_da_db_lightning, get_transazioni_con_saldo_lightning,
     leggi_transazioni_da_db_onchain, salva_su_db_onchain, leggi_transazioni_filtrate_onchain,
     elimina_transazione_da_db_onchain, modifica_transazione_db_onchain, get_transazioni_con_saldo_onchain,
-    ripristina_database_completo, get_transazioni_con_saldo_onchain,
+    ripristino_database_completo, get_transazioni_con_saldo_onchain,
     get_spese_per_categoria_filtrate, get_entrate_per_sottocategoria, get_bilancio_periodo,
     pulisci_mese, registra_transazione_conto, get_transaction_drill_down
 
@@ -378,7 +378,7 @@ def home():
     if valuta_utente != 'EUR':
         tasso_fiat = get_exchange_rate('EUR', valuta_utente) or 1.14
 
-    # 2. Recupero dati dai vari wallet (usando la db_utils corretta)
+    # 2. Recupero dati dai vari wallet
     dati, banca_eur, contanti_eur, s_inv_eur, s_pen_eur, saldo_totale_eur_base, btc_da_eur = get_transazioni_con_saldo(
         current_user.id)
     dati_lightning, saldo_totale_satoshi, saldo_eur_lightning_base = get_transazioni_con_saldo_lightning(
@@ -398,7 +398,7 @@ def home():
     # Prezzo BTC convertito nella valuta utente (es. USD o EUR)
     prezzo_attuale_btc_utente = prezzo_attuale_btc_eur * tasso_fiat
 
-    # 4. Conversioni FIAT nella valuta dell'utente
+    # 4. Conversioni FIAT nella valuta dell'utente (applicando il tasso di cambio)
     banca = banca_eur * tasso_fiat
     contanti = contanti_eur * tasso_fiat
 
@@ -410,7 +410,7 @@ def home():
     liquidita_totale = banca + contanti
     patrimonio_investito = s_inv + s_pen
 
-    # Saldo totale Fiat reale (Liquidità + Investimenti)
+    # Saldo totale Fiat reale (Liquidità + Investimenti) nella valuta dell'utente
     saldo_totale_eur = liquidita_totale + patrimonio_investito
 
     # Wallet Crypto - Conversione Storica e Live
@@ -464,6 +464,10 @@ def home():
     percentuale_lightning = (
         rendimento_lightning / saldo_eur_lightning * 100) if saldo_eur_lightning > 0 else 0.0
 
+    # Totale combinato Bitcoin
+    totale_btc_cumulativo = saldo_totale_btc + \
+        (saldo_totale_satoshi / 100000000.0)
+
     return render_template('index.html',
                            banca=banca,
                            contanti=contanti,
@@ -488,7 +492,8 @@ def home():
                            rendimento_lightning=rendimento_lightning,
                            percentuale_lightning=percentuale_lightning,
                            simbolo_valuta=simbolo_valuta,
-                           beesy_env=os.environ.get('BEESY_ENV', 'production')
+                           beesy_env=os.environ.get('BEESY_ENV', 'production'),
+                           totale_btc_cumulativo=totale_btc_cumulativo
                            )
 
 
@@ -497,19 +502,36 @@ def home():
 def transazioni():
     user_id = current_user.id
 
-    # Recuperiamo TUTTO in un colpo solo dalla funzione che abbiamo appena sistemato
-    dati, banca, contanti, invest, pen, saldo_totale_eur, btc_eur = get_transazioni_con_saldo(
+    # 1. Recupero valuta e tasso di cambio dell'utente
+    valuta_utente = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
+    tasso_fiat = 1.0
+    if valuta_utente != 'EUR':
+        tasso_fiat = get_exchange_rate('EUR', valuta_utente) or 1.14
+
+    # 2. Recuperiamo i dati dal DB
+    dati, banca_base, contanti_base, invest_base, pen_base, saldo_totale_eur_base, btc_eur = get_transazioni_con_saldo(
         user_id)
+
+    # 3. Applichiamo la conversione con il tasso fiat dell'utente
+    banca = banca_base * tasso_fiat
+    contanti = contanti_base * tasso_fiat
+    invest = abs(invest_base) * tasso_fiat
+    pen = abs(pen_base) * tasso_fiat
+    saldo_totale_eur = banca + contanti + invest + pen
+
+    # Ordiniamo la lista 'dati' per data decrescente e id decrescente
+    dati_ordinati = sorted(dati, key=lambda x: (
+        x['data'], x['id']), reverse=True)
 
     return render_template(
         'transazioni.html',
-        transazioni=dati,
+        transazioni=dati_ordinati,
         banca=banca,
         contanti=contanti,
         saldo_investimenti=invest,
         saldo_pensione=pen,
         saldo_totale_eur=saldo_totale_eur,
-        saldo_btc_da_eur=btc_eur  # Non dimentichiamoci i BTC!
+        saldo_btc_da_eur=btc_eur
     )
 
 
@@ -877,7 +899,7 @@ def ripristino_protetto():
                     data = json.loads(decrypted_json)
 
             # 3. Scrittura nel Database
-            successo = ripristina_database_completo(current_user.id, data)
+            successo = ripristino_database_completo(current_user.id, data)
 
             if successo:
                 print("✅ RIPRISTINO: Database aggiornato con successo!")
@@ -1205,9 +1227,44 @@ def scarica_csv_per_mese_lightning():
 @app.route('/transazioni_onchain')
 @login_required
 def transazioni_onchain():
+    valuta_utente = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
+
+    # Gestione del simbolo valuta
+    info_valuta = VALUTE_SUPPORTATE.get(valuta_utente, '$')
+    simbolo_valuta = info_valuta.get('simbolo', '$') if isinstance(
+        info_valuta, dict) else info_valuta
+
     dati_onchain, saldo_totale_btc = get_transazioni_con_saldo_onchain(
         current_user.id)
-    return render_template("transazioni_onchain.html", transazioni_onchain=dati_onchain, saldo_totale_btc=saldo_totale_btc)
+
+    # 1. Recupera l'ultimo prezzo BTC dal database
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT prezzo_eur FROM prezzi_btc ORDER BY data DESC LIMIT 1")
+    prezzo_record = cursor.fetchone()
+    conn.close()
+
+    prezzo_btc_eur_live = prezzo_record[0] if prezzo_record else 0
+
+    # 2. Converte il prezzo BTC nella valuta dell'utente
+    if valuta_utente == 'EUR':
+        prezzo_btc_live = prezzo_btc_eur_live
+    else:
+        tasso_fiat = get_exchange_rate('EUR', valuta_utente) or 1.14
+        prezzo_btc_live = prezzo_btc_eur_live * float(tasso_fiat)
+
+    # 3. Controvalore totale On-chain
+    totale_controvalore = saldo_totale_btc * prezzo_btc_live
+
+    return render_template(
+        "transazioni_onchain.html",
+        transazioni_onchain=dati_onchain,
+        saldo_totale_btc=saldo_totale_btc,
+        totale_controvalore=totale_controvalore,
+        simbolo_valuta=simbolo_valuta,
+        valuta_utente=valuta_utente
+    )
 
 
 @app.route('/nuova_transazione_onchain', methods=['GET', 'POST'])
@@ -2123,7 +2180,7 @@ def test_nostr_ripristino_protetto():
 
         try:
             data = json.loads(raw_content)
-            if ripristina_database_completo(current_user.id, data):
+            if ripristino_database_completo(current_user.id, data):
                 session.pop('temp_backup_data', None)
                 print("✅ RIPRISTINO MOBILE COMPLETATO!")
                 flash("🔥 Ripristino con Amber riuscito!", "success")
@@ -2159,13 +2216,26 @@ def api_drill_down():
     categoria = request.args.get('categoria')
     anno = request.args.get('anno')
     mese = request.args.get('mese')
-    # Prendiamo anche la direzione: 'spese' o 'entrate'
     tipo_movimento = request.args.get('tipo_movimento')
 
+    valuta_pref = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
+    simbolo_pref = currency_symbol(valuta_pref)
+
     if not categoria:
-        return jsonify({'euro': [], 'lightning': [], 'onchain': []})
+        return jsonify({
+            'euro': [],
+            'lightning': [],
+            'onchain': [],
+            'valuta_utente': valuta_pref,
+            'simbolo_valuta': simbolo_pref
+        })
 
     categoria = categoria.strip()
+
+    # Calcoliamo il tasso di cambio se la valuta è diversa da EUR
+    tasso_cambio = 1.0
+    if valuta_pref != 'EUR':
+        tasso_cambio = get_exchange_rate('EUR', valuta_pref) or 1.0
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -2179,11 +2249,6 @@ def api_drill_down():
         params_base = [current_user.id, categoria, categoria]
 
     # --- FILTRO SEGNO (Entrate > 0 / Spese < 0) ---
-    filtro_segno_fiat = ""
-    filtro_segno_ln = ""
-    filtro_segno_btc = ""
-
-    # --- DEFINIZIONE FILTRI SEGNO SPECIFICI PER OGNI TABELLA ---
     if tipo_movimento == 'entrate':
         filtro_segno_fiat = "AND importo > 0"
         filtro_segno_ln = "AND satoshi > 0"
@@ -2197,7 +2262,7 @@ def api_drill_down():
         filtro_segno_ln = ""
         filtro_segno_btc = ""
 
-    # --- 1. TRANSAZIONI FIAT (EURO) ---
+    # --- 1. TRANSAZIONI FIAT (MULTIVALUTA CON CONVERSIONE) ---
     where_fiat = ["user_id = ?", condizione_cat]
     params_fiat = list(params_base)
 
@@ -2209,7 +2274,7 @@ def api_drill_down():
         params_fiat.append(anno)
 
     query_fiat = f"""
-        SELECT data, descrizione, importo 
+        SELECT data, descrizione, importo, valuta
         FROM transazioni 
         WHERE {" AND ".join(where_fiat)} {filtro_segno_fiat}
         ORDER BY data DESC
@@ -2217,10 +2282,32 @@ def api_drill_down():
     cursor.execute(query_fiat, tuple(params_fiat))
     euro_rows = cursor.fetchall()
 
+    # Convertiamo gli importi al volo in base alla valuta scelta dall'utente
+    lista_euro_convertite = []
+    for r in euro_rows:
+        importo_originale = float(r['importo'])
+        valuta_origine = r['valuta'] if 'valuta' in r.keys(
+        ) and r['valuta'] else 'EUR'
+
+        # Se la transazione è in EUR e l'utente vuole un'altra valuta (es. USD)
+        if valuta_origine == 'EUR' and valuta_pref != 'EUR':
+            importo_convertito = importo_originale * tasso_cambio
+        elif valuta_origine != 'EUR' and valuta_pref == 'EUR':
+            # Se la transazione è in altra valuta e l'utente vuole EUR, applichiamo il tasso inverso
+            tasso_inv = get_exchange_rate(valuta_origine, 'EUR') or 1.0
+            importo_convertito = importo_originale * tasso_inv
+        else:
+            importo_convertito = importo_originale
+
+        lista_euro_convertite.append({
+            'data': str(r['data']),
+            'descrizione': r['descrizione'],
+            'importo': round(importo_convertito, 2)
+        })
+
     # --- 2. TRANSAZIONI LIGHTNING ---
     where_ln = ["user_id = ?", condizione_cat]
     params_ln = list(params_base)
-
     if mese:
         where_ln.append("SUBSTR(data, 1, 7) = ?")
         params_ln.append(mese)
@@ -2240,7 +2327,6 @@ def api_drill_down():
     # --- 3. TRANSAZIONI BITCOIN ON-CHAIN ---
     where_btc = ["user_id = ?", condizione_cat]
     params_btc = list(params_base)
-
     if mese:
         where_btc.append("SUBSTR(data, 1, 7) = ?")
         params_btc.append(mese)
@@ -2260,9 +2346,11 @@ def api_drill_down():
     conn.close()
 
     return jsonify({
-        'euro': [{'data': str(r['data']), 'descrizione': r['descrizione'], 'importo': r['importo']} for r in euro_rows],
+        'euro': lista_euro_convertite,
         'lightning': [{'data': str(r['data']), 'descrizione': r['descrizione'], 'satoshi': r['satoshi']} for r in ln_rows],
-        'onchain': [{'data': str(r['data']), 'descrizione': r['descrizione'], 'importo_btc': r['importo_btc']} for r in btc_rows]
+        'onchain': [{'data': str(r['data']), 'descrizione': r['descrizione'], 'importo_btc': r['importo_btc']} for r in btc_rows],
+        'valuta_utente': valuta_pref,
+        'simbolo_valuta': simbolo_pref
     })
 
 

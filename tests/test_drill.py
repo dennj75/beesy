@@ -33,7 +33,8 @@ def test_drill_down_avanzato(categoria_selezionata, anno=None, mese=None):
         if not euro_trans:
             print("  Nessuna transazione trovata in questa categoria.")
         for t in euro_trans:
-            print(f"  📅 {t[0]} | 📝 {t[1]} | 💰 {t[2]} €")
+            print(
+                f"  📅 {t[0]} | 📝 {t[1]} | 💰 {t[2]} {{ current_user.default_currency | currency_symbol }}")
     except sqlite3.OperationalError as e:
         print(f"  ❌ Errore lettura tabella transazioni: {e}")
 

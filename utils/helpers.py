@@ -1,4 +1,5 @@
 import datetime
+import requests
 from db.db_utils import leggi_transazioni_da_db
 
 # Dizionario unico per tutta l'applicazione Beesy
@@ -52,3 +53,26 @@ def formatta_importo(importo, valuta='EUR'):
         return f"{importo:.8f} {simbolo}"
 
     return f"{importo:.2f} {simbolo}"
+
+
+def get_exchange_rate(from_currency, to_currency, date_str=None):
+    """
+    Restituisce il tasso di cambio tra due valute.
+    Esempio: get_exchange_rate('USD', 'EUR') -> 0.92
+    """
+    if not from_currency or not to_currency or from_currency == to_currency:
+        return 1.0
+
+    try:
+        # API gratuita della Banca Centrale Europea (Frankfurter)
+        url = f"https://api.frankfurter.app/latest?from={from_currency}&to={to_currency}"
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return float(data['rates'].get(to_currency, 1.0))
+    except Exception as e:
+        print(
+            f"⚠️ Errore recupero tasso di cambio ({from_currency} -> {to_currency}): {e}")
+
+    # Fallback sicuro se manca la connessione o l'API non risponde
+    return 1.0

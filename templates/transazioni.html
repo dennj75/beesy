@@ -1,8 +1,8 @@
-{% extends "base.html" %} {% block title %}📋 {{ _('Transazioni') }} {{
-current_user.default_currency | currency_symbol }} - ₿eesy{% endblock %} {%
+{% extends "base.html" %} {% block title %}📋 {{ _('Transazioni') }} ({{
+current_user.default_currency | currency_symbol }}) - ₿eesy{% endblock %} {%
 block content %}
 <h1>
-  📋 {{ _('Transazioni %(simbolo)s', simbolo=(current_user.default_currency |
+  📋 {{ _('Transazioni (%(simbolo)s)', simbolo=(current_user.default_currency |
   currency_symbol)) }}
 </h1>
 
@@ -55,8 +55,9 @@ block content %}
 {% with messages = get_flashed_messages(with_categories=true) %} {% if messages
 %}
 <ul>
-  {% for category, message in messages %} {% if 'euro' in category %}
-  <li class="{{ category }}">{{ message }}</li>
+  {% for category, message in messages %} {% if 'euro' in category or 'success'
+  in category or 'danger' in category %}
+  <li class="{{ category }}">{{ message | string }}</li>
   {% endif %} {% endfor %}
 </ul>
 {% endif %} {% endwith %}
@@ -73,8 +74,8 @@ block content %}
         <th>{{ _('Importo') }}</th>
         <th>{{ _('Controvalore BTC') }}</th>
         <th>
-          {{ _('Valore BTC') }} ({{ current_user.default_currency |
-          currency_symbol }})
+          {{ _('Valore BTC (%(simbolo)s)',
+          simbolo=(current_user.default_currency | currency_symbol)) }}
         </th>
         <th>{{ _('Conto') }}</th>
         <th>{{ _('Note') }}</th>

@@ -18,7 +18,14 @@ block content %}
     <h5 class="text-uppercase text-muted small fw-bold mb-3">
       {{ _('Riepilogo Patrimonio Totale (Fiat + ₿itcoin)') }}
     </h5>
-
+    <div class="text-warning fw-bold small">
+          ₿ {{ "%.8f"|format(totale_btc_cumulativo) }} BTC
+        </div>
+        <small class="text-muted">
+          🔗 {{ "%.8f"|format(saldo_totale_btc) }} | ⚡ {{ "{:,}".format(saldo_totale_satoshi|int) }} sats
+        </small>
+        <br/><br/>  
+      </div>
     <div class="row align-items-center text-center text-md-start">
       <div class="col-md-4 border-end border-dark">
         <span class="text-muted">{{ _('Liquidità Spendibile:') }}</span>
@@ -45,13 +52,48 @@ block content %}
         <span class="text-muted">
           {{ _('Net Worth Totale (%(simbolo)s):', simbolo=(current_user.default_currency | currency_symbol)) }}
         </span>
-        <h2 class="fw-bold text-success">
+        <h2 class="fw-bold text-success mb-1">
           {{ "%.2f"|format(net_worth_totale) }} {{ current_user.default_currency | currency_symbol }}
-        </h2>
+        </h2>        
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-8 mx-auto">
+      <div class="card shadow p-3 mb-5 bg-dark text-white rounded">
+        <div class="card-body text-center">
+          <h5 class="card-title mb-4">
+            {{ _('Ripartizione del tuo Capitale') }}
+          </h5>
+
+          <!-- Div contenitore con dimensioni controllate per evitare deformazioni -->
+          <div
+            style="
+              position: relative;
+              margin: auto;
+              height: 320px;
+              width: 100%;
+              max-width: 380px;
+            "
+          >
+            <canvas id="chartPatrimonio"></canvas>
+          </div>
+
+          <p class="text-muted text-center mt-3" style="font-size: 0.8rem">
+            <i class="fas fa-info-circle"></i>
+            {{ _('I controvalori in BTC/SATS sono calcolati') }} {{ _('in base
+            al prezzo attuale di mercato.') }}
+          </p>
+        </div>
       </div>
     </div>
   </div>
 </div>
+<hr class="main-separator" />
 
 <div class="balances-grid">
   <div class="balance-card onchain-card">
@@ -144,43 +186,7 @@ block content %}
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<div class="container mt-4">
-  <div class="row">
-    <div class="col-md-8 mx-auto">
-      <div class="card shadow p-3 mb-5 bg-dark text-white rounded">
-        <div class="card-body text-center">
-          <h5 class="card-title mb-4">
-            {{ _('Ripartizione del tuo Capitale') }}
-          </h5>
-
-          <!-- Div contenitore con dimensioni controllate per evitare deformazioni -->
-          <div
-            style="
-              position: relative;
-              margin: auto;
-              height: 320px;
-              width: 100%;
-              max-width: 380px;
-            "
-          >
-            <canvas id="chartPatrimonio"></canvas>
-          </div>
-
-          <p class="text-muted text-center mt-3" style="font-size: 0.8rem">
-            <i class="fas fa-info-circle"></i>
-            {{ _('I controvalori in BTC/SATS sono calcolati') }} {{ _('in base
-            al prezzo attuale di mercato.') }}
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <hr class="main-separator" />
-<h2>💝 {{ _('Supporta il progetto') }}</h2>
 
 <div class="donation-row">
   <!-- Lightning Network -->
@@ -258,21 +264,25 @@ block content %}
                       callbacks: {
                           label: function(context) {
                               let label = context.label || '';
-                              let valoreEur = new Intl.NumberFormat('it-IT', {
+                              // Valuta dinamica dell'utente (es. 'USD', 'EUR', ecc.)
+                              let valutaUtente = "{{ current_user.default_currency if current_user.default_currency else 'EUR' }}";
+                              
+                              // Formattazione nativa multivaluta con Intl
+                              let valoreValuta = new Intl.NumberFormat(undefined, {
                                 style: 'currency',
-                                currency: 'EUR'
+                                currency: valutaUtente
                               }).format(context.parsed);
 
                               const extraData = {{ extra_data | tojson }};
                               let valoreExtra = extraData[context.dataIndex];
 
                               return [
-                                label + ": " + valoreEur,
+                                label + ": " + valoreValuta,
                                 "   " + valoreExtra
-                            ];
+                              ];
+                            }
                           }
-                      }
-                  }
+                        }
               }
           }
       });
