@@ -164,7 +164,7 @@ if os.environ.get('BEESY_ENV') == 'production':
 
 
 def get_locale():
-    # return 'en'
+    # return 'zh'
     return request.accept_languages.best_match(['it', 'en', 'zh'])
 
 
@@ -1237,7 +1237,7 @@ def transazioni_onchain():
     dati_onchain, saldo_totale_btc = get_transazioni_con_saldo_onchain(
         current_user.id)
 
-    # 1. Recupera l'ultimo prezzo BTC dal database
+    # 1. Recupera l'ultimo prezzo BTC dal database (esattamente come in Lightning)
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -1254,7 +1254,7 @@ def transazioni_onchain():
         tasso_fiat = get_exchange_rate('EUR', valuta_utente) or 1.14
         prezzo_btc_live = prezzo_btc_eur_live * float(tasso_fiat)
 
-    # 3. Controvalore totale On-chain
+    # 3. Controvalore totale On-chain (coerente con la logica Lightning)
     totale_controvalore = saldo_totale_btc * prezzo_btc_live
 
     return render_template(

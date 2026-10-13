@@ -117,7 +117,7 @@ block content %}
     <p class="saldo-principale">
       💰 {{ _('Saldo:') }} {{ "%.8f"|format(saldo_totale_btc) }} BTC
     </p>
-    <p class="saldo-secondario">{{ "%.2f"|format(saldo_eur_onchain) }} {{ current_user.default_currency | currency_symbol }}</p>
+    <p class="saldo-secondario">{{ "%.2f"|format(valore_attuale_onchain) }} {{ current_user.default_currency | currency_symbol }}</p>
   </div>
 
   <div class="balance-card lightning-card">

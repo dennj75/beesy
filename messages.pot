@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-08 22:22+0200\n"
+"POT-Creation-Date: 2026-10-11 15:36+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -349,29 +349,29 @@ msgstr ""
 msgid "On-chain"
 msgstr ""
 
-#: app.py:541
+#: app.py:559
 msgid "Importo non valido"
 msgstr ""
 
-#: app.py:1679
+#: app.py:1732
 #, python-format
 msgid "Statistiche %(simbolo)s"
 msgstr ""
 
-#: app.py:1680
+#: app.py:1733
 msgid "Statistiche Lightning (⚡)"
 msgstr ""
 
-#: app.py:1681
+#: app.py:1734
 msgid "Statistiche On-chain (₿)"
 msgstr ""
 
-#: app.py:1735 templates/analytics.html:2 templates/base.html:218
+#: app.py:1788 templates/analytics.html:2 templates/base.html:218
 #: templates/base.html:230 templates/base.html:241
 msgid "Statistiche"
 msgstr ""
 
-#: app.py:2286
+#: app.py:2370
 msgid "Valuta predefinita aggiornata con successo!"
 msgstr ""
 
@@ -491,7 +491,8 @@ msgstr ""
 msgid "Valore Attuale"
 msgstr ""
 
-#: templates/analytics.html:203 templates/index.html:71 templates/index.html:95
+#: templates/analytics.html:203 templates/index.html:113
+#: templates/index.html:137
 msgid "Rendimento"
 msgstr ""
 
@@ -575,7 +576,7 @@ msgid "Caricamento in corso..."
 msgstr ""
 
 #: templates/analytics.html:348
-msgid "💶 Transazioni Fiat (EUR)"
+msgid "Transazioni Fiat"
 msgstr ""
 
 #: templates/analytics.html:349
@@ -1066,84 +1067,80 @@ msgstr ""
 msgid "Riepilogo Patrimonio Totale (Fiat + ₿itcoin)"
 msgstr ""
 
-#: templates/index.html:24
+#: templates/index.html:31
 msgid "Liquidità Spendibile:"
 msgstr ""
 
-#: templates/index.html:34
+#: templates/index.html:41
 msgid "Risparmi & Futuro:"
 msgstr ""
 
-#: templates/index.html:39
+#: templates/index.html:46
 msgid "Titoli:"
 msgstr ""
 
-#: templates/index.html:40 templates/index.html:122
+#: templates/index.html:47 templates/index.html:164
 msgid "Pensione:"
 msgstr ""
 
-#: templates/index.html:46
+#: templates/index.html:53
 #, python-format
 msgid "Net Worth Totale (%(simbolo)s):"
 msgstr ""
 
-#: templates/index.html:60
-msgid "TRACKER ₿itcoin on-chain🔗"
-msgstr ""
-
-#: templates/index.html:66 templates/index.html:90 templates/index.html:127
-msgid "Analisi"
-msgstr ""
-
-#: templates/index.html:76 templates/index.html:99
-msgid "Saldo:"
-msgstr ""
-
-#: templates/index.html:84
-msgid "TRACKER Lightning Network⚡️"
-msgstr ""
-
-#: templates/index.html:109
-#, python-format
-msgid "TRACKER %(simbolo)s"
-msgstr ""
-
-#: templates/index.html:113
-msgid "Banca:"
-msgstr ""
-
-#: templates/index.html:116
-msgid "Contanti:"
-msgstr ""
-
-#: templates/index.html:119
-msgid "Investimenti:"
-msgstr ""
-
-#: templates/index.html:131
-msgid "Saldo"
-msgstr ""
-
-#: templates/index.html:141
-msgid "Importa CSV Banca"
-msgstr ""
-
-#: templates/index.html:155
+#: templates/index.html:70
 msgid "Ripartizione del tuo Capitale"
 msgstr ""
 
-#: templates/index.html:173
+#: templates/index.html:88
 msgid "I controvalori in BTC/SATS sono calcolati"
 msgstr ""
 
-#: templates/index.html:173
+#: templates/index.html:88
 msgid ""
 "in base\n"
 "            al prezzo attuale di mercato."
 msgstr ""
 
-#: templates/index.html:183 templates/login.html:173
-msgid "Supporta il progetto"
+#: templates/index.html:102
+msgid "TRACKER ₿itcoin on-chain🔗"
+msgstr ""
+
+#: templates/index.html:108 templates/index.html:132 templates/index.html:169
+msgid "Analisi"
+msgstr ""
+
+#: templates/index.html:118 templates/index.html:141
+msgid "Saldo:"
+msgstr ""
+
+#: templates/index.html:126
+msgid "TRACKER Lightning Network⚡️"
+msgstr ""
+
+#: templates/index.html:151
+#, python-format
+msgid "TRACKER %(simbolo)s"
+msgstr ""
+
+#: templates/index.html:155
+msgid "Banca:"
+msgstr ""
+
+#: templates/index.html:158
+msgid "Contanti:"
+msgstr ""
+
+#: templates/index.html:161
+msgid "Investimenti:"
+msgstr ""
+
+#: templates/index.html:173
+msgid "Saldo"
+msgstr ""
+
+#: templates/index.html:183
+msgid "Importa CSV Banca"
 msgstr ""
 
 #: templates/login.html:6
@@ -1167,6 +1164,10 @@ msgid ""
 "Login veloce e senza password tramite il tuo wallet Nostr\n"
 "        compatibile (es. <strong>nos2x</strong>, <strong>Alby</strong>,\n"
 "        <strong>Amber</strong>)."
+msgstr ""
+
+#: templates/login.html:173
+msgid "Supporta il progetto"
 msgstr ""
 
 #: templates/login.html:178

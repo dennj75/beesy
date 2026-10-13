@@ -5,11 +5,10 @@ content %}
     <p class="saldo-totale" style="color: #f39c12; font-weight: bold">
       💰 {{ _('Saldo ₿itcoin On-chain🔗') }}: {{ "%.8f"|format(saldo_totale_btc) }} BTC
     </p>
-    <!-- 🔹 Controvalore totale in EUR (opzionale) -->
-    {% if transazioni_onchain %} {% set totale_eur = transazioni_onchain |
-    map(attribute="controvalore_eur") | sum %}
-    <p class="saldo-totale" style="color: {% if totale_eur >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}; font-weight: bold;">
-      💶 {{ _('Controvalore Totale') }}: {{ "%.2f"|format(totale_eur) }} {{ current_user.default_currency | currency_symbol }}
+    <!-- 🔹 Controvalore Totale Live -->
+    {% if transazioni_onchain %}
+    <p class="saldo-totale" style="color: {% if totale_controvalore >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}; font-weight: bold;">
+      💶 {{ _('Controvalore Totale') }}: {{ "%.2f"|format(totale_controvalore) }} {{ simbolo_valuta }}
     </p>
     {% endif %}
 
