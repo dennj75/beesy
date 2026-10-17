@@ -147,6 +147,7 @@ LISTA_CATEGORIE_UNICHE = [
 app = Flask(__name__)
 app.config['DB_PATH'] = DB_PATH
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'default-key-per-test')
+app.jinja_env.globals['get_exchange_rate'] = get_exchange_rate
 
 app.jinja_env.filters['formatta_importo'] = formatta_importo
 
@@ -371,12 +372,13 @@ def home():
 
     # 1. Recupero valuta e simbolo dell'utente
     valuta_utente = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
-    simbolo_valuta = VALUTE_SUPPORTATE.get(valuta_utente, '€')
+    info_valuta = VALUTE_SUPPORTATE.get(valuta_utente, {'simbolo': '€'})
+    simbolo_valuta = info_valuta.get('simbolo', '€') if isinstance(
+        info_valuta, dict) else info_valuta
 
     # Tasso di cambio se la valuta non è EUR
-    tasso_fiat = 1.0
-    if valuta_utente != 'EUR':
-        tasso_fiat = get_exchange_rate('EUR', valuta_utente) or 1.14
+    tasso_fiat = float(get_exchange_rate('EUR', valuta_utente)
+                       or 1.0) if valuta_utente != 'EUR' else 1.0
 
     # 2. Recupero dati dai vari wallet
     dati, banca_eur, contanti_eur, s_inv_eur, s_pen_eur, saldo_totale_eur_base, btc_da_eur = get_transazioni_con_saldo(
@@ -392,17 +394,18 @@ def home():
     cursor.execute(
         "SELECT prezzo_eur FROM prezzi_btc ORDER BY data DESC LIMIT 1")
     prezzo_record = cursor.fetchone()
-    prezzo_attuale_btc_eur = prezzo_record[0] if prezzo_record else 0.0
+    prezzo_attuale_btc_eur = float(prezzo_record[0]) if (
+        prezzo_record and prezzo_record[0] is not None) else 0.0
     conn.close()
 
     # Prezzo BTC convertito nella valuta utente (es. USD o EUR)
     prezzo_attuale_btc_utente = prezzo_attuale_btc_eur * tasso_fiat
 
-    # 4. Conversioni FIAT nella valuta dell'utente (applicando il tasso di cambio)
+    # 4. Conversioni FIAT nella valuta dell'utente
     banca = banca_eur * tasso_fiat
     contanti = contanti_eur * tasso_fiat
 
-    # Assicuriamo valore assoluto positivo per gli asset investiti
+    # Asset investiti
     s_inv = abs(s_inv_eur) * tasso_fiat
     s_pen = abs(s_pen_eur) * tasso_fiat
 
@@ -410,17 +413,21 @@ def home():
     liquidita_totale = banca + contanti
     patrimonio_investito = s_inv + s_pen
 
-    # Saldo totale Fiat reale (Liquidità + Investimenti) nella valuta dell'utente
+    # Saldo totale Fiat reale
     saldo_totale_eur = liquidita_totale + patrimonio_investito
 
-    # Wallet Crypto - Conversione Storica e Live
+    # 5. Wallet Crypto - Costi Storici (convertiti in valuta utente)
     saldo_eur_lightning = saldo_eur_lightning_base * tasso_fiat
-    saldo_eur_onchain_base = sum(float(t['controvalore_eur'])
-                                 for t in dati_onchain if t.get('controvalore_eur') is not None)
+    saldo_eur_onchain_base = sum(
+        float(t.get('controvalore_eur', 0) or 0) for t in dati_onchain)
     saldo_eur_onchain = saldo_eur_onchain_base * tasso_fiat
 
-    # 5. Valore ATTUALE LIVE dei wallet crypto nella valuta dell'utente
-    valore_attuale_onchain = saldo_totale_btc * prezzo_attuale_btc_utente
+    # 6. Valore ATTUALE LIVE dei wallet crypto nella valuta dell'utente
+    # Per On-chain: usiamo la somma esatta dei controvalori live delle transazioni (allineato al 100% con la tabella)
+    valore_attuale_onchain = sum(float(
+        t.get('importo_btc', 0) or 0) * prezzo_attuale_btc_utente for t in dati_onchain)
+
+    # Per Lightning: calcolo basato sui Satoshi totali
     valore_attuale_lightning = (
         saldo_totale_satoshi / 100000000.0) * prezzo_attuale_btc_utente
 
@@ -428,13 +435,13 @@ def home():
     net_worth_totale = saldo_totale_eur + \
         valore_attuale_lightning + valore_attuale_onchain
 
-    # 6. Controvalore dinamico BTC per i fondi FIAT
+    # 7. Controvalore dinamico BTC per i fondi FIAT
     if prezzo_attuale_btc_utente > 0:
         controvalore_btc_reale = saldo_totale_eur / prezzo_attuale_btc_utente
     else:
         controvalore_btc_reale = 0.0
 
-    # 7. Dati per il grafico
+    # 8. Dati per il grafico
     labels_grafico = [
         _('Disponibilità (Banca/Contanti)'),
         _('Investimenti/Pensione'),
@@ -455,7 +462,7 @@ def home():
         f"{saldo_totale_btc:.8f} BTC" if saldo_totale_btc else "N/A"
     ]
 
-    # 8. Rendimento Crypto (Valore LIVE Attuale - Costo Storico Salvato)
+    # 9. Rendimento Crypto (Valore LIVE Attuale - Costo Storico Salvato)
     rendimento_onchain = valore_attuale_onchain - saldo_eur_onchain
     percentuale_onchain = (
         rendimento_onchain / saldo_eur_onchain * 100) if saldo_eur_onchain > 0 else 0.0
@@ -502,17 +509,16 @@ def home():
 def transazioni():
     user_id = current_user.id
 
-    # 1. Recupero valuta e tasso di cambio dell'utente
+    # 1. Recupero valuta e tasso di cambio dell'utente (EUR -> valuta_utente)
     valuta_utente = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
-    tasso_fiat = 1.0
-    if valuta_utente != 'EUR':
-        tasso_fiat = get_exchange_rate('EUR', valuta_utente) or 1.14
+    tasso_fiat = float(get_exchange_rate('EUR', valuta_utente)
+                       or 1.0) if valuta_utente != 'EUR' else 1.0
 
-    # 2. Recuperiamo i dati dal DB
+    # 2. Recuperiamo i dati dal DB (i saldi *_base sono SEMPRE in EUR)
     dati, banca_base, contanti_base, invest_base, pen_base, saldo_totale_eur_base, btc_eur = get_transazioni_con_saldo(
         user_id)
 
-    # 3. Applichiamo la conversione con il tasso fiat dell'utente
+    # 3. Convertiamo i saldi base EUR nella valuta di visualizzazione dell'utente
     banca = banca_base * tasso_fiat
     contanti = contanti_base * tasso_fiat
     invest = abs(invest_base) * tasso_fiat
@@ -546,11 +552,8 @@ def nuova_transazione():
         conto = request.form['conto']
         note = request.form.get('note', '')
 
-        # Valuta base dell'utente corrente (es. 'EUR', 'USD', 'GBP')
         valuta_utente = getattr(
             current_user, 'default_currency', 'EUR') or 'EUR'
-
-        # Valuta della spesa (se non specificata, usa quella dell'utente)
         valuta_spesa = request.form.get('valuta', valuta_utente).upper()
 
         try:
@@ -559,39 +562,38 @@ def nuova_transazione():
                 flash(_("Importo non valido"), "error")
                 return redirect(url_for('nuova_transazione'))
 
-            # 1. Recuperiamo il valore assoluto inserito dall'utente (positivo)
             importo_assoluto = abs(float(importo_normalizzato))
 
-            # 2. Assegniamo il segno in base alla Categoria:
-            #    Entrate = POSITIVO (+), Spese/Uscite = NEGATIVO (-)
+            # Entrate POSITIVE, Spese NEGATIVE
             if categoria.strip().lower() == 'entrate':
                 importo_finale = importo_assoluto
             else:
                 importo_finale = -importo_assoluto
 
-            # 3. Calcolo Tasso di Cambio e Importo in Valuta Base
-            if valuta_spesa == valuta_utente:
+            # 🎯 NORMALIZZAZIONE IN EURO BASE NEL DATABASE:
+            if valuta_spesa == 'EUR':
                 tasso_cambio = 1.0
                 importo_valuta_base = importo_finale
             else:
-                # Se l'utente ha inserito un tasso manuale nella form lo usiamo,
-                # altrimenti lo recuperiamo automaticamente dall'API
+                # Tasso EUR -> valuta_spesa (es. EUR -> USD = 1.1253)
+                tasso_fiat_dir = float(get_exchange_rate(
+                    'EUR', valuta_spesa) or 1.1253)
                 tasso_form = request.form.get('tasso_cambio')
+
                 if tasso_form and float(tasso_form) > 0:
                     tasso_cambio = float(tasso_form)
+                    # Se l'utente inserisce un tasso manuale
+                    importo_valuta_base = importo_finale / tasso_cambio
                 else:
-                    tasso_cambio = get_exchange_rate(
-                        valuta_spesa, valuta_utente)
+                    tasso_cambio = tasso_fiat_dir
+                    # Convertiamo l'importo speso nella base EUR dividendo per il tasso
+                    importo_valuta_base = importo_finale / tasso_fiat_dir
 
-                # Convertiamo l'importo (con il suo segno) nella valuta base dell'utente
-                importo_valuta_base = importo_finale * tasso_cambio
-
-            # 4. Calcolo controvalore BTC mantenendo il segno dell'importo
+            # Calcolo controvalore BTC
             valore_btc_eur = ottieni_valore_btc_eur(data)
             controvalore_btc = euro_to_btc(
                 importo_valuta_base, valore_btc_eur) if valore_btc_eur else None
 
-            # 5. Salvataggio nel DB con gli importi col segno corretto
             registra_transazione_conto(
                 current_user.id, data, descrizione, categoria, sottocategoria, importo_finale,
                 controvalore_btc=controvalore_btc, valore_btc_eur=valore_btc_eur,
@@ -603,7 +605,6 @@ def nuova_transazione():
         except ValueError:
             return "Importo non valido", 400
 
-    # Se GET, mostra il form passando la valuta predefinita dell'utente
     valuta_default = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
     return render_template(
         'nuova_transazione.html',
@@ -950,8 +951,8 @@ def scarica_csv_per_mese():
 def transazioni_lightning():
     valuta_utente = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
 
-    # Gestione del simbolo valuta
-    info_valuta = VALUTE_SUPPORTATE.get(valuta_utente, '$')
+    # Gestione del simbolo valuta da VALUTE_SUPPORTATE
+    info_valuta = VALUTE_SUPPORTATE.get(valuta_utente, {'simbolo': '$'})
     simbolo_valuta = info_valuta.get('simbolo', '$') if isinstance(
         info_valuta, dict) else info_valuta
 
@@ -959,7 +960,7 @@ def transazioni_lightning():
     saldo_totale_satoshi = sum(int(t.get('satoshi', 0) or 0)
                                for t in transazioni)
 
-    # 1. Recupera l'ultimo prezzo BTC dal database di Beesy
+    # 1. Recupera l'ultimo prezzo BTC dal database in EUR
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -967,18 +968,32 @@ def transazioni_lightning():
     prezzo_record = cursor.fetchone()
     conn.close()
 
-    prezzo_btc_eur_live = prezzo_record[0] if prezzo_record else 0
+    prezzo_btc_eur_live = float(prezzo_record[0]) if (
+        prezzo_record and prezzo_record[0] is not None) else 0.0
 
-    # 2. Converte il prezzo BTC nella valuta dell'utente
-    if valuta_utente == 'EUR':
-        prezzo_btc_live = prezzo_btc_eur_live
-    else:
-        tasso_fiat = get_exchange_rate('EUR', valuta_utente) or 1.14
-        prezzo_btc_live = prezzo_btc_eur_live * float(tasso_fiat)
+    # 2. Tasso di cambio dinamico per la valuta dell'utente
+    tasso_fiat = float(get_exchange_rate('EUR', valuta_utente)
+                       or 1.0) if valuta_utente != 'EUR' else 1.0
+    prezzo_btc_live = prezzo_btc_eur_live * tasso_fiat
 
-    # 3. Calcolo del Controvalore LIVE per tutti i Satoshi
-    totale_controvalore = (saldo_totale_satoshi /
-                           100_000_000.0) * prezzo_btc_live
+    # 3. Assegnazione sia del valore Storico che del valore Live per ciascuna transazione
+    for t in transazioni:
+        sats_t = int(t.get('satoshi', 0) or 0)
+
+        # Valori base salvati in EUR nel DB
+        storico_eur = float(t.get('controvalore_eur', 0) or 0)
+        unitario_eur = float(t.get('valore_btc_eur', 0) or 0)
+
+        # Conversione dinamica in base alla valuta scelta
+        t['controvalore_storico'] = storico_eur * tasso_fiat
+        t['valore_btc_fiat'] = unitario_eur * tasso_fiat
+
+        # Controvalore LIVE (satoshi / 100M * prezzo live)
+        t['controvalore_live'] = (sats_t / 100_000_000.0) * prezzo_btc_live
+
+    # 4. Controvalore Totale LIVE: somma esatta dei controvalori live di tutte le righe
+    totale_controvalore = sum(
+        float(t.get('controvalore_live', 0)) for t in transazioni)
 
     return render_template(
         'transazioni_lightning.html',
@@ -996,51 +1011,37 @@ def nuova_transazione_lightning():
     valuta_utente = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
 
     if request.method == 'POST':
-        data = request.form['data']
-        wallet = request.form['wallet']
-        descrizione = request.form['descrizione']
-        categoria = request.form['categoria']
-        sottocategoria = request.form['sottocategoria']
-        # -------------------------------------------------------------------
-        # 🎯 >>> MODIFICA QUI (GESTIONE SEGNO IN BASE ALLA CATEGORIA) <<<
-        # -------------------------------------------------------------------
-        # 1. Prendiamo il valore assoluto inserito dall'utente (senza segno)
-        satoshi_assoluti = abs(int(request.form.get('satoshi', 0)))
+        data = request.form.get('data', '')
+        wallet = request.form.get('wallet', '')
+        descrizione = request.form.get('descrizione', '')
+        categoria = request.form.get('categoria', '')
+        sottocategoria = request.form.get('sottocategoria', '')
 
-        # 2. Assegniamo il segno: Entrate = POSITIVO (+), Tutte le altre = NEGATIVO (-)
+        # 1. Gestione segno in base alla Categoria
+        satoshi_assoluti = abs(int(request.form.get('satoshi', 0) or 0))
         if categoria.strip().lower() == 'entrate':
             sats_finali = satoshi_assoluti
         else:
             sats_finali = -satoshi_assoluti
-        # -------------------------------------------------------------------
+
         try:
-            # 1. Recupera il valore BTC in EUR per la data indicata
+            # 2. Recupero prezzo BTC del giorno in EUR puri (con fallback)
             valore_btc_eur = ottieni_valore_btc_eur(data)
-
-            # Se per la data di oggi/scelta l'API storica fallisce, usiamo un fallback sul prezzo live
             if not valore_btc_eur or float(valore_btc_eur) == 0:
-                # o la tua funzione per il prezzo attuale
-                valore_btc_eur = ottieni_valore_btc_eur()
+                conn_p = get_db_connection()
+                cur_p = conn_p.cursor()
+                cur_p.execute(
+                    "SELECT prezzo_eur FROM prezzi_btc ORDER BY data DESC LIMIT 1")
+                res_p = cur_p.fetchone()
+                conn_p.close()
+                valore_btc_eur = res_p[0] if (
+                    res_p and res_p[0] is not None) else 70000.0
 
-            valore_btc_eur = float(valore_btc_eur or 0)
+            valore_btc_eur = float(valore_btc_eur)
 
-            # 2. Conversione nella valuta dell'utente (es. USD)
-            if valuta_utente == 'EUR':
-                valore_btc_utente = valore_btc_eur
-            else:
-                # Recupera tasso EUR -> USD (o viceversa se la tua funzione richiede valuta_utente -> EUR)
-                tasso_fiat = get_exchange_rate('EUR', valuta_utente)
-                if not tasso_fiat or tasso_fiat == 1.0:
-                    rate_inv = get_exchange_rate(valuta_utente, 'EUR')
-                    tasso_fiat = (
-                        1 / rate_inv) if (rate_inv and rate_inv > 0) else 1.14
-
-                valore_btc_utente = valore_btc_eur * float(tasso_fiat)
-
-            # 3. Calcolo controvalore in fiat mantenendo il segno dei satoshi finali
-            # 🎯 Nota: Usiamo 'sats_finali' al posto del vecchio 'satoshi'
-            controvalore_fiat = (
-                sats_finali / 100_000_000.0) * valore_btc_utente
+            # 3. Controvalore storico pulito sempre in EUR
+            controvalore_eur_puro = (
+                sats_finali / 100_000_000.0) * valore_btc_eur
 
             # 4. Salvataggio nel DB
             salva_su_db_lightning(
@@ -1051,8 +1052,8 @@ def nuova_transazione_lightning():
                 categoria=categoria,
                 sottocategoria=sottocategoria,
                 satoshi=sats_finali,
-                controvalore_eur=controvalore_fiat,
-                valore_btc_eur=valore_btc_utente
+                controvalore_eur=controvalore_eur_puro,  # Salviamo sempre in EUR puri
+                valore_btc_eur=valore_btc_eur           # Prezzo unitario in EUR
             )
 
             flash("Transazione Lightning salvata con successo", "success_lightning")
@@ -1065,7 +1066,8 @@ def nuova_transazione_lightning():
     return render_template(
         'nuova_transazione_lightning.html',
         categorie=list(CATEGORIE.keys()),
-        categorie_json=json.dumps(CATEGORIE)
+        categorie_json=json.dumps(CATEGORIE),
+        valuta_utente=valuta_utente
     )
 
 
@@ -1229,15 +1231,14 @@ def scarica_csv_per_mese_lightning():
 def transazioni_onchain():
     valuta_utente = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
 
-    # Gestione del simbolo valuta
-    info_valuta = VALUTE_SUPPORTATE.get(valuta_utente, '$')
+    info_valuta = VALUTE_SUPPORTATE.get(valuta_utente, {'simbolo': '$'})
     simbolo_valuta = info_valuta.get('simbolo', '$') if isinstance(
         info_valuta, dict) else info_valuta
 
     dati_onchain, saldo_totale_btc = get_transazioni_con_saldo_onchain(
         current_user.id)
 
-    # 1. Recupera l'ultimo prezzo BTC dal database (esattamente come in Lightning)
+    # Prezzo live in EUR
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -1247,15 +1248,29 @@ def transazioni_onchain():
 
     prezzo_btc_eur_live = prezzo_record[0] if prezzo_record else 0
 
-    # 2. Converte il prezzo BTC nella valuta dell'utente
-    if valuta_utente == 'EUR':
-        prezzo_btc_live = prezzo_btc_eur_live
-    else:
-        tasso_fiat = get_exchange_rate('EUR', valuta_utente) or 1.14
-        prezzo_btc_live = prezzo_btc_eur_live * float(tasso_fiat)
+    # Tasso di cambio fiat (es. EUR -> USD = 1.14)
+    tasso_fiat = float(get_exchange_rate('EUR', valuta_utente)
+                       or 1.0) if valuta_utente != 'EUR' else 1.0
+    prezzo_btc_live = prezzo_btc_eur_live * tasso_fiat
 
-    # 3. Controvalore totale On-chain (coerente con la logica Lightning)
-    totale_controvalore = saldo_totale_btc * prezzo_btc_live
+    # Ciclo di calcolo per ogni transazione
+    for t in dati_onchain:
+        importo_t = float(t.get('importo_btc', 0) or 0)
+
+        # Valori base salvati in EUR nel DB
+        storico_eur = float(t.get('controvalore_eur', 0) or 0)
+        unitario_eur = float(t.get('valore_btc_eur', 0) or 0)
+
+        # Conversione dinamica pulita basata sulla valuta attuale dell'utente
+        t['controvalore_storico'] = storico_eur * tasso_fiat
+        t['valore_btc_fiat'] = unitario_eur * tasso_fiat
+
+        # Controvalore LIVE della singola transazione
+        t['controvalore_live'] = importo_t * prezzo_btc_live
+
+    # 🔹 TOTALE CONTROVALORE: Somma esatta dei controvalori live di tutte le righe della tabella
+    totale_controvalore = sum(float(t.get('controvalore_live', 0))
+                              for t in dati_onchain)
 
     return render_template(
         "transazioni_onchain.html",
@@ -1273,20 +1288,26 @@ def nuova_transazione_onchain():
     valuta_utente = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
 
     if request.method == 'POST':
-        data = request.form['data']
-        wallet = request.form['wallet']
-        descrizione = request.form['descrizione']
-        categoria = request.form['categoria']
-        sottocategoria = request.form['sottocategoria']
-        transactionID = request.form['transactionID']
+        data = request.form.get('data', '')
+        wallet = request.form.get('wallet', '')
+        descrizione = request.form.get('descrizione', '')
+        categoria = request.form.get('categoria', '')
+        sottocategoria = request.form.get('sottocategoria', '')
+        transactionID = request.form.get('transactionID', '')
 
-        # 1. Normalizzazione e pulizia dell'input (conversione virgola in punto)
+        # 1. Normalizzazione e pulizia dell'input
         importo_raw = str(request.form.get('importo_btc', '0')
                           ).replace(',', '.').strip()
-        importo_assoluto = abs(float(importo_raw)) if importo_raw else 0.0
+        try:
+            importo_assoluto = abs(float(importo_raw)) if importo_raw else 0.0
+        except ValueError:
+            importo_assoluto = 0.0
 
         fee_raw = str(request.form.get('fee', '0')).replace(',', '.').strip()
-        fee = abs(float(fee_raw)) if fee_raw else 0.0
+        try:
+            fee = abs(float(fee_raw)) if fee_raw else 0.0
+        except ValueError:
+            fee = 0.0
 
         # 2. Assegnazione del segno in base alla Categoria
         if categoria.strip().lower() == 'entrate':
@@ -1295,21 +1316,22 @@ def nuova_transazione_onchain():
             importo_btc_final = -importo_assoluto
 
         try:
+            # 1. Recupero il prezzo di Bitcoin dal DB in EUR puri
             valore_btc_eur = ottieni_valore_btc_eur(data)
+            if not valore_btc_eur or float(valore_btc_eur) == 0:
+                conn_p = get_db_connection()
+                cur_p = conn_p.cursor()
+                cur_p.execute(
+                    "SELECT prezzo_eur FROM prezzi_btc ORDER BY data DESC LIMIT 1")
+                res_p = cur_p.fetchone()
+                conn_p.close()
+                valore_btc_eur = res_p[0] if (
+                    res_p and res_p[0] is not None) else 70000.0
 
-            if valore_btc_eur:
-                if valuta_utente == 'EUR':
-                    valore_btc_utente = valore_btc_eur
-                else:
-                    tasso_fiat = get_exchange_rate(
-                        valuta_utente, 'EUR', date_str=data) or 1.0
-                    valore_btc_utente = valore_btc_eur * tasso_fiat
+            valore_btc_eur = float(valore_btc_eur)
 
-                # Calcolo del controvalore mantenendo il segno dell'importo
-                controvalore_fiat = importo_btc_final * valore_btc_utente
-            else:
-                valore_btc_utente = None
-                controvalore_fiat = None
+            # Controvalore storico pulito in EUR
+            controvalore_eur_puro = importo_btc_final * valore_btc_eur
 
             salva_su_db_onchain(
                 user_id=current_user.id,
@@ -1321,8 +1343,8 @@ def nuova_transazione_onchain():
                 transactionID=transactionID,
                 importo_btc=importo_btc_final,
                 fee=fee,
-                controvalore_eur=controvalore_fiat,
-                valore_btc_eur=valore_btc_utente
+                controvalore_eur=controvalore_eur_puro,  # Salviamo sempre in EUR puliti
+                valore_btc_eur=valore_btc_eur           # Prezzo unitario in EUR puliti
             )
 
             flash("Transazione On-chain salvata con successo", "success")
@@ -1332,6 +1354,7 @@ def nuova_transazione_onchain():
             flash(f"Errore: {e}", "error")
             return redirect(url_for('nuova_transazione_onchain'))
 
+    # GET: rendering del form con i placeholder e le categorie intatte
     placeholder_transazione = {
         "id": None, "data": "", "wallet": "", "descrizione": "",
         "categoria": "", "sottocategoria": "", "transactionID": "",
@@ -1342,7 +1365,8 @@ def nuova_transazione_onchain():
         'nuova_transazione_onchain.html',
         transazione_onchain=placeholder_transazione,
         categorie=list(CATEGORIE.keys()),
-        categorie_json=json.dumps(CATEGORIE)
+        categorie_json=json.dumps(CATEGORIE),
+        valuta_utente=valuta_utente
     )
 
 
@@ -1493,26 +1517,23 @@ def analytics(tipo):
     from flask_babel import gettext as _
     from db.db_utils import get_db_connection
 
-    # 1. Normalizziamo SUBITO 'tipo' in MAIUSCOLO per evitare mismatch nelle query
+    # 1. Normalizziamo tipo in MAIUSCOLO
     tipo = tipo.upper().strip()
 
-    # Se l'utente ha una valuta impostata usiamo quella, altrimenti EUR di default
-    user_currency = getattr(current_user, 'default_currency', 'EUR')
-
-    info_valuta = VALUTE_SUPPORTATE.get(user_currency, '$')
+    # Valuta utente e simbolo
+    user_currency = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
+    info_valuta = VALUTE_SUPPORTATE.get(user_currency, {'simbolo': '$'})
     simbolo_valuta = info_valuta.get('simbolo', '$') if isinstance(
         info_valuta, dict) else info_valuta
 
-    # Tasso di cambio FIAT (1.0 se EUR)
-    tasso_fiat = 1.0
-    if user_currency != 'EUR':
-        tasso_fiat = float(get_exchange_rate('EUR', user_currency) or 1.14)
+    # Tasso di cambio dinamico se la valuta è diversa da EUR
+    tasso_fiat = float(get_exchange_rate('EUR', user_currency)
+                       or 1.0) if user_currency != 'EUR' else 1.0
 
-    # 1. Recuperiamo i dati corretti inviati dal metodo GET dell'HTML
+    # 2. Parametri di filtro (Mese / Anno)
     mese_selezionato = request.args.get('mese')
     anno_selezionato = request.args.get('anno')
 
-    # 2. Logica di esclusione reciproca
     if mese_selezionato:
         mese_selezionato = mese_selezionato.strip()
         if not mese_selezionato:
@@ -1527,7 +1548,7 @@ def analytics(tipo):
         else:
             mese_selezionato = None
 
-    # Recupero dati grafici spese/entrate
+    # 3. Recupero dati entrate e spese
     labels_spese, valori_spese = get_spese_per_categoria_filtrate(
         current_user.id, tipo, mese=mese_selezionato, anno=anno_selezionato)
 
@@ -1537,45 +1558,45 @@ def analytics(tipo):
     tot_entrate, tot_spese = get_bilancio_periodo(
         current_user.id, tipo, mese=mese_selezionato, anno=anno_selezionato)
 
-    # Conversione spese ed entrate nella valuta utente
-    tot_entrate *= tasso_fiat
-    tot_spese *= tasso_fiat
-    valori_spese = [v * tasso_fiat for v in valori_spese]
-    valori_entrate = [v * tasso_fiat for v in valori_entrate]
+    # Convertiamo i valori base se e solo se get_bilancio_periodo restituisce EUR base
+    if tipo == 'EURO':
+        # Se le funzioni di DB restituiscono i valori base in EUR, la conversione avviene qui 1 sola volta
+        tot_entrate = float(tot_entrate or 0) * tasso_fiat
+        tot_spese = float(tot_spese or 0) * tasso_fiat
+        valori_spese = [float(v or 0) * tasso_fiat for v in valori_spese]
+        valori_entrate = [float(v or 0) * tasso_fiat for v in valori_entrate]
 
     delta = tot_entrate - tot_spese
-    saving_rate = (delta / tot_entrate * 100) if tot_entrate > 0 else 0
+    saving_rate = (delta / tot_entrate * 100) if tot_entrate > 0 else 0.0
 
     date_btc = []
     saldi_btc = []
     saldi_eur_btc = []
     tx_storiche = []
 
-    rendimento = 0
-    percentuale = 0
-    valore_attuale_eur = 0
-    saldo_asset = 0
-    costo_storico_eur = 0
+    rendimento = 0.0
+    percentuale = 0.0
+    valore_attuale_eur = 0.0
+    saldo_asset = 0.0
+    costo_storico_eur = 0.0
 
+    # 4. Sezione Crypto (ONCHAIN / LIGHTNING)
     if tipo in ['ONCHAIN', 'LIGHTNING']:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # 1. Prezzo BTC attuale in EUR
         cursor.execute(
             "SELECT prezzo_eur FROM prezzi_btc ORDER BY data DESC LIMIT 1")
         prezzo_record = cursor.fetchone()
-        prezzo_attuale_btc_eur = prezzo_record[0] if prezzo_record else 0
-
-        # Prezzo BTC convertito nella valuta utente
+        prezzo_attuale_btc_eur = float(prezzo_record[0]) if (
+            prezzo_record and prezzo_record[0] is not None) else 0.0
         prezzo_attuale_btc = prezzo_attuale_btc_eur * tasso_fiat
 
-        # 2. Prezzi storici convertiti
         cursor.execute(
             "SELECT data, prezzo_eur FROM prezzi_btc ORDER BY data ASC")
         prezzi_rows = cursor.fetchall()
         prezzi_storici = {row['data']: (
-            row['prezzo_eur'] * tasso_fiat) for row in prezzi_rows}
+            float(row['prezzo_eur']) * tasso_fiat) for row in prezzi_rows}
 
         filtro_btc = ""
         params_btc = [current_user.id]
@@ -1588,16 +1609,17 @@ def analytics(tipo):
 
         if tipo == 'ONCHAIN':
             from db.db_utils import get_transazioni_con_saldo_onchain
-            dummy_tx, saldo_asset = get_transazioni_con_saldo_onchain(
+            dati_oc, saldo_asset = get_transazioni_con_saldo_onchain(
                 current_user.id)
 
             cursor.execute(
                 "SELECT SUM(controvalore_eur) FROM transazioni_onchain WHERE user_id = ?", (current_user.id,))
             res = cursor.fetchone()
-            costo_storico_eur = (res[0] if res[0] else 0) * tasso_fiat
-            valore_attuale_eur = saldo_asset * prezzo_attuale_btc
+            costo_storico_eur = float(res[0] if (
+                res and res[0]) else 0) * tasso_fiat
+            valore_attuale_eur = sum(
+                float(t.get('importo_btc', 0) or 0) * prezzo_attuale_btc for t in dati_oc)
 
-            # Query storiche ONCHAIN (convertendo sats/btc e considerando le fee)
             cursor.execute(f'''
                 SELECT SUBSTR(data, 1, 10) as giorno,
                        SUM(
@@ -1614,15 +1636,16 @@ def analytics(tipo):
 
         elif tipo == 'LIGHTNING':
             from db.db_utils import get_transazioni_con_saldo_lightning
-            dummy1, saldo_asset, dummy2 = get_transazioni_con_saldo_lightning(
+            dati_ln, saldo_asset, resto = get_transazioni_con_saldo_lightning(
                 current_user.id)
 
             cursor.execute(
                 "SELECT SUM(controvalore_eur) FROM transazioni_lightning WHERE user_id = ?", (current_user.id,))
             res = cursor.fetchone()
-            costo_storico_eur = (res[0] if res[0] else 0) * tasso_fiat
-            valore_attuale_eur = (
-                saldo_asset / 100000000.0) * prezzo_attuale_btc
+            costo_storico_eur = float(res[0] if (
+                res and res[0]) else 0) * tasso_fiat
+            valore_attuale_eur = (float(saldo_asset) /
+                                  100000000.0) * prezzo_attuale_btc
 
             cursor.execute(f'''
                 SELECT SUBSTR(data, 1, 10) as giorno,
@@ -1641,7 +1664,7 @@ def analytics(tipo):
         saldo_temporale_btc = 0.0
         for tx in tx_storiche:
             giorno = tx['giorno']
-            flusso = tx['flusso']
+            flusso = float(tx['flusso'] or 0)
             saldo_temporale_btc += flusso
 
             prezzo_quel_giorno = prezzi_storici.get(giorno, prezzo_attuale_btc)
@@ -1653,7 +1676,7 @@ def analytics(tipo):
 
         rendimento = valore_attuale_eur - costo_storico_eur
         if costo_storico_eur > 0:
-            percentuale = (rendimento / costo_storico_eur) * 100
+            percentuale = (rendimento / costo_storico_eur) * 100.0
 
         conn.close()
 
@@ -1662,6 +1685,7 @@ def analytics(tipo):
     date_fiat = []
     valori_fiat = []
 
+    # 5. Sezione EURO
     if tipo == 'EURO':
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -1670,10 +1694,10 @@ def analytics(tipo):
             "SELECT * FROM assets_watch WHERE user_id = ?", (current_user.id,))
         investimenti_fiat = cursor.fetchall()
 
-        costo_storico_eur = sum(
-            float(asset['capitale_investito']) for asset in investimenti_fiat) * tasso_fiat
+        costo_storico_eur = sum(float(
+            asset['capitale_investito'] or 0) for asset in investimenti_fiat) * tasso_fiat
         valore_attuale_eur = sum(
-            float(asset['valore_attuale']) for asset in investimenti_fiat) * tasso_fiat
+            float(asset['valore_attuale'] or 0) for asset in investimenti_fiat) * tasso_fiat
 
         try:
             cursor.execute('''
@@ -1718,22 +1742,22 @@ def analytics(tipo):
         dati_grafico_fiat = cursor.fetchall()
 
         date_fiat = [str(r['giorno']) for r in dati_grafico_fiat]
-        valori_fiat = [float(r['totale']) *
+        valori_fiat = [float(r['totale'] or 0) *
                        tasso_fiat for r in dati_grafico_fiat]
 
         rendimento = valore_attuale_eur - costo_storico_eur
         if costo_storico_eur > 0:
-            percentuale = (rendimento / costo_storico_eur) * 100
+            percentuale = (rendimento / costo_storico_eur) * 100.0
 
         conn.close()
 
-    # Ora _() è rimasta una funzione valida per tutte le chiavi!
     titoli = {
         'EURO': _('Statistiche %(simbolo)s', simbolo=simbolo_valuta),
         'LIGHTNING': _('Statistiche Lightning (⚡)'),
         'ONCHAIN': _('Statistiche On-chain (₿)')
     }
-    # === FORZATURA E VERIFICA PER ONCHAIN (CON FILTRI TEMPO) ===
+
+    # 6. Override per On-chain
     if tipo == 'ONCHAIN':
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -1748,7 +1772,6 @@ def analytics(tipo):
             filtro_tempo = "AND SUBSTR(data, 1, 4) = ?"
             parametri.append(anno_selezionato)
 
-        # Somma ENTRATE On-chain dal DB
         cursor.execute(f"""
             SELECT COALESCE(SUM(ABS(importo_btc)), 0.0) 
             FROM transazioni_onchain 
@@ -1756,7 +1779,6 @@ def analytics(tipo):
         """, tuple(parametri))
         tot_entrate = float(cursor.fetchone()[0])
 
-        # Somma USCITE On-chain
         cursor.execute(f"""
             SELECT COALESCE(SUM(ABS(importo_btc)), 0.0) 
             FROM transazioni_onchain 
@@ -1764,7 +1786,6 @@ def analytics(tipo):
         """, tuple(parametri))
         tot_spese = float(cursor.fetchone()[0])
 
-        # Somma FEE di rete
         cursor.execute(f"""
             SELECT COALESCE(SUM(ABS(fee)), 0.0) 
             FROM transazioni_onchain 
@@ -1772,12 +1793,11 @@ def analytics(tipo):
         """, tuple(parametri))
         tot_fee = float(cursor.fetchone()[0])
 
-        # Le uscite totali sono uscite + fee
         tot_spese += tot_fee
         conn.close()
 
-    delta = tot_entrate - tot_spese
-    savings_rate = (delta / tot_entrate * 100) if tot_entrate > 0 else 0
+        delta = tot_entrate - tot_spese
+        saving_rate = (delta / tot_entrate * 100.0) if tot_entrate > 0 else 0.0
 
     return render_template('analytics.html',
                            labels_spese=labels_spese,

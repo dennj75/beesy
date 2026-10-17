@@ -385,10 +385,10 @@ def get_transazioni_con_saldo(user_id):
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # Aggiunto id nelle colonne selezionate!
+    # Selezioniamo anche importo_valuta_base e valuta!
     cursor.execute("""
         SELECT id, data, descrizione, categoria, sottocategoria, importo, 
-               conto, controvalore_btc, valore_btc_eur, note
+               importo_valuta_base, valuta, conto, controvalore_btc, valore_btc_eur, note
         FROM transazioni
         WHERE user_id = ?
     """, (user_id,))
@@ -406,7 +406,11 @@ def get_transazioni_con_saldo(user_id):
         c = (r['conto'] or '').strip().upper()
         cat = (r['categoria'] or '').strip().lower()
         subcat = (r['sottocategoria'] or '').strip().lower()
-        imp = float(r['importo'] or 0.0)
+
+        # 🎯 USIAMO importo_valuta_base (valore base in EUR) per i saldi contabili
+        # Se importo_valuta_base è None/0, facciamo fallback su importo
+        imp = float(r['importo_valuta_base'] if r['importo_valuta_base']
+                    is not None else (r['importo'] or 0.0))
 
         # 1. Gestione BANCA
         if c == 'BANCA':
@@ -466,7 +470,6 @@ def get_transazioni_con_saldo_onchain(user_id):
         fee = float(t.get('fee', 0) or 0)
 
         saldo_btc += importo
-        # Le fee On-Chain sono sempre un costo in uscita
         saldo_btc -= abs(fee)
 
     return transazioni, saldo_btc
@@ -1165,7 +1168,8 @@ def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
         colonna_valore = "importo_btc"
     else:
         tabella = "transazioni"
-        colonna_valore = "importo"
+        # 🎯 Usiamo la colonna base EUR per le aggregazioni Fiat
+        colonna_valore = "COALESCE(importo_valuta_base, importo)"
 
     filtro_tempo = ""
     parametri = [user_id]
@@ -1180,7 +1184,6 @@ def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
         filtro_tempo = "AND data LIKE ?"
         parametri.append(f"{str(anno).strip()}%")
 
-    # Escludiamo Entrate, la macro-categoria Patrimonio & Finanze, e sottocategorie contenenti Giroconto
     query = f"""
         SELECT categoria, SUM(ABS({colonna_valore})) as totale 
         FROM {tabella} 
@@ -1218,7 +1221,8 @@ def get_entrate_per_sottocategoria(user_id, tipo_conto, mese=None, anno=None):
         colonna_valore = "importo_btc"
     else:
         tabella = "transazioni"
-        colonna_valore = "importo"
+        # 🎯 Usiamo la colonna base EUR per le aggregazioni Fiat
+        colonna_valore = "COALESCE(importo_valuta_base, importo)"
 
     filtro_tempo = ""
     parametri = [user_id]
@@ -1266,7 +1270,8 @@ def get_bilancio_periodo(user_id, tipo_conto, mese=None, anno=None):
     elif tipo_conto == 'ONCHAIN':
         tabella, colonna = "transazioni_onchain", "importo_btc"
     else:
-        tabella, colonna = "transazioni", "importo"
+        # 🎯 Usiamo la colonna base EUR per il bilancio Fiat
+        tabella, colonna = "transazioni", "COALESCE(importo_valuta_base, importo)"
 
     filtro_tempo = ""
     parametri = [user_id]
@@ -1297,6 +1302,7 @@ def get_bilancio_periodo(user_id, tipo_conto, mese=None, anno=None):
         WHERE user_id=? 
         AND LOWER(TRIM(categoria)) NOT IN ('entrate', 'patrimonio & finanze', 'patrimonio e finanze')
         AND LOWER(sottocategoria) NOT LIKE '%giroconto%'
+        AND LOWER(sottocategoria) NOT LIKE '%trasferimento%'
         {filtro_tempo}
     """
     cursor.execute(query_spese, parametri)
@@ -1322,72 +1328,96 @@ def registra_transazione_conto(user_id, data, descrizione, categoria, sottocateg
                                controvalore_btc=None, valore_btc_eur=None, note='',
                                valuta='EUR', importo_valuta_base=None, tasso_cambio=1.0):
     """
-    Gestisce automaticamente i trasferimenti BANCA ↔ CONTANTI e Giroconti Multi-Valuta.
+    Gestisce automaticamente i trasferimenti BANCA ↔ CONTANTI e Giroconti Multi-Valuta con calcolo BTC.
     """
     if importo_valuta_base is None:
         importo_valuta_base = float(importo)
 
-    # Helper per calcolare l'importo base quando cambiamo il segno (abs o negativo)
     def calcola_base_proporzionale(imp_target):
         if float(importo) == 0:
             return 0.0
         return (imp_target / float(importo)) * float(importo_valuta_base)
 
-    # --- CASO 1: INVESTIMENTI (PAC o Versamenti grossi) ---
+    # Helper per ricalcolare il controvalore BTC proporzionale se presente
+    def calcola_btc_proporzionale(imp_target_base):
+        if not valore_btc_eur or float(valore_btc_eur) == 0:
+            return None, None
+        # Import locale per evitare l'import circolare
+        from utils.crypto import euro_to_btc
+        base_abs = abs(float(imp_target_base))
+        btc_calc = euro_to_btc(base_abs, float(valore_btc_eur))
+        return btc_calc, float(valore_btc_eur)
+
+    # --- CASO 1: INVESTIMENTI ---
     if sottocategoria == "Acquisto Titoli/Fondi (Giroconto)":
-        imp_uscita_banca = -abs(importo)  # Force Uscita (Negativo)
-        imp_entrata_inv = abs(importo)  # Force Entrata (Positivo)
-        # 1. Togliamo i soldi dalla BANCA
+        imp_uscita_banca = -abs(importo)
+        imp_entrata_inv = abs(importo)
+        base_uscita = calcola_base_proporzionale(imp_uscita_banca)
+        base_entrata = calcola_base_proporzionale(imp_entrata_inv)
+
+        btc_u, val_u = calcola_btc_proporzionale(base_uscita)
+
+        # 1. Uscita BANCA
         salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
-                    imp_uscita_banca, controvalore_btc, valore_btc_eur, conto="BANCA", note=note,
-                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_uscita_banca), tasso_cambio=tasso_cambio)
-        # 2. Li aggiungiamo al conto INVESTIMENTI
+                    imp_uscita_banca, btc_u, val_u, conto="BANCA", note=note,
+                    valuta=valuta, importo_valuta_base=base_uscita, tasso_cambio=tasso_cambio)
+        # 2. Entrata INVESTIMENTI
         salva_su_db(user_id, data, f"Caricamento: {descrizione}", categoria, sottocategoria,
-                    imp_entrata_inv, None, None, conto="INVESTIMENTI", note="Giroconto automatico",
-                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_entrata_inv), tasso_cambio=tasso_cambio)
+                    imp_entrata_inv, btc_u, val_u, conto="INVESTIMENTI", note="Giroconto automatico",
+                    valuta=valuta, importo_valuta_base=base_entrata, tasso_cambio=tasso_cambio)
         return
 
     # --- CASO 2: PENSIONE COMPLEMENTARE ---
     if sottocategoria == "Versamento Pensione (Giroconto)":
-        imp_uscita_banca = -abs(importo)  # Force Uscita (Negativo)
-        imp_entrata_pen = abs(importo)  # Force Entrata (Positivo)
+        imp_uscita_banca = -abs(importo)
+        imp_entrata_pen = abs(importo)
+        base_uscita = calcola_base_proporzionale(imp_uscita_banca)
+        base_entrata = calcola_base_proporzionale(imp_entrata_pen)
 
-        # 1. Uscita dalla BANCA (in ROSSO)
+        btc_u, val_u = calcola_btc_proporzionale(base_uscita)
+
+        # 1. Uscita BANCA
         salva_su_db(user_id, data, descrizione, categoria,
-                    sottocategoria, imp_uscita_banca, None, None, conto="BANCA", note=note,
-                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_uscita_banca), tasso_cambio=tasso_cambio)
+                    sottocategoria, imp_uscita_banca, btc_u, val_u, conto="BANCA", note=note,
+                    valuta=valuta, importo_valuta_base=base_uscita, tasso_cambio=tasso_cambio)
 
-        # 2. Entrata nel conto PENSIONE (in VERDE)
+        # 2. Entrata PENSIONE
         salva_su_db(user_id, data, f"Versamento: {descrizione}", categoria, sottocategoria,
-                    imp_entrata_pen, None, None, conto="PENSIONE", note="Giroconto automatico",
-                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_entrata_pen), tasso_cambio=tasso_cambio)
+                    imp_entrata_pen, btc_u, val_u, conto="PENSIONE", note="Giroconto automatico",
+                    valuta=valuta, importo_valuta_base=base_entrata, tasso_cambio=tasso_cambio)
         return
 
-    # 3. PRELIEVO (Soldi che escono dalla BANCA per andare nei CONTANTI)
+    # 3. PRELIEVO (Banca -> Contanti)
     if categoria == "Patrimonio & Finanze" and sottocategoria == "Prelievo Contante" and importo < 0:
         salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
                     controvalore_btc, valore_btc_eur, conto="BANCA", note=note,
                     valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio)
 
         imp_cnt = abs(importo)
+        base_cnt = calcola_base_proporzionale(imp_cnt)
+        btc_c, val_c = calcola_btc_proporzionale(base_cnt)
+
         salva_su_db(user_id, data, "Giroconto: Prelievo da banca", "Patrimonio & Finanze", "Trasferimento",
-                    imp_cnt, None, None, conto="CONTANTI",
-                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_cnt), tasso_cambio=tasso_cambio)
+                    imp_cnt, btc_c, val_c, conto="CONTANTI",
+                    valuta=valuta, importo_valuta_base=base_cnt, tasso_cambio=tasso_cambio)
         return
 
-    # 4. DEPOSITO (Soldi contanti che versi in BANCA)
+    # 4. DEPOSITO (Contanti -> Banca)
     if categoria == "Patrimonio & Finanze" and sottocategoria == "Prelievo Contante" and importo > 0:
         salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
                     controvalore_btc, valore_btc_eur, conto="BANCA", note=note,
                     valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio)
 
         imp_cnt = -abs(importo)
+        base_cnt = calcola_base_proporzionale(imp_cnt)
+        btc_c, val_c = calcola_btc_proporzionale(base_cnt)
+
         salva_su_db(user_id, data, "Giroconto: Versamento in banca", "Patrimonio & Finanze", "Trasferimento",
-                    imp_cnt, None, None, conto="CONTANTI",
-                    valuta=valuta, importo_valuta_base=calcola_base_proporzionale(imp_cnt), tasso_cambio=tasso_cambio)
+                    imp_cnt, btc_c, val_c, conto="CONTANTI",
+                    valuta=valuta, importo_valuta_base=base_cnt, tasso_cambio=tasso_cambio)
         return
 
-    # Se non è un prelievo/deposito, salva normalmente sul conto selezionato
+    # Standard
     salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
                 controvalore_btc, valore_btc_eur, conto=conto, note=note,
                 valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio)

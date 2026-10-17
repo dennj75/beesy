@@ -71,7 +71,10 @@ block content %}
         <th>{{ _('Descrizione') }}</th>
         <th>{{ _('Categoria') }}</th>
         <th>{{ _('Sottocategoria') }}</th>
-        <th>{{ _('Importo') }}</th>
+        <th>
+          {{ _('Importo (%(simbolo)s)', simbolo=(current_user.default_currency |
+          currency_symbol)) }}
+        </th>
         <th>{{ _('Controvalore BTC') }}</th>
         <th>
           {{ _('Valore BTC (%(simbolo)s)',
@@ -91,26 +94,32 @@ block content %}
         <td>{{ traduci(t.categoria) }}</td>
         <td>{{ traduci(t.sottocategoria) }}</td>
 
+        <!-- 🔹 Importo con simbolo valuta sempre visibile e conversione base corretta -->
         <td
           class="{% if t.importo >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
         >
           {{ t.importo | formatta_importo(t.valuta) }} {% if t.valuta and
           t.valuta != current_user.default_currency %}
-          <br /><small style="color: #888"
-            >({{ "%.2f"|format(t.importo_valuta_base) }} {{
-            current_user.default_currency | currency_symbol }})</small
-          >
+          <br /><small style="color: #888">
+            ({% set tasso_utente = get_exchange_rate('EUR',
+            current_user.default_currency) or 1.1253 %} {{
+            "%.2f"|format((t.importo_valuta_base | float) * (tasso_utente |
+            float)) }} {{ current_user.default_currency | currency_symbol }})
+          </small>
           {% endif %}
         </td>
 
+        <!-- 🔹 Controvalore BTC -->
         <td style="color: #f39c12; font-weight: bold">
           {% if t.controvalore_btc %} {{ "%.8f"|format(t.controvalore_btc) }} {%
           else %} - {% endif %}
         </td>
 
+        <!-- 🔹 Valore BTC con il simbolo della valuta utente -->
         <td>
-          {% if t.valore_btc_eur %} {{ "%.2f"|format(t.valore_btc_eur) }} {%
-          else %} - {% endif %}
+          {% if t.valore_btc_eur %} {{ "%.2f"|format(t.valore_btc_eur) }} {{
+          current_user.default_currency | currency_symbol }} {% else %} - {%
+          endif %}
         </td>
 
         <td>

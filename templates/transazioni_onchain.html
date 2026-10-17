@@ -37,7 +37,8 @@ content %}
     {% endif %} {% endwith %}
     <div class="table-responsive-custom">
     <table border="1">
-    <thead> <tr>
+    <thead> 
+      <tr>
         <th>{{ _('ID') }}</th>
         <th>{{ _('Data') }}</th>
         <th>{{ _('Wallet') }}</th>
@@ -46,13 +47,15 @@ content %}
         <th>{{ _('Sottocategoria') }}</th>
         <th>{{ _('TransactionID') }}</th>
         <th>{{ _('Importo BTC') }}</th>
-        <th>{{ _('fee') }}</th>
-        <th>{{ _('Controvalore') }} ({{ current_user.default_currency | currency_symbol }})</th>
-        <th>{{ _('Valore BTC') }}/{{ current_user.default_currency | currency_symbol }}</th>
+        <th>{{ _('Fee') }}</th>
+        <th>{{ _('Controvalore Storico') }} ({{ simbolo_valuta }})</th>
+        <th>{{ _('Controvalore Live') }} ({{ simbolo_valuta }})</th>
+        <th>{{ _('Valore BTC') }}/{{ simbolo_valuta }}</th>
         <th>{{ _('Azioni') }}</th>
       </tr>
-      </thead>
-      <tbody>{% for t in transazioni_onchain %}
+    </thead>
+    <tbody>
+      {% for t in transazioni_onchain %}
       <tr>
         <td>{{ t["id"] }}</td>
         <td>{{ t["data"] }}</td>
@@ -61,21 +64,25 @@ content %}
         <td>{{ traduci(t["categoria"]) }}</td>
         <td>{{ traduci(t["sottocategoria"]) }}</td>
         <td>{{ t["transactionID"] }}</td>
-        <td
-          style="color: #f39c12; font-weight: bold"
-        >
+        <td style="color: #f39c12; font-weight: bold">
           {{ '%.8f' % t["importo_btc"] if t["importo_btc"] is not none else '0.00000000' }}
         </td>
-        <td
-          style="color: #f39c12; font-weight: bold"
-        >
+        <td style="color: #f39c12; font-weight: bold">
           {{ '%.8f' % t["fee"] if t["fee"] is not none else '0.00000000' }}
         </td>
 
-        <td style="color: {% if (t.controvalore_eur|float) >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}; font-weight: bold;"
-        >
-        {{ "%.2f"|format(t["controvalore_eur"]) }}</td>
-        <td>{{ "%.2f"|format(t["valore_btc_eur"]) }}</td>
+        <!-- 🔹 Controvalore STORICO (convertito in valuta utente) -->
+        <td style="color: #8e44ad; font-weight: bold;">
+          {{ "%.2f"|format(t["controvalore_storico"]) }} {{ simbolo_valuta }}
+        </td>
+
+        <!-- 🔹 Controvalore LIVE -->
+        <td style="color: {% if (t.controvalore_live|float) >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}; font-weight: bold;">
+          {{ "%.2f"|format(t["controvalore_live"]) }} {{ simbolo_valuta }}
+        </td>
+
+        <!-- 🔹 Valore BTC Unitario in valuta utente -->
+        <td>{{ "%.2f"|format(t["valore_btc_fiat"]) }} {{ simbolo_valuta }}</td>
         <td>
           <form
             method="post"
