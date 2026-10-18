@@ -165,7 +165,7 @@ if os.environ.get('BEESY_ENV') == 'production':
 
 
 def get_locale():
-    # return 'zh'
+    # return 'en'
     return request.accept_languages.best_match(['it', 'en', 'zh'])
 
 
