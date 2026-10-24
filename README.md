@@ -1,9 +1,9 @@
-# <strong style="color: #f39c12">₿eesy</strong> - Bitcoin Expense Tracker 🐝⚡
+# <strong style="color: #f39c12">₿eesy</strong> Bitcoin Expense Tracker 🐝⚡
 
 > **"Your Node, Your Rules. Your Data, Your Privacy."**
 
 [![GitHub license](https://img.shields.io/github/license/dennj75/beesy?style=flat-square)](LICENSE)
-[![GitHub stars](https://imgpl.io/github/stars/dennj75/beesy?style=flat-square)](https://github.com/dennj75/beesy/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/dennj75/beesy?style=flat-square)](https://github.com/dennj75/beesy/stargazers)
 
 ---
 
@@ -18,16 +18,18 @@ This project is an **EXPERIMENTAL EDUCATIONAL LABORATORY**.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Key Features (v0.2.0)
+
+### ⚙️ Modular Architecture & Dedicated Settings
+- **Clean Separation of Concerns:** Core identity & security (`auth_bp`) are cleanly decoupled from application preferences (`settings_bp`).
+- **Dedicated Settings Panel (`/impostazioni`):** Autonomous management of default currency (AUD, USD, GBP, JPY, CHF, BRL, EUR, etc.) and upcoming interface preferences.
 
 ### 💱 Foreign Currency and Exchange Rate Management
+- **Automatic Conversion:** Support for historical and real-time exchange rates for fiduciary and savings transactions (e.g., pension funds, securities).
+- **Multi-Currency Integration:** Transaction entry and automatic calculation of equivalent value in EUR and Bitcoin (both On-Chain and Lightning).
 
-- **Dedicated Settings Panel**: Dynamic management of foreign currencies (AUD, USD, GBP, JPY, CHF, BRL, etc.).
-- **Automatic Conversion**: Support for historical and real-time exchange rates for fiduciary and savings transactions (e.g., pension funds, securities).
-- **Multi-Currency Integration**: Transaction entry and automatic calculation of equivalent value in EUR and Bitcoin (both On-Chain and Lightning).
-
-- 🌍 **Internationalization (i18n):** Multi-language localization engine powered by Flask-Babel / GNU gettext. Fully supports English, Chinese and Italian language profiles.
-- 📊 **Advanced Analytics & Drill-Down:** Integrated dashboards powered by Chart.js. Track income, expenses, and savings efficiency with category-level drill-down modal views across Fiat (EUR), Lightning, and On-Chain transactions.
+- 🌍 **Internationalization (i18n):** Multi-language localization engine powered by Flask-Babel / GNU gettext. Fully supports English, Chinese, and Italian language profiles.
+- 📊 **Advanced Analytics & Drill-Down:** Integrated dashboards powered by Chart.js. Track income, expenses, and savings efficiency with category-level drill-down modal views across Fiat, Lightning, and On-Chain transactions.
 - **📱 Mobile Success & Portability:** Full mobile compatibility tested via ngrok. 100% success rate on mobile database restoration, allowing you to manage your finances on the go without a central server.
 - **🔑 Nostr Native Auth:**
   - **Desktop:** Password-less login via NIP-07 extensions (Alby, nos2x).
@@ -40,19 +42,21 @@ This project is an **EXPERIMENTAL EDUCATIONAL LABORATORY**.
 
 ## 📸 Screenshots
 
-|                    Dashboard                     |                  Analytics                  |
+|                Dashboard                 |                 Analytics                  |
 | :----------------------------------------------: | :-----------------------------------------: |
 | ![Dashboard](/static/img/Dashboard_20260502.png) | ![Analytics](static/img/Chart_20260502.png) |
 
-### 🛠️ TechStack
+---
+
+### 🛠️ Tech Stack
 
 | Component        | Technology                    | Role                                                      |
 | :--------------- | :---------------------------- | :-------------------------------------------------------- |
-| **Backend**      | Flask (Python)                | Server-side logic & API management                        |
+| **Backend**      | Flask (Python) / Blueprints   | Modular server-side logic & API management                |
 | **Data Viz**     | **Chart.js**                  | Interactive bar and doughnut charts with modal drill-down |
 | **Database**     | SQLite                        | Local-first, private data storage                         |
 | **Security**     | Fernet (PBKDF2HMAC + SHA-256) | Zero-knowledge local encryption for backups               |
-| **Localization** | **Flask-Babel / gettext**     | Server-side i18n translation framework                    |
+| **Localization** | **Flask-Babel / gettext**     | Server-side i18n translation framework (IT, EN, ZH)       |
 | **Auth**         | Nostr (Amber / NIP-07)        | Decentralized, password-less authentication               |
 | **Dev Method**   | **Vibe Coding**               | Building with passion and real-time iteration             |
 
