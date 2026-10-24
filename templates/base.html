@@ -179,7 +179,9 @@
               <a class="nav-link" href="{{ url_for('auth.profile') }}"
                 >👤 {{ _('Profilo') }}</a
               >
-              <a class="dropdown-item" href="{{ url_for('impostazioni') }}"
+              <a
+                class="dropdown-item"
+                href="{{ url_for('settings.impostazioni') }}"
                 >⚙️ {{ _('Impostazioni') }}</a
               >
               <div class="dropdown-divider"></div>
@@ -236,7 +238,11 @@
             <div class="nav-dropdown">
               <button class="nav-dropdown-btn" type="button">💶 ▾</button>
               <div class="nav-dropdown-content">
-                <a href="{{ url_for('transazioni') }}">📝 {{ _('FT %(simbolo)s', simbolo=(current_user.default_currency | currency_symbol)) }}</a>
+                <a href="{{ url_for('transazioni') }}"
+                  >📝 {{ _('FT %(simbolo)s',
+                  simbolo=(current_user.default_currency | currency_symbol))
+                  }}</a
+                >
                 <a href="{{ url_for('analytics', tipo='EURO') }}"
                   >📊 {{ _('Statistiche') }}</a
                 >

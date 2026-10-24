@@ -253,28 +253,22 @@ def profile():
     if request.method == 'POST':
         action = request.form.get('action')
 
-        # 1. AGGIORNAMENTO DATI BASE (Email e Valuta Predefinita)
+        # 1. AGGIORNAMENTO DATI BASE (Solo Email)
         if action == 'update_info':
             email = request.form.get('email', '').strip()
-            default_currency = request.form.get('default_currency', 'EUR')
-
-            # STAMPA DI DEBUG NEL TERMINALE DI VS CODE:
-            print(
-                f"DEBUG PROFILE UPDATE: email={email}, valuta_ricevuta={default_currency}, user_id={current_user.id}")
 
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE users 
-                SET email = ?, default_currency = ? 
+                SET email = ? 
                 WHERE id = ?
-            """, (email, default_currency, current_user.id))
+            """, (email, current_user.id))
             conn.commit()
             conn.close()
 
             # Aggiorniamo l'oggetto utente corrente in sessione
             current_user.email = email
-            current_user.default_currency = default_currency
 
             flash(_('Informazioni del profilo aggiornate con successo!'), 'success')
             return redirect(url_for('auth.profile'))
@@ -335,4 +329,4 @@ def profile():
 
             return redirect(url_for('auth.profile'))
 
-    return render_template('profile.html', valute=VALUTE_SUPPORTATE)
+    return render_template('profile.html')

@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 from utils.security import decrypt_master_key, encrypt_data, decrypt_data
 from utils.helpers import normalizza_importo, formatta_importo, VALUTE_SUPPORTATE, get_exchange_rate
 from models import User
+
 from utils.import_manager import anteprima_importazione_csv, anteprima_importazione_blink_csv
 from utils.export import (
     genera_stringa_backup_json,
@@ -2374,25 +2375,6 @@ def api_drill_down():
     })
 
 
-@app.route('/impostazioni', methods=['GET', 'POST'])
-@login_required
-def impostazioni():
-    if request.method == 'POST':
-        nuova_valuta = request.form.get('valuta')
-
-        if nuova_valuta in VALUTE_SUPPORTATE:
-            # 1. Salva la modifica su SQLite persistentemente
-            aggiorna_valuta_utente_db(current_user.id, nuova_valuta)
-
-            # 2. Aggiorna l'oggetto in sessione per la risposta immediata
-            current_user.default_currency = nuova_valuta
-
-            flash(_("Valuta predefinita aggiornata con successo!"), "success")
-            return redirect(url_for('impostazioni'))
-
-    return render_template('impostazioni.html', valute=VALUTE_SUPPORTATE)
-
-
 @app.template_filter('currency_symbol')
 def currency_symbol(code):
     info = VALUTE_SUPPORTATE.get(code)
@@ -2413,6 +2395,13 @@ if __name__ == '__main__':
         app.register_blueprint(auth_bp)
     except Exception as e:
         print(f"⚠️ Nota registrazione Auth: {e}")
+
+    # Registrazione blueprint settings (Nuovo)
+    try:
+        from settings import settings_bp
+        app.register_blueprint(settings_bp)
+    except Exception as e:
+        print(f"⚠️ Nota registrazione Settings: {e}")
 
     # Avvio del server Flask
     print("🚀 Avvio di Beesy in corso...")

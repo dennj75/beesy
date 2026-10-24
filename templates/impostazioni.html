@@ -1,33 +1,50 @@
-{% extends "base.html" %} {% block title %}{{ _('Impostazioni - ₿eesy') }}{%
-endblock %} {% block content %}
-<div class="container mt-4" style="max-width: 600px">
-  <h1>⚙️ {{ _('Impostazioni Account') }}</h1>
+{% extends "base.html" %} 
+{% block title %}{{ _('Impostazioni - ₿eesy') }}{% endblock %} 
+
+{% block content %}
+<div class="container mt-4 mb-5" style="max-width: 800px">
+  <h1 class="main-title mb-4">⚙️ {{ _('Impostazioni App') }}</h1>
   <hr style="border-color: #444" />
 
-  <form action="{{ url_for('impostazioni') }}" method="POST">
-    <div class="mb-4">
-      <label for="default_currency" class="form-label fw-bold">
-        🌐 {{ _('Valuta Predefinita per le Nuove Transazioni:') }}
-      </label>
-      {% set v = current_user.default_currency if current_user.default_currency
-      else 'EUR' %}
+  <!-- FORM UNICO PER LE IMPOSTAZIONI -->
+  <form action="{{ url_for('settings.impostazioni') }}" method="POST">
+    
+    <!-- CARD 1: VALUTA PREDEFINITA (ATTIVA E MODIFICABILE) -->
+    <div class="card bg-dark text-white shadow mb-4" style="border-left: 5px solid #f39c12;">
+      <div class="card-body p-4">
+        <h5 class="card-title mb-3">🌐 {{ _('Valuta Predefinita per le Nuove Transazioni') }}</h5>
+        
+        {% set v = current_user.default_currency if current_user.default_currency else 'EUR' %}
 
-      <select name="valuta" id="valuta" style="margin-left: 5px">
-        {% for codice, info in valute.items() %}
-        <option value="{{ codice }}" {{ 'selected' if v == codice else '' }}>
-          {{ codice }} ({{ info.simbolo }}) - {{ info.nome }}
-        </option>
-        {% endfor %}
-      </select>
-      <small class="text-muted d-block mt-2">
-        {{ _('Questa valuta verrà selezionata automaticamente quando inserisci
-        una nuova transazione.') }}
-      </small>
+        <select class="form-select bg-secondary text-white" name="valuta" id="valuta">
+          {% for codice, info in valute.items() %}
+          <option value="{{ codice }}" {{ 'selected' if v == codice else '' }}>
+            {{ codice }} ({{ info.simbolo }}) - {{ info.nome }}
+          </option>
+          {% endfor %}
+        </select>
+        
+        <small class="text-muted d-block mt-2">
+          {{ _('Questa valuta verrà selezionata automaticamente quando inserisci una nuova transazione.') }}
+        </small>
+      </div>
     </div>
 
-    <button type="submit" class="btn btn-primary">
-      💾 {{ _('Salva Preferenze') }}
+    <!-- CARD 2: LINGUA E INTERFACCIA (PRONTA PER IL FUTURO) -->
+    <div class="card bg-dark text-white shadow mb-4" style="border-left: 5px solid #2ecc71;">
+      <div class="card-body p-4">
+        <h5 class="card-title mb-3">🌍 {{ _('Lingua e Interfaccia') }}</h5>
+        <p class="text-muted">
+          {{ _('La gestione della lingua e del tema visivo verrà integrata qui a breve.') }}
+        </p>
+      </div>
+    </div>
+
+    <!-- PULSANTE DI SALVATAGGIO GLOBALE -->
+    <button type="submit" class="btn btn-primary btn-lg">
+      💾 {{ _('Salva Impostazioni') }}
     </button>
   </form>
+
 </div>
 {% endblock %}
