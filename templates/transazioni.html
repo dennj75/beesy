@@ -94,17 +94,15 @@ block content %}
         <td>{{ traduci(t.categoria) }}</td>
         <td>{{ traduci(t.sottocategoria) }}</td>
 
-        <!-- 🔹 Importo con simbolo valuta sempre visibile e conversione base corretta -->
+        <!-- 🔹 Importo con simbolo valuta sempre visibile -->
         <td
           class="{% if t.importo >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
         >
           {{ t.importo | formatta_importo(t.valuta) }} {% if t.valuta and
           t.valuta != current_user.default_currency %}
           <br /><small style="color: #888">
-            ({% set tasso_utente = get_exchange_rate('EUR',
-            current_user.default_currency) or 1.1253 %} {{
-            "%.2f"|format((t.importo_valuta_base | float) * (tasso_utente |
-            float)) }} {{ current_user.default_currency | currency_symbol }})
+            ({{ "%.2f"|format(t.importo_valuta_base | float) }} {{
+            current_user.default_currency | currency_symbol }})
           </small>
           {% endif %}
         </td>

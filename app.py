@@ -512,19 +512,23 @@ def transazioni():
 
     # 1. Recupero valuta e tasso di cambio dell'utente (EUR -> valuta_utente)
     valuta_utente = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
+
+    # Recuperiamo il tasso reale (o 1.0 se EUR)
     tasso_fiat = float(get_exchange_rate('EUR', valuta_utente)
                        or 1.0) if valuta_utente != 'EUR' else 1.0
 
-    # 2. Recuperiamo i dati dal DB (i saldi *_base sono SEMPRE in EUR)
+    # 2. Recuperiamo i saldi base dal DB (tutti in EUR)
     dati, banca_base, contanti_base, invest_base, pen_base, saldo_totale_eur_base, btc_eur = get_transazioni_con_saldo(
         user_id)
 
-    # 3. Convertiamo i saldi base EUR nella valuta di visualizzazione dell'utente
+    # 3. Convertiamo TUTTI i saldi base nella valuta utente
     banca = banca_base * tasso_fiat
     contanti = contanti_base * tasso_fiat
-    invest = abs(invest_base) * tasso_fiat
-    pen = abs(pen_base) * tasso_fiat
-    saldo_totale_eur = banca + contanti + invest + pen
+    invest = invest_base * tasso_fiat
+    pen = pen_base * tasso_fiat
+
+    # Saldo totale convertito
+    saldo_totale_fiat = banca + contanti + invest + pen
 
     # Ordiniamo la lista 'dati' per data decrescente e id decrescente
     dati_ordinati = sorted(dati, key=lambda x: (
@@ -537,8 +541,9 @@ def transazioni():
         contanti=contanti,
         saldo_investimenti=invest,
         saldo_pensione=pen,
-        saldo_totale_eur=saldo_totale_eur,
-        saldo_btc_da_eur=btc_eur
+        saldo_totale_eur=saldo_totale_fiat,
+        saldo_btc_da_eur=btc_eur,
+        tasso_utente=tasso_fiat
     )
 
 
@@ -930,19 +935,39 @@ def scarica_csv():
     return send_file(nome_file, as_attachment=True, download_name=f"transazioni.csv")
 
 
+app.route('/scarica-csv-mese', methods=['GET', 'POST'])
+
+
 @app.route('/scarica-csv-mese', methods=['GET', 'POST'])
 @login_required
 def scarica_csv_per_mese():
     if request.method == 'POST':
-        mese = request.form['mese']  # esempio formato YYYY-MM
-        if len(mese) != 7 or not mese[:4].isdigit() or mese[4] != '-' or not mese[5:].isdigit():
-            flash("⚠️ Formato mese non valido. Usa YYYY-MM.", "error")
+        mese = request.form.get('mese')  # esempio formato YYYY-MM
+
+        if not mese or len(mese) != 7 or not mese[:4].isdigit() or mese[4] != '-' or not mese[5:].isdigit():
+            flash("⚠️ Formato mese non valido. Usa YYYY-MM.", "danger")
             return redirect(url_for('scarica_csv_per_mese'))
 
-        nome_file = f'exports/transazioni_{mese}.csv'
+        # Assicuriamoci che la cartella exports esista
+        export_dir = os.path.join(os.getcwd(), 'exports')
+        if not os.path.exists(export_dir):
+            os.makedirs(export_dir)
+
+        nome_file = os.path.join(export_dir, f"transazioni_{mese}.csv")
+
         # Genera il csv aggiornato filtrato per utente
-        esporta_csv_per_mese(mese, user_id=current_user.id)
-        return send_file(nome_file, as_attachment=True, download_name=f"transazioni_{mese}.csv")
+        try:
+            esporta_csv_per_mese(mese, user_id=current_user.id)
+        except Exception as e:
+            print(f"Errore durante l'esportazione CSV: {e}")
+
+        # Controllo di sicurezza: verifichiamo che il file esista e non sia vuoto
+        if os.path.exists(nome_file) and os.path.getsize(nome_file) > 0:
+            return send_file(nome_file, as_attachment=True, download_name=f"transazioni_{mese}.csv")
+        else:
+            flash(
+                f"⚠️ Nessuna transazione trovata per il mese {mese}.", "warning")
+            return redirect(url_for('scarica_csv_per_mese'))
 
     return render_template('scarica_csv_per_mese.html')
 
@@ -1094,8 +1119,8 @@ def modifica_transazione_web_lightning(id_transazione):
     Gestisce la modifica di una transazione Lightning esistente.
 
     - GET: Recupera i dati della transazione dal DB e mostra il form precompilato.
-    - POST: Riceve i dati aggiornati, ricalcola il prezzo storico/live di BTC 
-      e il controvalore nella valuta preferita dell'utente (EUR, USD, ecc.), 
+    - POST: Riceve i dati aggiornati, ricalcola il prezzo storico/live di BTC
+      e il controvalore nella valuta preferita dell'utente (EUR, USD, ecc.),
       salva le modifiche sul DB e reindirizza alla lista transazioni.
     """
     transazioni_lightning = leggi_transazioni_da_db_lightning(current_user.id)
@@ -1489,25 +1514,56 @@ def modifica_transazione_web_onchain(id_transazione):
 @app.route('/scarica_csv_onchain')
 @login_required
 def scarica_csv_onchain():
-    nome_file = 'exports/transazioni_onchain.csv'
-    # Genera il csv aggiornato filtrato per utente
-    esporta_csv_onchain(nome_file, user_id=current_user.id)
-    return send_file(nome_file, as_attachment=True, download_name=f"transazioni_onchain.csv")
+    # Assicuriamoci che la cartella exports esista
+    export_dir = os.path.join(os.getcwd(), 'exports')
+    if not os.path.exists(export_dir):
+        os.makedirs(export_dir)
+
+    nome_file = os.path.join(export_dir, 'transazioni_onchain.csv')
+
+    # Genera il csv generale aggiornato filtrato per utente
+    try:
+        esporta_csv_onchain(nome_file, user_id=current_user.id)
+    except Exception as e:
+        print(f"Errore export onchain generale: {e}")
+
+    # Controllo di sicurezza prima di inviare il file
+    if os.path.exists(nome_file) and os.path.getsize(nome_file) > 0:
+        return send_file(nome_file, as_attachment=True, download_name="transazioni_onchain.csv")
+    else:
+        flash("⚠️ Nessun dato onchain disponibile per l'esportazione.", "warning")
+        return redirect(url_for('scarica_csv_per_mese_onchain'))
 
 
 @app.route('/scarica_csv_onchain_per_mese', methods=['GET', 'POST'])
 @login_required
 def scarica_csv_per_mese_onchain():
     if request.method == 'POST':
-        mese = request.form['mese']  # esempio formato YYYY-MM
-        if len(mese) != 7 or not mese[:4].isdigit() or mese[4] != '-' or not mese[5:].isdigit():
+        mese = request.form.get('mese')  # esempio formato YYYY-MM
+        if not mese or len(mese) != 7 or not mese[:4].isdigit() or mese[4] != '-' or not mese[5:].isdigit():
             flash("⚠️ Formato mese non valido. Usa YYYY-MM.", "error")
             return redirect(url_for('scarica_csv_per_mese_onchain'))
 
-        nome_file = f'exports/transazioni_{mese}_onchain.csv'
+        # Assicuriamoci che la cartella exports esista
+        export_dir = os.path.join(os.getcwd(), 'exports')
+        if not os.path.exists(export_dir):
+            os.makedirs(export_dir)
+
+        nome_file = os.path.join(export_dir, f"transazioni_{mese}_onchain.csv")
+
         # Genera il csv aggiornato filtrato per utente
-        esporta_csv_per_mese_onchain(mese, user_id=current_user.id)
-        return send_file(nome_file, as_attachment=True, download_name=f"transazioni_{mese}_onchain.csv")
+        try:
+            esporta_csv_per_mese_onchain(mese, user_id=current_user.id)
+        except Exception as e:
+            print(f"Errore durante l'esportazione CSV Onchain: {e}")
+
+        # Controllo di sicurezza: verifica che il file esista e non sia vuoto
+        if os.path.exists(nome_file) and os.path.getsize(nome_file) > 0:
+            return send_file(nome_file, as_attachment=True, download_name=f"transazioni_{mese}_onchain.csv")
+        else:
+            flash(
+                f"⚠️ Nessuna transazione onchain trovata per il mese {mese}.", "warning")
+            return redirect(url_for('scarica_csv_per_mese_onchain'))
 
     return render_template('scarica_csv_per_mese_onchain.html')
 
@@ -1624,7 +1680,7 @@ def analytics(tipo):
             cursor.execute(f'''
                 SELECT SUBSTR(data, 1, 10) as giorno,
                        SUM(
-                           CASE 
+                           CASE
                                WHEN LOWER(TRIM(categoria)) = 'entrate' THEN ABS(importo_btc) - ABS(COALESCE(fee, 0))
                                ELSE -ABS(importo_btc) - ABS(COALESCE(fee, 0))
                            END
@@ -1651,7 +1707,7 @@ def analytics(tipo):
             cursor.execute(f'''
                 SELECT SUBSTR(data, 1, 10) as giorno,
                        SUM(
-                           CASE 
+                           CASE
                                WHEN LOWER(TRIM(categoria)) = 'entrate' THEN ABS(satoshi) * 0.00000001
                                ELSE -ABS(satoshi) * 0.00000001
                            END
@@ -1691,15 +1747,21 @@ def analytics(tipo):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        cursor.execute(
-            "SELECT * FROM assets_watch WHERE user_id = ?", (current_user.id,))
-        investimenti_fiat = cursor.fetchall()
+        # 🛠️ MAPPA SICURA DEI VECCHI ID SUI NUOVI ID DELL'UTENTE 1
+        try:
+            cursor.execute(
+                "UPDATE assets_history SET asset_id = 77 WHERE asset_id IN (73, 61)")
+            cursor.execute(
+                "UPDATE assets_history SET asset_id = 78 WHERE asset_id IN (74, 62)")
+            cursor.execute(
+                "UPDATE assets_history SET asset_id = 79 WHERE asset_id = 75")
+            cursor.execute(
+                "UPDATE assets_history SET asset_id = 80 WHERE asset_id = 76")
+            conn.commit()
+        except Exception as e:
+            print("Fix ID automatico:", e)
 
-        costo_storico_eur = sum(float(
-            asset['capitale_investito'] or 0) for asset in investimenti_fiat) * tasso_fiat
-        valore_attuale_eur = sum(
-            float(asset['valore_attuale'] or 0) for asset in investimenti_fiat) * tasso_fiat
-
+        # 1. Recupero dati per la tabella della cronologia (ordinata dal più recente)
         try:
             cursor.execute('''
                 SELECT h.*, w.nome_asset
@@ -1709,46 +1771,61 @@ def analytics(tipo):
                 ORDER BY h.data_rilevazione DESC
             ''', (current_user.id,))
             cronologia_fiat = cursor.fetchall()
+            print(
+                f"DEBUG CRONOLOGIA FIAT TROVATA: {len(cronologia_fiat)} record")
         except Exception as e:
-            print(f"Nota nel recupero cronologia: {e}")
+            print(f"Errore recupero cronologia fiat: {e}")
+            cronologia_fiat = []
 
-        filtro_tempo_grafico = ""
-        parametri_grafico = [current_user.id]
+        # 2. Recupero dati per il grafico (selezionando esplicitamente il giorno)
+        try:
+            cursor.execute('''
+                SELECT SUBSTR(h.data_rilevazione, 1, 10) as giorno, h.valore_rilevato, h.asset_id
+                FROM assets_history h
+                JOIN assets_watch w ON h.asset_id = w.id
+                WHERE w.user_id = ?
+                ORDER BY h.data_rilevazione ASC
+            ''', (current_user.id,))
+            tutti_i_dati = cursor.fetchall()
+        except Exception as e:
+            print(f"Errore dati grafico: {e}")
+            tutti_i_dati = []
 
-        if mese_selezionato:
-            filtro_tempo_grafico = "AND SUBSTR(h.data_rilevazione, 1, 7) <= ?"
-            parametri_grafico.append(mese_selezionato)
-        elif anno_selezionato:
-            filtro_tempo_grafico = "AND SUBSTR(h.data_rilevazione, 1, 4) <= ?"
-            parametri_grafico.append(anno_selezionato)
+        giorni_dict = {}
+        for row in tutti_i_dati:
+            giorno = row['giorno']
+            if mese_selezionato and not giorno.startswith(mese_selezionato):
+                continue
+            if anno_selezionato and not giorno.startswith(str(anno_selezionato)):
+                continue
 
-        tutti_i_parametri = [current_user.id] + \
-            [p for p in parametri_grafico[1:]] + parametri_grafico
+            if giorno not in giorni_dict:
+                giorni_dict[giorno] = {}
+            giorni_dict[giorno][row['asset_id']] = float(
+                row['valore_rilevato'] or 0)
 
-        cursor.execute(f'''
-            SELECT SUBSTR(h.data_rilevazione, 1, 10) as giorno, SUM(h.valore_rilevato) as totale
-            FROM assets_history h
-            JOIN assets_watch w ON h.asset_id = w.id
-            WHERE w.user_id = ? {filtro_tempo_grafico} AND h.id IN (
-                SELECT MAX(inner_h.id)
-                FROM assets_history inner_h
-                JOIN assets_watch inner_w ON inner_h.asset_id = inner_w.id
-                WHERE inner_w.user_id = ? {filtro_tempo_grafico}
-                AND SUBSTR(inner_h.data_rilevazione, 1, 10) = SUBSTR(h.data_rilevazione, 1, 10)
-                GROUP BY inner_h.asset_id
-            )
-            GROUP BY giorno ORDER BY giorno ASC
-        ''', tuple(tutti_i_parametri))
-
-        dati_grafico_fiat = cursor.fetchall()
+        dati_grafico_fiat = []
+        for giorno in sorted(giorni_dict.keys()):
+            totale_giorno = sum(giorni_dict[giorno].values())
+            dati_grafico_fiat.append(
+                {'giorno': giorno, 'totale': totale_giorno})
 
         date_fiat = [str(r['giorno']) for r in dati_grafico_fiat]
         valori_fiat = [float(r['totale'] or 0) *
                        tasso_fiat for r in dati_grafico_fiat]
 
+        cursor.execute(
+            "SELECT * FROM assets_watch WHERE user_id = ?", (current_user.id,))
+        investimenti_fiat = cursor.fetchall()
+
+        costo_storico_eur = sum(float(
+            asset['capitale_investito'] or 0) for asset in investimenti_fiat) * tasso_fiat
+        valore_attuale_eur = sum(
+            float(asset['valore_attuale'] or 0) for asset in investimenti_fiat) * tasso_fiat
+
         rendimento = valore_attuale_eur - costo_storico_eur
-        if costo_storico_eur > 0:
-            percentuale = (rendimento / costo_storico_eur) * 100.0
+        percentuale = (rendimento / costo_storico_eur *
+                       100.0) if costo_storico_eur > 0 else 0.0
 
         conn.close()
 
@@ -1774,22 +1851,22 @@ def analytics(tipo):
             parametri.append(anno_selezionato)
 
         cursor.execute(f"""
-            SELECT COALESCE(SUM(ABS(importo_btc)), 0.0) 
-            FROM transazioni_onchain 
+            SELECT COALESCE(SUM(ABS(importo_btc)), 0.0)
+            FROM transazioni_onchain
             WHERE user_id = ? AND LOWER(TRIM(categoria)) = 'entrate' {filtro_tempo}
         """, tuple(parametri))
         tot_entrate = float(cursor.fetchone()[0])
 
         cursor.execute(f"""
-            SELECT COALESCE(SUM(ABS(importo_btc)), 0.0) 
-            FROM transazioni_onchain 
+            SELECT COALESCE(SUM(ABS(importo_btc)), 0.0)
+            FROM transazioni_onchain
             WHERE user_id = ? AND LOWER(TRIM(categoria)) != 'entrate' {filtro_tempo}
         """, tuple(parametri))
         tot_spese = float(cursor.fetchone()[0])
 
         cursor.execute(f"""
-            SELECT COALESCE(SUM(ABS(fee)), 0.0) 
-            FROM transazioni_onchain 
+            SELECT COALESCE(SUM(ABS(fee)), 0.0)
+            FROM transazioni_onchain
             WHERE user_id = ? {filtro_tempo}
         """, tuple(parametri))
         tot_fee = float(cursor.fetchone()[0])
@@ -2073,7 +2150,7 @@ def conferma_importazione():
             if sottocategoria == "Prelievo Contante" or sottocategoria == "Trasferimento":
                 cursor.execute('''
                     SELECT id FROM transazioni
-                    WHERE user_id = ? AND data = ? AND abs(importo) = abs(?) 
+                    WHERE user_id = ? AND data = ? AND abs(importo) = abs(?)
                     AND (descrizione = ? OR descrizione LIKE '%Giroconto%' OR descrizione LIKE '%Prelievo%')
                 ''', (current_user.id, data, importo, desc))
             else:
@@ -2296,7 +2373,7 @@ def api_drill_down():
 
     query_fiat = f"""
         SELECT data, descrizione, importo, valuta
-        FROM transazioni 
+        FROM transazioni
         WHERE {" AND ".join(where_fiat)} {filtro_segno_fiat}
         ORDER BY data DESC
     """
@@ -2338,7 +2415,7 @@ def api_drill_down():
 
     query_ln = f"""
         SELECT data, descrizione, satoshi
-        FROM transazioni_lightning 
+        FROM transazioni_lightning
         WHERE {" AND ".join(where_ln)} {filtro_segno_ln}
         ORDER BY data DESC
     """
@@ -2356,8 +2433,8 @@ def api_drill_down():
         params_btc.append(anno)
 
     query_btc = f"""
-        SELECT data, descrizione, importo_btc 
-        FROM transazioni_onchain 
+        SELECT data, descrizione, importo_btc
+        FROM transazioni_onchain
         WHERE {" AND ".join(where_btc)} {filtro_segno_btc}
         ORDER BY data DESC
     """

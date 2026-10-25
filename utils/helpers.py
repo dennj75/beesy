@@ -57,8 +57,8 @@ def formatta_importo(importo, valuta='EUR'):
 
 def get_exchange_rate(from_currency, to_currency, date_str=None):
     """
-    Restituisce il tasso di cambio tra due valute.
-    Esempio: get_exchange_rate('USD', 'EUR') -> 0.92
+    Restituisce il tasso di cambio tra due valute con timeout ultra-rapido
+    e protezione totale contro i blocchi di rete.
     """
     if not from_currency or not to_currency or from_currency == to_currency:
         return 1.0
@@ -66,13 +66,15 @@ def get_exchange_rate(from_currency, to_currency, date_str=None):
     try:
         # API gratuita della Banca Centrale Europea (Frankfurter)
         url = f"https://api.frankfurter.app/latest?from={from_currency}&to={to_currency}"
-        response = requests.get(url, timeout=5)
+        # Timeout abbassato a 2 secondi per evitare qualsiasi blocco del server
+        response = requests.get(url, timeout=2)
         if response.status_code == 200:
             data = response.json()
             return float(data['rates'].get(to_currency, 1.0))
     except Exception as e:
+        # Stampiamo l'errore senza bloccare l'esecuzione
         print(
-            f"⚠️ Errore recupero tasso di cambio ({from_currency} -> {to_currency}): {e}")
+            f"⚠️ API cambio non disponibile ({from_currency} -> {to_currency}), uso fallback: {e}")
 
-    # Fallback sicuro se manca la connessione o l'API non risponde
+    # Fallback immediato: se la rete fallisce, l'app non si blocca e usa 1.0
     return 1.0

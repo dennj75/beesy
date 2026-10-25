@@ -1286,23 +1286,30 @@ def get_bilancio_periodo(user_id, tipo_conto, mese=None, anno=None):
         filtro_tempo = "AND data LIKE ?"
         parametri.append(f"{str(anno).strip()}%")
 
-    # Query diretta sulle entrate
+    # Query diretta sulle entrate (escludendo il saldo iniziale)
     query_entrate = f"""
         SELECT COALESCE(SUM(ABS({colonna})), 0.0) 
         FROM {tabella} 
-        WHERE user_id=? AND LOWER(TRIM(categoria)) = 'entrate' {filtro_tempo}
+        WHERE user_id=? 
+        AND LOWER(TRIM(categoria)) = 'entrate' 
+        AND LOWER(descrizione) NOT LIKE '%saldo iniziale%'
+        AND LOWER(sottocategoria) NOT LIKE '%rimborso%'
+        {filtro_tempo}
     """
     cursor.execute(query_entrate, parametri)
     totale_entrate = cursor.fetchone()[0]
 
-    # Query diretta sulle uscite (escludendo Entrate, Patrimonio & Finanze e Giroconti)
+    # Query diretta sulle uscite (escludendo Entrate, saldi, prelievi e rimborsi)
     query_spese = f"""
         SELECT COALESCE(SUM(ABS({colonna})), 0.0) 
         FROM {tabella} 
         WHERE user_id=? 
-        AND LOWER(TRIM(categoria)) NOT IN ('entrate', 'patrimonio & finanze', 'patrimonio e finanze')
+        AND LOWER(TRIM(categoria)) != 'entrate'
+        AND LOWER(descrizione) NOT LIKE '%saldo iniziale%'
         AND LOWER(sottocategoria) NOT LIKE '%giroconto%'
         AND LOWER(sottocategoria) NOT LIKE '%trasferimento%'
+        AND LOWER(sottocategoria) NOT LIKE '%prelievo contante%'
+        AND LOWER(sottocategoria) NOT LIKE '%rimborso%'
         {filtro_tempo}
     """
     cursor.execute(query_spese, parametri)
