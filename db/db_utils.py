@@ -56,7 +56,45 @@ def inizializza_db():
     conn.execute("PRAGMA foreign_keys = ON;")
     cursor = conn.cursor()
 
-    # 1. Creazione tabella con TUTTE le colonne aggiornate
+    # ======================================================
+    # 1. CREAZIONE TABELLA USERS (DEVE ESSERE LA PRIMA!)
+    # ======================================================
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE,
+            password_hash TEXT NOT NULL
+        )
+    ''')
+
+    # Aggiunta colonne extra per utenti
+    colonne_users = [
+        ('npub', 'TEXT'),
+        ('encrypted_master_key', 'TEXT'),
+        ('pubkey', 'TEXT'),
+        ('auth_type', "TEXT DEFAULT 'local'"),
+        ('default_currency', "TEXT DEFAULT 'EUR'")
+    ]
+
+    for nome_col, tipo in colonne_users:
+        try:
+            cursor.execute(f'ALTER TABLE users ADD COLUMN {nome_col} {tipo}')
+        except sqlite3.OperationalError:
+            pass
+
+    # Paracadute: Inseriamo l'utente predefinito (id=1) se la tabella users è vuota
+    cursor.execute("SELECT COUNT(*) FROM users")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute('''
+            INSERT INTO users (id, username, password_hash, auth_type)
+            VALUES (1, 'default_user', 'no_password_set', 'local')
+        ''')
+        print("👤 Utente di default (id=1) creato con successo!")
+
+    # ======================================================
+    # 2. CREAZIONE ALTRE TABELLE
+    # ======================================================
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS transazioni (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,13 +107,11 @@ def inizializza_db():
             valore_btc_eur REAL,
             conto TEXT DEFAULT 'BANCA',
             user_id INTEGER DEFAULT 1,
-            note TEXT DEFAULT '',  -- <--- AGGIUNTA QUI!
+            note TEXT DEFAULT '',
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
 
-    # 2. "Paracadute" per i database vecchi
-    # Se il database esiste già ma mancano le colonne, le aggiungiamo qui
     colonne_extra = [
         ('user_id', 'INTEGER DEFAULT 1'),
         ('conto', "TEXT DEFAULT 'BANCA'"),
@@ -87,7 +123,7 @@ def inizializza_db():
             cursor.execute(
                 f'ALTER TABLE transazioni ADD COLUMN {nome_col} {tipo}')
         except sqlite3.OperationalError:
-            pass  # La colonna esiste già, tutto ok!
+            pass
 
     # Tabella per Lightning Network
     cursor.execute('''
@@ -135,47 +171,21 @@ def inizializza_db():
     except sqlite3.OperationalError:
         pass
 
-    # Tabella per utenti (auth) - USO LO STESSO CURSORE DI PRIMA
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            email TEXT UNIQUE,
-            password_hash TEXT NOT NULL
-            
-        )
-    ''')
-
-    # Aggiunta colonne extra per utenti
-    colonne_users = [
-        ('npub', 'TEXT'),
-        ('encrypted_master_key', 'TEXT'),
-        ('pubkey', 'TEXT'),
-        ('auth_type', "TEXT DEFAULT 'local'"),
-        ('default_currency', "TEXT DEFAULT 'EUR'")
-    ]
-
-    for nome_col, tipo in colonne_users:
-        try:
-            cursor.execute(f'ALTER TABLE users ADD COLUMN {nome_col} {tipo}')
-        except sqlite3.OperationalError:
-            pass
-
-    # Tabella per tenere d'occhio gli asset (es. fondi pensione, azioni, ETF)
+    # Tabella per tenere d'occhio gli asset
     cursor.execute('''        
         CREATE TABLE IF NOT EXISTS assets_watch(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
-            nome_asset TEXT NOT NULL,       -- Es: "Fondo Pensione", "Poste Italiane"
-            tipo_asset TEXT DEFAULT 'FIAT', -- Per distinguerli dalle crypto
-            capitale_investito REAL,        -- Quanto hai messo il 31/03
-            valore_attuale REAL,            -- Il valore aggiornato oggi
+            nome_asset TEXT NOT NULL,
+            tipo_asset TEXT DEFAULT 'FIAT',
+            capitale_investito REAL,
+            valore_attuale REAL,
             data_aggiornamento DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     ''')
 
-    # Tabella per tenere la storia dei valori degli asset (per grafici e analisi)
+    # Tabella per storia asset
     cursor.execute('''        
         CREATE TABLE IF NOT EXISTS assets_history(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -197,19 +207,8 @@ def inizializza_db():
             FOREIGN KEY (user_id) REFERENCES users (id)
         )        
     ''')
-    # Tabella per il "cervello" delle categorie
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS mapping_categorie (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            parola_chiave TEXT NOT NULL,
-            categoria TEXT,
-            sottocategoria TEXT,
-            user_id INTEGER,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )        
-    ''')
 
-    # INSERIAMO GLI ESEMPI DI DEFAULT SOLO SE LA TABELLA È VUOTA
+    # Esempi di default per il mapping
     cursor.execute("SELECT COUNT(*) FROM mapping_categorie")
     if cursor.fetchone()[0] == 0:
         esempi = [
@@ -219,32 +218,23 @@ def inizializza_db():
             ('ENI', 'Trasporti', 'Carburante'),
             ('ALI', 'Alimentari', 'Supermercato')
         ]
-        # Inseriamo gli esempi assegnandoli all'utente di default (user_id=1)
         cursor.executemany('''
             INSERT INTO mapping_categorie (parola_chiave, categoria, sottocategoria, user_id)
             VALUES (?, ?, ?, 1)
         ''', esempi)
         print("🧠 Tabella Mapping popolata con i primi esempi!")
 
-    # Tabella per i prezzi Bitcoin (usando la TUA struttura corretta)
+    # Tabella prezzi Bitcoin
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS prezzi_btc (
             data TEXT PRIMARY KEY,
             prezzo_eur REAL NOT NULL
         )
     ''')
-    # ------------------------------------------------------
-    # NUOVA SEZIONE: PARACADUTE MULTI-VALUTA (EUR, USD, CHF, ecc.)
-    # ------------------------------------------------------
 
-    # 1. Preferenza valuta base per gli utenti (Usiamo 'default_currency' già presente in colonne_users)
-    # try:
-    #     cursor.execute(
-    #         "ALTER TABLE users ADD COLUMN base_currency TEXT DEFAULT 'EUR'")
-    # except sqlite3.OperationalError:
-    #     pass
-
-    # 2. Supporto valuta originaria nelle transazioni classiche
+    # ======================================================
+    # 3. AGGIORNAMENTI MULTIVALUTA E CHIUSURA FINALE
+    # ======================================================
     colonne_multivaluta_transazioni = [
         ('valuta', "TEXT DEFAULT 'EUR'"),
         ('importo_valuta_base', "REAL"),
@@ -257,17 +247,16 @@ def inizializza_db():
         except sqlite3.OperationalError:
             pass
 
-    # Popoliamo retroattivamente importo_valuta_base per i vecchi record dove è NULL
     cursor.execute(
         "UPDATE transazioni SET importo_valuta_base = importo WHERE importo_valuta_base IS NULL")
 
-    # 3. Supporto valuta negli asset di investimento
     try:
         cursor.execute(
             "ALTER TABLE assets_watch ADD COLUMN valuta TEXT DEFAULT 'EUR'")
     except sqlite3.OperationalError:
         pass
-    # ALLA FINE DI TUTTO: Un solo commit e una sola chiusura
+
+    # 🛑 UNICO PUNTO DI COMMIT E CHIUSURA ALLA FINE ASSOLUTA DI TUTTO
     conn.commit()
     conn.close()
     print("🐝 Beesy: Database inizializzato e pronto!")

@@ -297,8 +297,8 @@ def profile():
 
             try:
                 # A. Decifriamo la Master Key esistente usando la VECCHIA password
-                m_key = decrypt_master_key(
-                    current_user.encrypted_master_key, old_password, current_user.username)
+                # NOTA: Passiamo l'oggetto current_user intero e la vecchia password (2 argomenti corretti)
+                m_key = decrypt_master_key(current_user, old_password)
 
                 # B. Ricifriamo la STESSA Master Key usando la NUOVA password
                 new_enc_m_key = encrypt_master_key(
