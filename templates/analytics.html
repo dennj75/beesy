@@ -38,11 +38,11 @@
       <h6 style="color: #888">⚖️ {{ _('Delta (Bilancio)') }}</h6>
       <h3 style="color: #2ecc71">
         {% if tipo == 'EURO' %}
-          {{ "%.2f"|format(tot_entrate - tot_spese) }} {{ simbolo_valuta }}
+          {{ "%.2f"|format(delta) }} {{ simbolo_valuta }}
         {% elif tipo == 'LIGHTNING' %}
-          ⚡ {{ "{:,.0f}".format(tot_entrate|int).replace(',', '.') }} sats
+          ⚡ {{ "{:,.0f}".format(delta|int).replace(',', '.') }} sats
         {% else %}
-          {{ "%.8f"|format(tot_entrate) }} ₿
+          {{ "%.8f"|format(delta) }} ₿
         {% endif %}
       </h3>
     </div>
