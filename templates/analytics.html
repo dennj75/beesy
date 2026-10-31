@@ -9,24 +9,52 @@
     <div class="card text-center shadow p-3 mb-2" style="background-color: #1a1a1a; border-left: 5px solid #2ecc71;">
       <h6 style="color: #888">📥 {{ _('Entrate') }}</h6>
       <h3 style="color: #2ecc71">
-        {{ "%.2f"|format(tot_entrate) if tipo != 'ONCHAIN' else "%.8f"|format(tot_entrate) }}
-      </h3>
+        {% if tipo == 'EURO' %}
+          {{ "%.2f"|format(tot_entrate) }} {{ simbolo_valuta }}
+        {% elif tipo == 'LIGHTNING' %}
+          ⚡ {{ "{:,.0f}".format(tot_entrate|int).replace(',', '.') }} sats
+        {% else %}
+          {{ "%.8f"|format(tot_entrate) }} ₿
+  {% endif %}
+</h3>
     </div>
   </div>
   <div class="col-md-4">
     <div class="card text-center shadow p-3 mb-2" style="background-color: #1a1a1a; border-left: 5px solid #e74c3c;">
       <h6 style="color: #888">📤 {{ _('Uscite') }}</h6>
       <h3 style="color: #e74c3c">
-        {{ "%.2f"|format(tot_spese) if tipo != 'ONCHAIN' else "%.8f"|format(tot_spese) }}
+        {% if tipo == 'EURO' %}
+          {{ "%.2f"|format(tot_spese) }} {{ simbolo_valuta }}
+        {% elif tipo == 'LIGHTNING' %}
+          ⚡ {{ "{:,.0f}".format(tot_spese|int).replace(',', '.') }} sats
+        {% else %}
+          {{ "%.8f"|format(tot_spese) }} ₿
+        {% endif %}
       </h3>
     </div>
   </div>
   <div class="col-md-4">
     <div class="card text-center shadow p-3 mb-2" style="background-color: #1a1a1a; border-left: 5px solid #f39c12;">
       <h6 style="color: #888">⚖️ {{ _('Delta (Bilancio)') }}</h6>
-      <h3 style="{% if delta >= 0 %}color: #2ecc71;{% else %}color: #e74c3c;{% endif %}">
-        {{ "%.2f"|format(delta) if tipo != 'ONCHAIN' else "%.8f"|format(delta) }}
+      <h3 style="color: #2ecc71">
+        {% if tipo == 'EURO' %}
+          {{ "%.2f"|format(tot_entrate - tot_spese) }} {{ simbolo_valuta }}
+        {% elif tipo == 'LIGHTNING' %}
+          ⚡ {{ "{:,.0f}".format(tot_entrate|int).replace(',', '.') }} sats
+        {% else %}
+          {{ "%.8f"|format(tot_entrate) }} ₿
+        {% endif %}
       </h3>
+    </div>
+  </div>
+</div>
+
+<!-- SAVINGS RATE -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card shadow p-3" style="background-color: #1a1a1a; border-top: 3px solid #3498db">
+      <div class="d-flex justify-content-between align-items-center flex-wrap">
+</h3>
     </div>
   </div>
 </div>

@@ -1835,7 +1835,7 @@ def analytics(tipo):
         'ONCHAIN': _('Statistiche On-chain (₿)')
     }
 
-    # 6. Override per On-chain
+    # 6. Override per On-chain e Lightning
     if tipo == 'ONCHAIN':
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -1873,6 +1873,70 @@ def analytics(tipo):
 
         tot_spese += tot_fee
         conn.close()
+
+        delta = tot_entrate - tot_spese
+        saving_rate = (delta / tot_entrate * 100.0) if tot_entrate > 0 else 0.0
+
+    elif tipo == 'LIGHTNING':
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        from db.db_utils import get_transazioni_con_saldo_lightning
+        dati_ln, saldo_asset, resto = get_transazioni_con_saldo_lightning(
+            current_user.id)
+
+        # Calcolo costo storico in fiat per la tabella performance
+        cursor.execute(
+            "SELECT SUM(controvalore_eur) FROM transazioni_lightning WHERE user_id = ?", (current_user.id,))
+        res = cursor.fetchone()
+        costo_storico_eur = float(res[0] if (
+            res and res[0]) else 0) * tasso_fiat
+        valore_attuale_eur = (float(saldo_asset) /
+                              100000000.0) * prezzo_attuale_btc
+
+        # Query SQL per il grafico storico temporale di Lightning (convertito in BTC con * 0.00000001)
+        cursor.execute(f'''
+                SELECT SUBSTR(data, 1, 10) as giorno,
+                       SUM(
+                           CASE
+                               WHEN LOWER(TRIM(categoria)) = 'entrate' THEN ABS(satoshi) * 0.00000001
+                               ELSE -ABS(satoshi) * 0.00000001
+                           END
+                       ) as flusso
+                FROM transazioni_lightning
+                WHERE user_id = ? {filtro_btc}
+                GROUP BY giorno ORDER BY giorno ASC
+            ''', tuple(params_btc))
+        tx_storiche = cursor.fetchall()
+
+        conn.close()
+
+        tot_entrate = 0.0
+        tot_spese = 0.0
+
+        m_sel = mese_selezionato.strip() if mese_selezionato else None
+        a_sel = str(anno_selezionato).strip() if anno_selezionato else None
+        if m_sel == "":
+            m_sel = None
+        if a_sel == "":
+            a_sel = None
+
+        for tx in dati_ln:
+            data_tx = str(tx.get('data', ''))
+
+            if m_sel and not data_tx.startswith(m_sel):
+                continue
+            if a_sel and not data_tx.startswith(a_sel):
+                continue
+
+            cat = str(tx.get('categoria', '')).lower().strip()
+            sats = float(tx.get('satoshi', 0) or 0)
+
+            # Accumuliamo direttamente i Satoshi interi per i box KPI in alto
+            if cat == 'entrate':
+                tot_entrate += abs(sats)
+            else:
+                tot_spese += abs(sats)
 
         delta = tot_entrate - tot_spese
         saving_rate = (delta / tot_entrate * 100.0) if tot_entrate > 0 else 0.0

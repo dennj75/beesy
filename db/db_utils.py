@@ -1151,13 +1151,13 @@ def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
 
     if tipo_conto == 'LIGHTNING':
         tabella = "transazioni_lightning"
-        colonna_valore = "satoshi"
+        # Per Lightning usiamo direttamente i satoshi assoluti
+        colonna_valore = "ABS(satoshi)"
     elif tipo_conto == 'ONCHAIN':
         tabella = "transazioni_onchain"
-        colonna_valore = "importo_btc"
+        colonna_valore = "ABS(importo_btc)"
     else:
         tabella = "transazioni"
-        # 🎯 Usiamo la colonna base EUR per le aggregazioni Fiat
         colonna_valore = "COALESCE(importo_valuta_base, importo)"
 
     filtro_tempo = ""
@@ -1173,24 +1173,47 @@ def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
         filtro_tempo = "AND data LIKE ?"
         parametri.append(f"{str(anno).strip()}%")
 
-    query = f"""
-        SELECT categoria, SUM(ABS({colonna_valore})) as totale 
-        FROM {tabella} 
-        WHERE user_id=? 
-        AND LOWER(TRIM(categoria)) NOT IN ('entrate', 'patrimonio & finanze', 'patrimonio e finanze')
-        AND LOWER(sottocategoria) NOT LIKE '%giroconto%'
-        {filtro_tempo}
-        GROUP BY categoria
-        ORDER BY totale DESC
-    """
+    if tipo_conto in ['LIGHTNING', 'ONCHAIN']:
+        # Query dedicata per le crypto: prende tutto ciò che non è entrata
+        query = f"""
+            SELECT categoria, SUM({colonna_valore}) as totale 
+            FROM {tabella} 
+            WHERE user_id=? 
+            AND LOWER(TRIM(categoria)) != 'entrate'
+            {filtro_tempo}
+            GROUP BY categoria
+            ORDER BY totale DESC
+        """
+    else:
+        # Query Fiat con i filtri raffinati che abbiamo fatto prima
+        query = f"""
+            SELECT categoria, SUM({colonna_valore}) as totale 
+            FROM {tabella} 
+            WHERE user_id=? 
+            AND LOWER(TRIM(categoria)) != 'entrate'
+            AND NOT (
+                LOWER(TRIM(categoria)) IN ('patrimonio & finanze', 'patrimonio e finanze') 
+                AND LOWER(TRIM(COALESCE(sottocategoria, ''))) NOT IN ('imposte di bollo / ivafe', 'commissioni bancarie', 'bolli', 'commissioni')
+            )
+            AND LOWER(TRIM(sottocategoria)) NOT IN ('acquisto titoli', 'versamento pensione', 'giroconto', 'prelievo contanti')
+            {filtro_tempo}
+            GROUP BY categoria
+            ORDER BY totale DESC
+        """
 
     cursor.execute(query, parametri)
     righe = cursor.fetchall()
     conn.close()
 
     labels_spese = [r[0] if r[0] else "Generale" for r in righe]
-    valori_spese = [round(r[1], 8) if tipo_conto ==
-                    'ONCHAIN' else round(r[1], 2) for r in righe]
+
+    if tipo_conto == 'LIGHTNING':
+        # Per Lightning restituiamo i satoshi interi senza decimali
+        valori_spese = [int(r[1]) if r[1] else 0 for r in righe]
+    elif tipo_conto == 'ONCHAIN':
+        valori_spese = [round(r[1], 8) if r[1] else 0.0 for r in righe]
+    else:
+        valori_spese = [round(r[1], 2) if r[1] else 0.0 for r in righe]
 
     return labels_spese, valori_spese
 
