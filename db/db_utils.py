@@ -108,6 +108,7 @@ def inizializza_db():
             conto TEXT DEFAULT 'BANCA',
             user_id INTEGER DEFAULT 1,
             note TEXT DEFAULT '',
+            bloccata INTEGER DEFAULT 0,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
@@ -115,7 +116,8 @@ def inizializza_db():
     colonne_extra = [
         ('user_id', 'INTEGER DEFAULT 1'),
         ('conto', "TEXT DEFAULT 'BANCA'"),
-        ('note', "TEXT DEFAULT ''")
+        ('note', "TEXT DEFAULT ''"),
+        ('bloccata', 'INTEGER DEFAULT 0')
     ]
 
     for nome_col, tipo in colonne_extra:
@@ -377,7 +379,7 @@ def get_transazioni_con_saldo(user_id):
     # Selezioniamo anche importo_valuta_base e valuta!
     cursor.execute("""
         SELECT id, data, descrizione, categoria, sottocategoria, importo, 
-               importo_valuta_base, valuta, conto, controvalore_btc, valore_btc_eur, note
+               importo_valuta_base, valuta, conto, controvalore_btc, valore_btc_eur, note, bloccata
         FROM transazioni
         WHERE user_id = ?
     """, (user_id,))
@@ -569,12 +571,11 @@ def leggi_transazioni_filtrate_lightning(filtro_data, user_id):
 
 def salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
                 importo, controvalore_btc=0, valore_btc_eur=0, conto='BANCA', note='',
-                valuta='EUR', importo_valuta_base=None, tasso_cambio=1.0):
+                valuta='EUR', importo_valuta_base=None, tasso_cambio=1.0, bloccata=0):
 
     if importo_valuta_base is None:
         importo_valuta_base = float(importo)
 
-    # Usiamo get_db_connection così sfrutta il timeout=20.0!
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -592,9 +593,10 @@ def salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
                 note,
                 valuta,
                 importo_valuta_base,
-                tasso_cambio
+                tasso_cambio,
+                bloccata
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             user_id,
             data,
@@ -608,11 +610,11 @@ def salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
             note,
             valuta,
             float(importo_valuta_base),
-            float(tasso_cambio)
+            float(tasso_cambio),
+            int(bloccata)
         ))
         conn.commit()
     finally:
-        # Il blocco finally assicura la chiusura della connessione ANCHE in caso di errori
         conn.close()
 
 
@@ -622,7 +624,7 @@ def leggi_transazioni_da_db(user_id):
     cursor.execute(
         '''SELECT 
             id, data, descrizione, categoria, sottocategoria, importo,
-            controvalore_btc, valore_btc_eur, conto, note, valuta, tasso_cambio, importo_valuta_base
+            controvalore_btc, valore_btc_eur, conto, note, valuta, tasso_cambio, importo_valuta_base, bloccata
         FROM transazioni 
         WHERE user_id = ? 
         ORDER BY data DESC, id DESC''',
@@ -642,14 +644,15 @@ def leggi_transazioni_da_db(user_id):
             "descrizione": r[2],
             "categoria": r[3],
             "sottocategoria": r[4],
-            "importo": importo,  # <-- Sintassi corretta Chiave: Valore
+            "importo": importo,
             "controvalore_btc": controvalore_btc,
             "valore_btc_eur": valore_btc_eur,
             "conto": r[8],
             "note": r[9],
             "valuta": r[10] if r[10] else "EUR",
             "tasso_cambio": r[11] if r[11] else 1.0,
-            "importo_valuta_base": r[12] if r[12] else r[5]
+            "importo_valuta_base": r[12] if r[12] else r[5],
+            "bloccata": int(r[13]) if r[13] is not None else 0
         })
     return transazioni
 
@@ -1376,14 +1379,14 @@ def registra_transazione_conto(user_id, data, descrizione, categoria, sottocateg
 
         btc_u, val_u = calcola_btc_proporzionale(base_uscita)
 
-        # 1. Uscita BANCA
+        # 1. Uscita BANCA (Utente) -> Sbloccata
         salva_su_db(user_id, data, descrizione, categoria, sottocategoria,
                     imp_uscita_banca, btc_u, val_u, conto="BANCA", note=note,
-                    valuta=valuta, importo_valuta_base=base_uscita, tasso_cambio=tasso_cambio)
-        # 2. Entrata INVESTIMENTI
+                    valuta=valuta, importo_valuta_base=base_uscita, tasso_cambio=tasso_cambio, bloccata=0)
+        # 2. Entrata INVESTIMENTI (Gemella) -> Bloccata
         salva_su_db(user_id, data, f"Caricamento: {descrizione}", categoria, sottocategoria,
                     imp_entrata_inv, btc_u, val_u, conto="INVESTIMENTI", note="Giroconto automatico",
-                    valuta=valuta, importo_valuta_base=base_entrata, tasso_cambio=tasso_cambio)
+                    valuta=valuta, importo_valuta_base=base_entrata, tasso_cambio=tasso_cambio, bloccata=1)
         return
 
     # --- CASO 2: PENSIONE COMPLEMENTARE ---
@@ -1395,51 +1398,55 @@ def registra_transazione_conto(user_id, data, descrizione, categoria, sottocateg
 
         btc_u, val_u = calcola_btc_proporzionale(base_uscita)
 
-        # 1. Uscita BANCA
+        # 1. Uscita BANCA (Utente) -> Sbloccata
         salva_su_db(user_id, data, descrizione, categoria,
                     sottocategoria, imp_uscita_banca, btc_u, val_u, conto="BANCA", note=note,
-                    valuta=valuta, importo_valuta_base=base_uscita, tasso_cambio=tasso_cambio)
+                    valuta=valuta, importo_valuta_base=base_uscita, tasso_cambio=tasso_cambio, bloccata=0)
 
-        # 2. Entrata PENSIONE
+        # 2. Entrata PENSIONE (Gemella) -> Bloccata
         salva_su_db(user_id, data, f"Versamento: {descrizione}", categoria, sottocategoria,
                     imp_entrata_pen, btc_u, val_u, conto="PENSIONE", note="Giroconto automatico",
-                    valuta=valuta, importo_valuta_base=base_entrata, tasso_cambio=tasso_cambio)
+                    valuta=valuta, importo_valuta_base=base_entrata, tasso_cambio=tasso_cambio, bloccata=1)
         return
 
-    # 3. PRELIEVO (Banca -> Contanti)
+    # --- CASO 3: PRELIEVO (Banca -> Contanti) ---
     if categoria == "Patrimonio & Finanze" and sottocategoria == "Prelievo Contante" and importo < 0:
+        # 1. Uscita BANCA (Utente) -> Sbloccata
         salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
                     controvalore_btc, valore_btc_eur, conto="BANCA", note=note,
-                    valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio)
+                    valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio, bloccata=0)
 
         imp_cnt = abs(importo)
         base_cnt = calcola_base_proporzionale(imp_cnt)
         btc_c, val_c = calcola_btc_proporzionale(base_cnt)
 
+        # 2. Entrata CONTANTI (Gemella) -> Bloccata
         salva_su_db(user_id, data, "Giroconto: Prelievo da banca", "Patrimonio & Finanze", "Trasferimento",
                     imp_cnt, btc_c, val_c, conto="CONTANTI",
-                    valuta=valuta, importo_valuta_base=base_cnt, tasso_cambio=tasso_cambio)
+                    valuta=valuta, importo_valuta_base=base_cnt, tasso_cambio=tasso_cambio, bloccata=1)
         return
 
-    # 4. DEPOSITO (Contanti -> Banca)
+    # --- CASO 4: DEPOSITO (Contanti -> Banca) ---
     if categoria == "Patrimonio & Finanze" and sottocategoria == "Prelievo Contante" and importo > 0:
+        # 1. Uscita CONTANTI (Utente) -> Sbloccata
         salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
                     controvalore_btc, valore_btc_eur, conto="BANCA", note=note,
-                    valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio)
+                    valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio, bloccata=0)
 
         imp_cnt = -abs(importo)
         base_cnt = calcola_base_proporzionale(imp_cnt)
         btc_c, val_c = calcola_btc_proporzionale(base_cnt)
 
+        # 2. Entrata BANCA (Gemella) -> Bloccata
         salva_su_db(user_id, data, "Giroconto: Versamento in banca", "Patrimonio & Finanze", "Trasferimento",
                     imp_cnt, btc_c, val_c, conto="CONTANTI",
-                    valuta=valuta, importo_valuta_base=base_cnt, tasso_cambio=tasso_cambio)
+                    valuta=valuta, importo_valuta_base=base_cnt, tasso_cambio=tasso_cambio, bloccata=1)
         return
 
-    # Standard
+    # Standard (Transazioni normali inserite dall'utente) -> Sbloccata
     salva_su_db(user_id, data, descrizione, categoria, sottocategoria, importo,
                 controvalore_btc, valore_btc_eur, conto=conto, note=note,
-                valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio)
+                valuta=valuta, importo_valuta_base=importo_valuta_base, tasso_cambio=tasso_cambio, bloccata=0)
 
 
 def get_transaction_drill_down(user_id, categoria, anno=None, mese=None):

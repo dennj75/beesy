@@ -67,6 +67,7 @@ block content %}
     <thead>
       <tr>
         <th>{{ _('ID') }}</th>
+        <th>{{ _('Stato') }}</th>
         <th>{{ _('Data') }}</th>
         <th>{{ _('Descrizione') }}</th>
         <th>{{ _('Categoria') }}</th>
@@ -89,6 +90,19 @@ block content %}
       {% for t in transazioni %}
       <tr>
         <td>{{ t.id }}</td>
+        <td>
+          {% if t.bloccata == 1 %}
+          <!-- Mostra il lucchetto grigetto solo se è bloccata (es. transazione gemella) -->
+          <span
+            title="{{ _('Transazione automatica bloccata dal sistema') }}"
+            style="opacity: 0.4; cursor: not-allowed; font-size: 1.2em"
+          >
+            🔒
+          </span>
+          {% else %}
+          <!-- Cella vuota per le transazioni normali (libere) -->
+          - {% endif %}
+        </td>
         <td>{{ t.data }}</td>
         <td>{{ t.descrizione }}</td>
         <td>{{ traduci(t.categoria) }}</td>
@@ -129,6 +143,24 @@ block content %}
         </td>
         <td>{{ t.note }}</td>
         <td>
+          {% if t.bloccata == 1 %}
+          <!-- Pulsanti disabilitati se la transazione è bloccata -->
+          <button
+            type="button"
+            disabled
+            style="opacity: 0.5; cursor: not-allowed"
+            title="{{ _('Transazione bloccata') }}"
+          >
+            🗑️ {{ _('Elimina') }}
+          </button>
+          <span
+            style="opacity: 0.5; margin-left: 5px"
+            title="{{ _('Transazione bloccata') }}"
+          >
+            ✏️ {{ _('Modifica') }}
+          </span>
+          {% else %}
+          <!-- Pulsanti attivi se la transazione è sbloccata -->
           <form
             method="post"
             action="{{ url_for('elimina_transazione_eur', id_transazione=t.id) }}"
@@ -137,10 +169,10 @@ block content %}
             <button
               type="submit"
               onclick="
-                return confirm(
-                  '{{ _('Sei sicuro di voler eliminare questa transazione?') }}',
-                );
-              "
+                  return confirm(
+                    '{{ _('Sei sicuro di voler eliminare questa transazione?') }}',
+                  );
+                "
             >
               🗑️ {{ _('Elimina') }}
             </button>
@@ -149,6 +181,7 @@ block content %}
             href="{{ url_for('modifica_transazione_eur', id_transazione=t.id) }}"
             >✏️ {{ _('Modifica') }}</a
           >
+          {% endif %}
         </td>
       </tr>
       {% endfor %}
