@@ -665,6 +665,67 @@ def elimina_transazione_eur(id_transazione):
     return redirect(url_for('transazioni'))
 
 
+@app.route('/elimina_selezionate', methods=['POST'])
+@login_required
+def elimina_selezionate():
+    user_id = current_user.id
+    ids_da_eliminare = request.form.getlist('id_selezionate')
+
+    if not ids_da_eliminare:
+        flash("Nessuna transazione selezionata.", "warning")
+        return redirect(url_for('transazioni'))
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    eliminate_principali = 0
+    eliminate_gemelle = 0
+
+    for tx_id in ids_da_eliminare:
+        # 1. Recupera i dati della transazione
+        cursor.execute(
+            "SELECT data, importo, bloccata FROM transazioni WHERE id=? AND user_id=?", (tx_id, user_id))
+        row = cursor.fetchone()
+
+        if row:
+            data_tx, importo_tx, bloccata_tx = row[0], row[1], row[2]
+
+            # Salta se per caso è una transazione bloccata
+            if bloccata_tx == 1:
+                continue
+
+            # 2. Elimina la transazione principale
+            cursor.execute(
+                "DELETE FROM transazioni WHERE id=? AND user_id=?", (tx_id, user_id))
+            eliminate_principali += 1
+
+            # 3. Cerca ed elimina a cascata la gemella (partita doppia)
+            importo_opposto = -importo_tx
+            cursor.execute("""
+                SELECT id FROM transazioni 
+                WHERE user_id=? AND data=? AND abs(importo - ?) < 0.01 AND id != ?
+            """, (user_id, data_tx, importo_opposto, tx_id))
+            gemella = cursor.fetchone()
+
+            if gemella:
+                cursor.execute(
+                    "DELETE FROM transazioni WHERE id=?", (gemella[0],))
+                eliminate_gemelle += 1
+
+    conn.commit()
+    conn.close()
+
+    # Messaggio dinamico e intelligente!
+    if eliminate_gemelle > 0:
+        flash(
+            f"✅ Eliminate con successo {eliminate_principali} transazioni e {eliminate_gemelle} relative gemelle.", "success")
+    else:
+        flash(
+            f"✅ Eliminate con successo {eliminate_principali} transazioni.", "success")
+
+    return redirect(url_for('transazioni'))
+
+
 @app.route('/modifica-transazione/<int:id_transazione>', methods=['GET', 'POST'])
 @login_required
 def modifica_transazione_eur(id_transazione):
@@ -1171,6 +1232,34 @@ def elimina_transazione_web_lightning(id_transazione):
     return redirect(url_for('transazioni_lightning'))
 
 
+@app.route('/elimina_selezionate_lightning', methods=['POST'])
+@login_required
+def elimina_selezionate_lightning():
+    user_id = current_user.id
+    ids_da_eliminare = request.form.getlist('id_selezionate')
+
+    if not ids_da_eliminare:
+        flash("Nessuna transazione Lightning selezionata.", "warning")
+        return redirect(url_for('transazioni_lightning'))
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    eliminate_count = 0
+    for tx_id in ids_da_eliminare:
+        cursor.execute(
+            "DELETE FROM transazioni_lightning WHERE id=? AND user_id=?", (tx_id, user_id))
+        if cursor.rowcount > 0:
+            eliminate_count += 1
+
+    conn.commit()
+    conn.close()
+
+    flash(
+        f"✅ Eliminate con successo {eliminate_count} transazioni Lightning.", "success")
+    return redirect(url_for('transazioni_lightning'))
+
+
 @app.route('/modifica-transazione_lightning/<int:id_transazione>', methods=['GET', 'POST'])
 @login_required
 def modifica_transazione_web_lightning(id_transazione):
@@ -1472,6 +1561,34 @@ def elimina_transazione_web_onchain(id_transazione):
     return redirect(url_for('transazioni_onchain'))
 
 
+@app.route('/elimina_selezionate_onchain', methods=['POST'])
+@login_required
+def elimina_selezionate_onchain():
+    user_id = current_user.id
+    ids_da_eliminare = request.form.getlist('id_selezionate')
+
+    if not ids_da_eliminare:
+        flash("Nessuna transazione On-chain selezionata.", "warning")
+        return redirect(url_for('transazioni_onchain'))
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    eliminate_count = 0
+    for tx_id in ids_da_eliminare:
+        cursor.execute(
+            "DELETE FROM transazioni_onchain WHERE id=? AND user_id=?", (tx_id, user_id))
+        if cursor.rowcount > 0:
+            eliminate_count += 1
+
+    conn.commit()
+    conn.close()
+
+    flash(
+        f"✅ Eliminate con successo {eliminate_count} transazioni On-chain.", "success")
+    return redirect(url_for('transazioni_onchain'))
+
+
 @app.route('/modifica-transazione_onchain/<int:id_transazione>', methods=['GET', 'POST'])
 @login_required
 def modifica_transazione_web_onchain(id_transazione):
@@ -1557,8 +1674,9 @@ def modifica_transazione_web_onchain(id_transazione):
 
         return redirect(url_for('transazioni_onchain'))
 
-    # --- SE RICHIESTA GET (Mostriamo l'importo positivo nel form per la UX) ---
+    # --- SE RICHIESTA GET ---
     t_form = dict(t)
+    # Mostriamo sempre il valore assoluto nel form per comodità di modifica
     if 'importo_btc' in t_form and t_form['importo_btc'] is not None:
         t_form['importo_btc'] = abs(t_form['importo_btc'])
 

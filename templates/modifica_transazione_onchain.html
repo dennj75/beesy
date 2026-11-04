@@ -42,7 +42,7 @@ content %}
     <button type="submit">✅ {{ _('Salva Modifiche') }}</button>
   </form>
 
-  <p><a href="/transazioni_lightning">⬅️ {{ _('Torna alle transazioni On-Chain') }}</a></p>
+  <p><a href="{{ url_for('transazioni_onchain') }}">⬅️ {{ _('Torna alle transazioni On-Chain') }}</a></p>
 
   <script>
     const categorie = {{ categorie_json | safe }};
