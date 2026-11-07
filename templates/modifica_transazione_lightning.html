@@ -1,41 +1,55 @@
-{% extends "base.html" %} {% block title %}{{ _('Modifica Transazione Lightning') }} - ₿eesy{% endblock %} {% block
-content %}
+{% extends "base.html" %} 
+{% block title %}{{ _('Modifica transazione Lightning⚡️ - ₿eesy') }}{% endblock %} 
 
-  <h1>✏️ {{ _('Modifica Transazione Lightning') }} ⚡️</h1>
+{% block content %}
 
-  <form method="post" action="{{ url_for('modifica_transazione_web_lightning', id_transazione=transazione_lightning["id"]) }}">
-    
-    <label for="data">📅 {{ _('Data') }}:</label>
-    <input type="date" id="data" name="data" value="{{ transazione_lightning['data'] }}" required /><br /><br />
+<h1>⚡ {{ _('Modifica Transazione Lightning ⚡️') }}</h1>
 
-    <label for="wallet">👛 {{ _('Wallet') }}:</label>
-    <input type="text" id="wallet" name="wallet" value="{{ transazione_lightning['wallet'] }}" required /><br /><br />
+<form method="post">
+  <label for="data">📅 {{ _('Data:') }}</label>
+  <input type="date" id="data" name="data" value="{{ transazione_lightning['data'] }}" required /><br /><br />
 
-    <label for="descrizione">📝 {{ _('Descrizione') }}:</label>
-    <input type="text" id="descrizione" name="descrizione" value="{{ transazione_lightning['descrizione'] }}" required /><br /><br />
+  <label for="wallet">👛 {{ _('Wallet:') }}</label>
+  <input type="text" id="wallet" name="wallet" value="{{ transazione_lightning['wallet'] }}" required /><br /><br />
 
-    <label for="categoria">📂 {{ _('Categoria') }}:</label>
-    <select name="categoria" id="categoria" onchange="popolaSottocategoria()" required>
-      <option value="">-- {{ _('Seleziona Categoria') }} --</option>
-      {% for cat in categorie %}
-        <option value="{{ cat }}" {% if transazione_lightning['categoria'] == cat %}selected{% endif %}>{{ cat }}</option>
+  <label for="descrizione">📝 {{ _('Descrizione:') }}</label>
+  <input type="text" id="descrizione" name="descrizione" value="{{ transazione_lightning['descrizione'] }}" required /><br /><br />
+
+  <label for="categoria">📂 {{ _('Categoria:') }}</label>
+  <select name="categoria" id="categoria" required>
+    <option value="">-- {{ _('Seleziona Categoria') }} --</option>
+    {% for cat in categorie %}
+    <option value="{{ cat }}" {% if transazione_lightning['categoria'] == cat %}selected{% endif %}>{{ traduci(cat) }}</option>
+    {% endfor %}
+  </select><br /><br />
+
+  <script>
+    const mappaTraduzioniSottocategorie = {
+      {% for macro, sottocat_list in CATEGORIE.items() %}
+        {% for sotto in sottocat_list %}
+          "{{ sotto }}": "{{ traduci(sotto) }}",
+        {% endfor %}
       {% endfor %}
-    </select><br /><br />
+    };
+  </script>
 
-    <label for="sottocategoria">🔖 {{ _('Sottocategoria') }}:</label>
-    <select name="sottocategoria" id="sottocategoria" required></select><br /><br />
+  <label for="sottocategoria">🔖 {{ _('Sottocategoria:') }}</label>
+  <select name="sottocategoria" id="sottocategoria" required></select><br /><br />
 
-    <label for="satoshi">⚡️ {{ _('Importo (satoshi)') }}:</label>
-    <input type="number" id="satoshi" name="satoshi" min="-1000000" max="1000000" value="{{ transazione_lightning['satoshi'] }}" required /><br /><br />
+  <label for="satoshi">⚡️ {{ _('Importo (satoshi):') }}</label>
+  <input type="number" id="satoshi" name="satoshi" value="{{ transazione_lightning['satoshi'] }}" min="-1000000000" max="1000000000" required /><br /><br />
 
-    <button type="submit">✅ {{ _('Salva Modifiche') }}</button>
-  </form>
+  <button type="submit">✅ {{ _('Salva Modifiche') }}</button>
+</form>
 
-  <p><a href="/transazioni_lightning">⬅️ {{ _('Torna alle transazioni Lightning') }}</a></p>
- <script>
+<p>
+  <a href="{{ url_for('transazioni_lightning') }}">⬅️ {{ _('Torna alle transazioni Lightning ⚡️') }}</a>
+</p>
+<p><a href="{{ url_for('home') }}">⬅️ {{ _('Torna alla Home') }}</a></p>
+
+<script>
     const categorie = {{ categorie_json | safe }};
-    const categoriaAttuale = "{{ transazione_lightning['categoria'] }}";
-    const sottocategoriaAttuale = "{{ transazione_lightning['sottocategoria'] }}";
+    const sottocategoriaSalvata = "{{ transazione_lightning['sottocategoria'] }}";
 
     function popolaSottocategoria() {
       const categoriaSelezionata = document.getElementById("categoria").value;
@@ -46,22 +60,28 @@ content %}
         categorie[categoriaSelezionata].forEach(sotto => {
           const opt = document.createElement("option");
           opt.value = sotto;
-          opt.text = sotto;
-          if (sotto === sottocategoriaAttuale) opt.selected = true;
+          opt.text = mappaTraduzioniSottocategorie[sotto] || sotto;
+          if (sotto === sottocategoriaSalvata) {
+            opt.selected = true;
+          }
           sottoSel.appendChild(opt);
         });
       } else {
         const opt = document.createElement("option");
         opt.value = "";
-        opt.text = "-- Nessuna sottocategoria --";
+        opt.text = "-- {{ _('Nessuna sottocategoria') }} --";
         sottoSel.appendChild(opt);
       }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("categoria").value = categoriaAttuale;
       popolaSottocategoria();
+
+      const catElem = document.getElementById("categoria");
+      if (catElem) {
+        catElem.addEventListener("change", popolaSottocategoria);
+      }
     });
-  </script>
-  {% endblock %}
+</script>
+{% endblock %}
 

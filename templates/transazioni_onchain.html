@@ -1,109 +1,268 @@
-{% extends "base.html" %} {% block title %}{{ _('Transazioni ₿itcoin On-chain - ₿eesy') }}{% endblock %} {% block
-content %}
-      <h1>🔗 {{ _('Transazioni ₿itcoin On-chain 🔗') }}</h1>
-      <!-- 🔹 Saldo SATOSHI -->
-    <p class="saldo-totale" style="color: #f39c12; font-weight: bold">
-      💰 {{ _('Saldo ₿itcoin On-chain🔗') }}: {{ "%.8f"|format(saldo_totale_btc) }} BTC
-    </p>
-    <!-- 🔹 Controvalore Totale Live -->
-    {% if transazioni_onchain %}
-    <p class="saldo-totale" style="color: {% if totale_controvalore >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}; font-weight: bold;">
-      💶 {{ _('Controvalore Totale') }}: {{ "%.2f"|format(totale_controvalore) }} {{ simbolo_valuta }}
-    </p>
-    {% endif %}
+{% extends "base.html" %} {% block title %}{{ _('Transazioni ₿itcoin On-chain -
+₿eesy') }}{% endblock %} {% block content %}
 
-    <div class="csv-buttons">
-      <a href="{{ url_for('scarica_csv_onchain') }}">
-        <button type="button" class="csv-button">📥 {{ _('Esporta CSV') }}</button>
-      </a>
-      <a href="{{ url_for('scarica_csv_per_mese_onchain') }}">
-        <button type="button" class="csv-button">
-          📥 {{ _('Esporta CSV per mese') }}
-        </button>
-      </a>
-    </div>
-    <p>
-      <a href="{{ url_for('nuova_transazione_onchain') }}"
-        >➕ {{ _('Aggiungi una nuova transazione On-chain') }}</a
-      >
-    </p>
-    {% with messages = get_flashed_messages(with_categories=true) %} {% if
-    messages %}
-    <ul>
-      {% for category, message in messages %} {% if 'onchain' in category %}
-      <li class="{{ category }}">{{ message }}</li>
-      {% endif %} {% endfor %}
-    </ul>
-    {% endif %} {% endwith %}
-    <div class="table-responsive-custom">
-    <table border="1">
-    <thead> 
-      <tr>
-        <th>{{ _('ID') }}</th>
-        <th>{{ _('Data') }}</th>
-        <th>{{ _('Wallet') }}</th>
-        <th>{{ _('Descrizione') }}</th>
-        <th>{{ _('Categoria') }}</th>
-        <th>{{ _('Sottocategoria') }}</th>
-        <th>{{ _('TransactionID') }}</th>
-        <th>{{ _('Importo BTC') }}</th>
-        <th>{{ _('Fee') }}</th>
-        <th>{{ _('Controvalore Storico') }} ({{ simbolo_valuta }})</th>
-        <th>{{ _('Controvalore Live') }} ({{ simbolo_valuta }})</th>
-        <th>{{ _('Valore BTC') }}/{{ simbolo_valuta }}</th>
-        <th>{{ _('Azioni') }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for t in transazioni_onchain %}
-      <tr>
-        <td>{{ t["id"] }}</td>
-        <td>{{ t["data"] }}</td>
-        <td>{{ t["wallet"] }}</td>
-        <td>{{ t["descrizione"] }}</td>
-        <td>{{ traduci(t["categoria"]) }}</td>
-        <td>{{ traduci(t["sottocategoria"]) }}</td>
-        <td>{{ t["transactionID"] }}</td>
-        <td style="color: #f39c12; font-weight: bold">
-          {{ '%.8f' % t["importo_btc"] if t["importo_btc"] is not none else '0.00000000' }}
-        </td>
-        <td style="color: #f39c12; font-weight: bold">
-          {{ '%.8f' % t["fee"] if t["fee"] is not none else '0.00000000' }}
-        </td>
-
-        <!-- 🔹 Controvalore STORICO (convertito in valuta utente) -->
-        <td style="color: #8e44ad; font-weight: bold;">
-          {{ "%.2f"|format(t["controvalore_storico"]) }} {{ simbolo_valuta }}
-        </td>
-
-        <!-- 🔹 Controvalore LIVE -->
-        <td style="color: {% if (t.controvalore_live|float) >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}; font-weight: bold;">
-          {{ "%.2f"|format(t["controvalore_live"]) }} {{ simbolo_valuta }}
-        </td>
-
-        <!-- 🔹 Valore BTC Unitario in valuta utente -->
-        <td>{{ "%.2f"|format(t["valore_btc_fiat"]) }} {{ simbolo_valuta }}</td>
-        <td>
-          <form
-            method="post"
-            action="{{ url_for('elimina_transazione_web_onchain', id_transazione=t["id"]) }}"
-            style="display: inline"
-          >
-            <button
-              type="submit"
-              onclick="return confirm('Sei sicuro di voler eliminare questa transazione On-chain?');"
-            >
-              🗑️ {{ _('Elimina') }}
-            </button>
-          </form>
-          <a
-            href="{{ url_for('modifica_transazione_web_onchain', id_transazione=t["id"]) }}"
-            >✏️ {{ _('Modifica') }} </a
-          >
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<!-- HEADER: Titolo e Bottone Aggiungi -->
+<div
+  style="
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  "
+>
+  <h1 style="margin: 0">🔗 {{ _('Transazioni ₿itcoin On-chain 🔗') }}</h1>
+  <a
+    href="{{ url_for('nuova_transazione_onchain') }}"
+    style="
+      background-color: #2ecc71;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 0.9em;
+    "
+  >
+    ➕ {{ _('Nuova On-chain') }}
+  </a>
 </div>
-  {% endblock %}
+
+<!-- SALDI ON-CHAIN IN ORIZZONTALE -->
+<div
+  style="
+    background: #1e1e1e;
+    border: 1px solid #333;
+    padding: 12px;
+    border-radius: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    text-align: center;
+    margin-bottom: 20px;
+    gap: 10px;
+  "
+>
+  <div style="flex: 1 1 140px; min-width: 120px">
+    <span style="color: #f39c12; font-size: 0.85em; font-weight: bold"
+      >💰 {{ _('Saldo ₿itcoin On-chain') }}</span
+    ><br />
+    <strong style="color: #f39c12; font-size: 1.05em"
+      >{{ "%.8f"|format(saldo_totale_btc) }} BTC</strong
+    >
+  </div>
+  {% if transazioni_onchain %}
+  <div
+    style="
+      flex: 1 1 140px;
+      min-width: 120px;
+      border-left: 1px solid #444;
+      padding-left: 10px;
+    "
+  >
+    <span style="color: #888; font-size: 0.85em"
+      >💶 {{ _('Controvalore Totale') }}</span
+    ><br />
+    <strong
+      style="color: {% if totale_controvalore >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}; font-size: 1.05em;"
+    >
+      {{ "%.2f"|format(totale_controvalore) }} {{ simbolo_valuta }}
+    </strong>
+  </div>
+  {% endif %}
+</div>
+
+<!-- BOTTONI CSV (Stile pillola) -->
+<div style="display: flex; gap: 10px; margin-bottom: 20px">
+  <a
+    href="{{ url_for('scarica_csv_onchain') }}"
+    style="
+      background: #2c2c2c;
+      color: #bbb;
+      padding: 6px 14px;
+      border-radius: 20px;
+      text-decoration: none;
+      font-size: 0.85em;
+      border: 1px solid #444;
+    "
+  >
+    📥 {{ _('Esporta CSV') }}
+  </a>
+  <a
+    href="{{ url_for('scarica_csv_per_mese_onchain') }}"
+    style="
+      background: #2c2c2c;
+      color: #bbb;
+      padding: 6px 14px;
+      border-radius: 20px;
+      text-decoration: none;
+      font-size: 0.85em;
+      border: 1px solid #444;
+    "
+  >
+    📥 {{ _('Esporta per mese') }}
+  </a>
+</div>
+
+<!-- Form per la Toolbar e la Tabella -->
+<form
+  action="{{ url_for('elimina_selezionate_onchain') }}"
+  method="POST"
+  id="form-onchain"
+>
+  <!-- 🛠️ TOOLBAR AZIONI RAPIDE -->
+  <div
+    style="
+      background: #1e1e1e;
+      border: 1px solid #333;
+      padding: 10px 15px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    "
+  >
+    <span style="color: #f39c12; font-weight: bold; font-size: 0.9em"
+      >🛠️ {{ _('Azioni Rapide') }}</span
+    >
+    <div>
+      <button
+        type="button"
+        class="btn btn-outline-warning btn-sm"
+        disabled
+        id="btn-modifica-onchain"
+        onclick="eseguiModificaOnchain()"
+        style="
+          padding: 4px 12px;
+          font-size: 0.85em;
+          border-radius: 6px;
+          margin-right: 5px;
+        "
+      >
+        ✏️ {{ _('Modifica') }}
+      </button>
+      <button
+        type="submit"
+        class="btn btn-outline-danger btn-sm"
+        disabled
+        id="btn-elimina-onchain"
+        onclick="return confirm('{{ _('Sei sicuro di voler eliminare le transazioni On-chain selezionate?') }}');"
+        style="
+          padding: 4px 12px;
+          font-size: 0.85em;
+          background-color: #c0392b;
+          color: white;
+          border: none;
+          border-radius: 6px;
+        "
+      >
+        🗑️ {{ _('Elimina Selezionate') }}
+      </button>
+    </div>
+  </div>
+
+  <div class="table-responsive-custom">
+    <table border="1">
+      <thead>
+        <tr>
+          <th style="width: 40px; text-align: center">
+            <input
+              type="checkbox"
+              id="seleziona-tutti-onchain"
+              title="{{ _('Seleziona tutti') }}"
+            />
+          </th>
+          <th>{{ _('ID') }}</th>
+          <th>{{ _('Data') }}</th>
+          <th>{{ _('Wallet') }}</th>
+          <th>{{ _('Descrizione') }}</th>
+          <th>{{ _('Categoria') }}</th>
+          <th>{{ _('Sottocategoria') }}</th>
+          <th>{{ _('TransactionID') }}</th>
+          <th>{{ _('Importo BTC') }}</th>
+          <th>{{ _('Fee') }}</th>
+          <th>{{ _('Controvalore Storico') }} ({{ simbolo_valuta }})</th>
+          <th>{{ _('Controvalore Live') }} ({{ simbolo_valuta }})</th>
+          <th>{{ _('Valore BTC') }}/{{ simbolo_valuta }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transazioni_onchain %}
+        <tr>
+          <td style="text-align: center">
+            <input
+              type="checkbox"
+              name="id_selezionate"
+              value="{{ t['id'] }}"
+              class="row-checkbox-onchain"
+            />
+          </td>
+          <td>{{ t["id"] }}</td>
+          <td>{{ t["data"] }}</td>
+          <td>{{ t["wallet"] }}</td>
+          <td>{{ t["descrizione"] }}</td>
+          <td>{{ traduci(t["categoria"]) }}</td>
+          <td>{{ traduci(t["sottocategoria"]) }}</td>
+          <td>{{ t["transactionID"] }}</td>
+          <td style="color: #f39c12; font-weight: bold">
+            {{ '%.8f' % t["importo_btc"] if t["importo_btc"] is not none else
+            '0.00000000' }}
+          </td>
+          <td style="color: #f39c12; font-weight: bold">
+            {{ '%.8f' % t["fee"] if t["fee"] is not none else '0.00000000' }}
+          </td>
+          <td style="color: #8e44ad; font-weight: bold">
+            {{ "%.2f"|format(t["controvalore_storico"]) }} {{ simbolo_valuta }}
+          </td>
+          <td
+            style="color: {% if (t.controvalore_live|float) >= 0 %}#2ecc71{% else %}#e74c3c{% endif %}; font-weight: bold;"
+          >
+            {{ "%.2f"|format(t["controvalore_live"]) }} {{ simbolo_valuta }}
+          </td>
+          <td>
+            {{ "%.2f"|format(t["valore_btc_fiat"]) }} {{ simbolo_valuta }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</form>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const selezionaTutti = document.getElementById("seleziona-tutti-onchain");
+    const checkboxes = document.querySelectorAll(".row-checkbox-onchain");
+    const btnElimina = document.getElementById("btn-elimina-onchain");
+    const btnModifica = document.getElementById("btn-modifica-onchain");
+
+    function aggiornaStato() {
+      const spuntate = document.querySelectorAll(
+        ".row-checkbox-onchain:checked",
+      );
+      btnElimina.disabled = spuntate.length === 0;
+      btnModifica.disabled = spuntate.length !== 1;
+    }
+
+    if (selezionaTutti) {
+      selezionaTutti.addEventListener("change", function () {
+        checkboxes.forEach((cb) => (cb.checked = selezionaTutti.checked));
+        aggiornaStato();
+      });
+    }
+
+    checkboxes.forEach((cb) => cb.addEventListener("change", aggiornaStato));
+  });
+
+  function eseguiModificaOnchain() {
+    const spuntata = document.querySelector(".row-checkbox-onchain:checked");
+    if (spuntata) {
+      window.location.href =
+        "{{ url_for('modifica_transazione_web_onchain', id_transazione=0) }}".slice(
+          0,
+          -1,
+        ) + spuntata.value;
+    }
+  }
+</script>
+{% endblock %}

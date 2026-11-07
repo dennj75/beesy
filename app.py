@@ -18,7 +18,7 @@ from db.db_utils import (
     salva_su_db_lightning, leggi_transazioni_da_db_lightning, modifica_transazione_db_lightning,
     elimina_transazione_da_db_lightning, get_transazioni_con_saldo_lightning,
     leggi_transazioni_da_db_onchain, salva_su_db_onchain, leggi_transazioni_filtrate_onchain,
-    elimina_transazione_da_db_onchain, modifica_transazione_db_onchain, get_transazioni_con_saldo_onchain,
+    elimina_transazione_da_db_onchain, modifica_transazione_db_onchain,
     ripristino_database_completo, get_transazioni_con_saldo_onchain,
     get_spese_per_categoria_filtrate, get_entrate_per_sottocategoria, get_bilancio_periodo,
     pulisci_mese, registra_transazione_conto, get_transaction_drill_down
@@ -626,20 +626,103 @@ def nuova_transazione():
 def elimina_transazione_eur(id_transazione):
     user_id = current_user.id
 
-    # 1. Elimina la transazione (fai solo questo)
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+
+    # 1. Recuperiamo i dati della transazione da eliminare per trovare la gemella
+    cursor.execute(
+        "SELECT data, importo, bloccata FROM transazioni WHERE id=? AND user_id=?", (id_transazione, user_id))
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        flash("Transazione non trovata", "error")
+        return redirect(url_for('transazioni'))
+
+    data_tx, importo_tx, bloccata_tx = row[0], row[1], row[2]
+
+    # Se la transazione è bloccata (e non sbloccabile), blocchiamo l'eliminazione
+    if bloccata_tx == 1:
+        conn.close()
+        flash("Impossibile eliminare: la transazione è bloccata 🔒", "error")
+        return redirect(url_for('transazioni'))
+
+    # 2. Elimina la transazione principale
     cursor.execute(
         "DELETE FROM transazioni WHERE id=? AND user_id=?", (id_transazione, user_id))
+
+    # 3. CERCA ED ELIMINA ANCHE LA GEMELLA (Partita doppia: importo opposto nella stessa data)
+    importo_opposto = -importo_tx
+    cursor.execute("""
+        DELETE FROM transazioni 
+        WHERE user_id=? AND data=? AND abs(importo - ?) < 0.01 AND id != ?
+    """, (user_id, data_tx, importo_opposto, id_transazione))
+
     conn.commit()
     conn.close()
 
-    # 2. Messaggio per l'utente
-    flash("Transazione eliminata con successo", "success")
+    flash("Transazione (e relativa gemella) eliminata con successo", "success")
+    return redirect(url_for('transazioni'))
 
-    # 3. REINDIRIZZA alla pagina principale delle transazioni
-    # Supponendo che la tua rotta per vedere le transazioni EUR si chiami 'home'
-    # (quella che abbiamo sistemato prima con le 5 variabili)
+
+@app.route('/elimina_selezionate', methods=['POST'])
+@login_required
+def elimina_selezionate():
+    user_id = current_user.id
+    ids_da_eliminare = request.form.getlist('id_selezionate')
+
+    if not ids_da_eliminare:
+        flash("Nessuna transazione selezionata.", "warning")
+        return redirect(url_for('transazioni'))
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    eliminate_principali = 0
+    eliminate_gemelle = 0
+
+    for tx_id in ids_da_eliminare:
+        # 1. Recupera i dati della transazione
+        cursor.execute(
+            "SELECT data, importo, bloccata FROM transazioni WHERE id=? AND user_id=?", (tx_id, user_id))
+        row = cursor.fetchone()
+
+        if row:
+            data_tx, importo_tx, bloccata_tx = row[0], row[1], row[2]
+
+            # Salta se per caso è una transazione bloccata
+            if bloccata_tx == 1:
+                continue
+
+            # 2. Elimina la transazione principale
+            cursor.execute(
+                "DELETE FROM transazioni WHERE id=? AND user_id=?", (tx_id, user_id))
+            eliminate_principali += 1
+
+            # 3. Cerca ed elimina a cascata la gemella (partita doppia)
+            importo_opposto = -importo_tx
+            cursor.execute("""
+                SELECT id FROM transazioni 
+                WHERE user_id=? AND data=? AND abs(importo - ?) < 0.01 AND id != ?
+            """, (user_id, data_tx, importo_opposto, tx_id))
+            gemella = cursor.fetchone()
+
+            if gemella:
+                cursor.execute(
+                    "DELETE FROM transazioni WHERE id=?", (gemella[0],))
+                eliminate_gemelle += 1
+
+    conn.commit()
+    conn.close()
+
+    # Messaggio dinamico e intelligente!
+    if eliminate_gemelle > 0:
+        flash(
+            f"✅ Eliminate con successo {eliminate_principali} transazioni e {eliminate_gemelle} relative gemelle.", "success")
+    else:
+        flash(
+            f"✅ Eliminate con successo {eliminate_principali} transazioni.", "success")
+
     return redirect(url_for('transazioni'))
 
 
@@ -654,11 +737,21 @@ def modifica_transazione_eur(id_transazione):
         flash("Transazione non trovata", "error")
         return redirect(url_for('transazioni'))
 
+    # 🔒 CONTROLLO DI SICUREZZA: Se è bloccata, blocchiamo l'accesso alla modifica
+    if t.get('bloccata', 0) == 1:
+        flash("Questa transazione è bloccata e non può essere modificata 🔒", "error")
+        return redirect(url_for('transazioni'))
+
     # Valuta base di preferenza dell'utente (default a EUR se non impostata)
     valuta_utente = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
 
     # --- SE L'UTENTE PREME SALVA (POST) ---
     if request.method == 'POST':
+        # Doppio controllo di sicurezza in POST nel caso di invio forzato
+        if t.get('bloccata', 0) == 1:
+            flash("Operazione negata: la transazione è bloccata 🔒", "error")
+            return redirect(url_for('transazioni'))
+
         data = request.form['data']
         descrizione = request.form['descrizione']
         categoria = request.form['categoria']
@@ -681,10 +774,8 @@ def modifica_transazione_eur(id_transazione):
             return redirect(url_for('modifica_transazione_eur', id_transazione=id_transazione))
 
         # --- GESTIONE SEGNO CORRETTO PER IL DB ---
-        # 1. Recuperiamo il valore assoluto inserito dall'utente
         valore_assoluto = abs(float(importo_normalizzato))
 
-        # 2. Assegniamo il segno: Entrate = POSITIVO, Tutte le altre (Spese/Uscite) = NEGATIVO
         if categoria.strip().lower() == 'entrate':
             importo = valore_assoluto
         else:
@@ -708,7 +799,6 @@ def modifica_transazione_eur(id_transazione):
                 tasso_cambio = get_exchange_rate(
                     valuta, valuta_utente, date_str=data) or 1.0
 
-            # L'importo in valuta base conserva il segno originale
             importo_valuta_base = importo * tasso_cambio if tasso_cambio else importo
 
         # --- UNICA CONNESSIONE PER TUTTO ---
@@ -734,7 +824,6 @@ def modifica_transazione_eur(id_transazione):
                   id_transazione, current_user.id))
 
             # 3. LOGICA GEMELLA (PARTITA DOPPIA)
-            # Cerchiamo la transazione gemella che aveva l'importo OPPOSTO al vecchio importo
             importo_da_cercare = -vecchio_importo
             cursor.execute("""
                 SELECT id FROM transazioni
@@ -745,7 +834,6 @@ def modifica_transazione_eur(id_transazione):
 
             if gemella_row:
                 id_gemella = gemella_row[0]
-                # La gemella avrà SEMPRE l'importo opposto rispetto alla principale modificata
                 importo_gemella = -importo
                 importo_valuta_base_gemella = -importo_valuta_base
                 controvalore_btc_gemella = -controvalore_btc
@@ -777,7 +865,6 @@ def modifica_transazione_eur(id_transazione):
     transazione_dict = {
         "id": t["id"], "data": t["data"], "descrizione": t["descrizione"],
         "categoria": t["categoria"], "sottocategoria": t["sottocategoria"],
-        # Mostriamo il valore assoluto nell'input del form per l'utente
         "importo": abs(t["importo"]),
         "conto": t["conto"], "note": t.get("note", ""),
         "valuta": t.get("valuta", valuta_utente),
@@ -791,6 +878,39 @@ def modifica_transazione_eur(id_transazione):
         categorie=list(CATEGORIE.keys()),
         categorie_json=json.dumps(CATEGORIE)
     )
+
+
+@app.route('/toggle_lock/<int:tx_id>')
+@login_required
+def toggle_lock(tx_id):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Controlliamo lo stato e se appartiene all'utente
+    cursor.execute(
+        'SELECT bloccata FROM transazioni WHERE id = ? AND user_id = ?', (tx_id, current_user.id))
+    row = cursor.fetchone()
+
+    if row:
+        stato_attuale = row[0] if row[0] is not None else 0
+
+        # OPZIONALE MA CONSIGLIATO: Se vuoi impedire del tutto lo sblocco manuale di certe transazioni,
+        # puoi decidere che una volta bloccate non si sbloccano più, oppure permettere il toggle solo se
+        # non sono transazioni di sistema. Per ora, se vuoi che il lucchetto chiuso sia intoccabile:
+        if stato_attuale == 1:
+            flash(
+                "Questa transazione è gestita automaticamente dal sistema e non può essere sbloccata 🔒", "error")
+            conn.close()
+            return redirect(request.referrer or url_for('transazioni'))
+
+        nuovo_stato = 1 if stato_attuale == 0 else 0
+
+        cursor.execute(
+            'UPDATE transazioni SET bloccata = ? WHERE id = ?', (nuovo_stato, tx_id))
+        conn.commit()
+
+    conn.close()
+    return redirect(request.referrer or url_for('transazioni'))
 
 
 @app.route('/backup-protetto', methods=['GET', 'POST'])
@@ -1112,6 +1232,34 @@ def elimina_transazione_web_lightning(id_transazione):
     return redirect(url_for('transazioni_lightning'))
 
 
+@app.route('/elimina_selezionate_lightning', methods=['POST'])
+@login_required
+def elimina_selezionate_lightning():
+    user_id = current_user.id
+    ids_da_eliminare = request.form.getlist('id_selezionate')
+
+    if not ids_da_eliminare:
+        flash("Nessuna transazione Lightning selezionata.", "warning")
+        return redirect(url_for('transazioni_lightning'))
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    eliminate_count = 0
+    for tx_id in ids_da_eliminare:
+        cursor.execute(
+            "DELETE FROM transazioni_lightning WHERE id=? AND user_id=?", (tx_id, user_id))
+        if cursor.rowcount > 0:
+            eliminate_count += 1
+
+    conn.commit()
+    conn.close()
+
+    flash(
+        f"✅ Eliminate con successo {eliminate_count} transazioni Lightning.", "success")
+    return redirect(url_for('transazioni_lightning'))
+
+
 @app.route('/modifica-transazione_lightning/<int:id_transazione>', methods=['GET', 'POST'])
 @login_required
 def modifica_transazione_web_lightning(id_transazione):
@@ -1413,6 +1561,34 @@ def elimina_transazione_web_onchain(id_transazione):
     return redirect(url_for('transazioni_onchain'))
 
 
+@app.route('/elimina_selezionate_onchain', methods=['POST'])
+@login_required
+def elimina_selezionate_onchain():
+    user_id = current_user.id
+    ids_da_eliminare = request.form.getlist('id_selezionate')
+
+    if not ids_da_eliminare:
+        flash("Nessuna transazione On-chain selezionata.", "warning")
+        return redirect(url_for('transazioni_onchain'))
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    eliminate_count = 0
+    for tx_id in ids_da_eliminare:
+        cursor.execute(
+            "DELETE FROM transazioni_onchain WHERE id=? AND user_id=?", (tx_id, user_id))
+        if cursor.rowcount > 0:
+            eliminate_count += 1
+
+    conn.commit()
+    conn.close()
+
+    flash(
+        f"✅ Eliminate con successo {eliminate_count} transazioni On-chain.", "success")
+    return redirect(url_for('transazioni_onchain'))
+
+
 @app.route('/modifica-transazione_onchain/<int:id_transazione>', methods=['GET', 'POST'])
 @login_required
 def modifica_transazione_web_onchain(id_transazione):
@@ -1498,8 +1674,9 @@ def modifica_transazione_web_onchain(id_transazione):
 
         return redirect(url_for('transazioni_onchain'))
 
-    # --- SE RICHIESTA GET (Mostriamo l'importo positivo nel form per la UX) ---
+    # --- SE RICHIESTA GET ---
     t_form = dict(t)
+    # Mostriamo sempre il valore assoluto nel form per comodità di modifica
     if 'importo_btc' in t_form and t_form['importo_btc'] is not None:
         t_form['importo_btc'] = abs(t_form['importo_btc'])
 

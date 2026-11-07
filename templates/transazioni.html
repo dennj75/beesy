@@ -1,158 +1,346 @@
 {% extends "base.html" %} {% block title %}📋 {{ _('Transazioni') }} ({{
 current_user.default_currency | currency_symbol }}) - ₿eesy{% endblock %} {%
 block content %}
-<h1>
-  📋 {{ _('Transazioni (%(simbolo)s)', simbolo=(current_user.default_currency |
-  currency_symbol)) }}
-</h1>
 
-<div class="saldi-container">
-  <p
-    class="saldo-banca {% if banca >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+<!-- HEADER: Titolo a sinistra e Bottone Aggiungi compatto a destra -->
+<div
+  style="
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  "
+>
+  <h1 style="margin: 0">
+    📋 {{ _('Transazioni (%(simbolo)s)', simbolo=(current_user.default_currency
+    | currency_symbol)) }}
+  </h1>
+  <a
+    href="/nuova_transazione"
+    style="
+      background-color: #2ecc71;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: bold;
+    "
   >
-    🏦 {{ _('Banca') }}: {{ "%.2f"|format(banca) }} {{
-    current_user.default_currency | currency_symbol }}
-  </p>
-  <p
-    class="saldo-contanti {% if contanti >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
-  >
-    💼 {{ _('Contanti') }}: {{ "%.2f"|format(contanti) }} {{
-    current_user.default_currency | currency_symbol }}
-  </p>
-  <p class="saldo-investimenti" style="color: #3498db">
-    📈 {{ _('Investimenti') }}: {{ "%.2f"|format(saldo_investimenti) }} {{
-    current_user.default_currency | currency_symbol }}
-  </p>
-  <p class="saldo-pensione" style="color: #9b59b6">
-    👴 {{ _('Pensione') }}: {{ "%.2f"|format(saldo_pensione) }} {{
-    current_user.default_currency | currency_symbol }}
-  </p>
-  <p class="saldo-totale">
-    💰 {{ _('Saldo Totale') }}: {{ "%.2f"|format(saldo_totale_eur) }} {{
-    current_user.default_currency | currency_symbol }}
-  </p>
-</div>
-
-<div class="csv-buttons">
-  <a href="{{ url_for('scarica_csv') }}">
-    <button type="button" class="csv-button">📥 {{ _('Esporta CSV') }}</button>
-  </a>
-  <a href="{{ url_for('scarica_csv_per_mese') }}">
-    <button type="button" class="csv-button">
-      📥 {{ _('Esporta CSV per mese') }}
-    </button>
+    ➕ {{ _('Nuova Transazione') }}
   </a>
 </div>
 
-<div class="nuova-transazione">
-  <p>
-    <a href="/nuova_transazione"
-      >➕ {{ _('Aggiungi una nuova transazione') }}</a
+<!-- SALDI IN ORIZZONTALE (Responsive: Perfetto sia su PC che su Smartphone) -->
+<div
+  style="
+    background: #1e1e1e;
+    border: 1px solid #333;
+    padding: 12px;
+    border-radius: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    text-align: center;
+    margin-bottom: 20px;
+    gap: 10px;
+  "
+>
+  <div style="flex: 1 1 100px; min-width: 85px">
+    <span style="color: #888; font-size: 0.8em">🏦 {{ _('Banca') }}</span><br />
+    <strong
+      class="{% if banca >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+      style="font-size: 0.9em"
+      >{{ "%.2f"|format(banca) }} {{ current_user.default_currency |
+      currency_symbol }}</strong
     >
-  </p>
+  </div>
+
+  <div style="flex: 1 1 100px; min-width: 85px">
+    <span style="color: #888; font-size: 0.8em">💼 {{ _('Contanti') }}</span
+    ><br />
+    <strong
+      class="{% if contanti >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+      style="font-size: 0.9em"
+      >{{ "%.2f"|format(contanti) }} {{ current_user.default_currency |
+      currency_symbol }}</strong
+    >
+  </div>
+
+  <div style="flex: 1 1 100px; min-width: 85px">
+    <span style="color: #888; font-size: 0.8em">📈 {{ _('Investimenti') }}</span
+    ><br />
+    <strong style="color: #3498db; font-size: 0.9em"
+      >{{ "%.2f"|format(saldo_investimenti) }} {{ current_user.default_currency
+      | currency_symbol }}</strong
+    >
+  </div>
+
+  <div style="flex: 1 1 100px; min-width: 85px">
+    <span style="color: #888; font-size: 0.8em">👴 {{ _('Pensione') }}</span
+    ><br />
+    <strong style="color: #9b59b6; font-size: 0.9em"
+      >{{ "%.2f"|format(saldo_pensione) }} {{ current_user.default_currency |
+      currency_symbol }}</strong
+    >
+  </div>
+
+  <!-- Saldo Totale in evidenza -->
+  <div
+    style="
+      flex: 1 1 140px;
+      min-width: 120px;
+      border-top: 1px solid #444;
+      padding-top: 6px;
+      width: 100%;
+    "
+  >
+    <span style="color: #f39c12; font-size: 0.85em; font-weight: bold"
+      >💰 {{ _('Saldo Totale') }}</span
+    ><br />
+    <strong style="color: #f39c12; font-size: 1.05em"
+      >{{ "%.2f"|format(saldo_totale_eur) }} {{ current_user.default_currency |
+      currency_symbol }}</strong
+    >
+  </div>
 </div>
 
-{% with messages = get_flashed_messages(with_categories=true) %} {% if messages
-%}
-<ul>
-  {% for category, message in messages %} {% if 'euro' in category or 'success'
-  in category or 'danger' in category %}
-  <li class="{{ category }}">{{ message | string }}</li>
-  {% endif %} {% endfor %}
-</ul>
-{% endif %} {% endwith %}
+<!-- 📥 BOTTONI CSV MODERNI E ARROTONDATI (Stile pillola) -->
+<div style="display: flex; gap: 10px; margin-bottom: 20px">
+  <a
+    href="{{ url_for('scarica_csv') }}"
+    style="
+      background: #2c2c2c;
+      color: #bbb;
+      padding: 6px 14px;
+      border-radius: 20px;
+      text-decoration: none;
+      font-size: 0.85em;
+      border: 1px solid #444;
+      transition: 0.2s;
+    "
+  >
+    📥 {{ _('Esporta CSV') }}
+  </a>
+  <a
+    href="{{ url_for('scarica_csv_per_mese') }}"
+    style="
+      background: #2c2c2c;
+      color: #bbb;
+      padding: 6px 14px;
+      border-radius: 20px;
+      text-decoration: none;
+      font-size: 0.85em;
+      border: 1px solid #444;
+      transition: 0.2s;
+    "
+  >
+    📥 {{ _('Esporta per mese') }}
+  </a>
+</div>
 
-<div class="table-responsive-custom">
-  <table border="1">
-    <thead>
-      <tr>
-        <th>{{ _('ID') }}</th>
-        <th>{{ _('Data') }}</th>
-        <th>{{ _('Descrizione') }}</th>
-        <th>{{ _('Categoria') }}</th>
-        <th>{{ _('Sottocategoria') }}</th>
-        <th>
-          {{ _('Importo (%(simbolo)s)', simbolo=(current_user.default_currency |
-          currency_symbol)) }}
-        </th>
-        <th>{{ _('Controvalore BTC') }}</th>
-        <th>
-          {{ _('Valore BTC (%(simbolo)s)',
-          simbolo=(current_user.default_currency | currency_symbol)) }}
-        </th>
-        <th>{{ _('Conto') }}</th>
-        <th>{{ _('Note') }}</th>
-        <th>{{ _('Azioni') }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for t in transazioni %}
-      <tr>
-        <td>{{ t.id }}</td>
-        <td>{{ t.data }}</td>
-        <td>{{ t.descrizione }}</td>
-        <td>{{ traduci(t.categoria) }}</td>
-        <td>{{ traduci(t.sottocategoria) }}</td>
+<!-- Form che racchiude la Toolbar delle Azioni Rapide e la Tabella -->
+<form
+  action="{{ url_for('elimina_selezionate') }}"
+  method="POST"
+  id="form-transazioni"
+>
+  <!-- 🛠️ TOOLBAR AZIONI RAPIDE (Ora pulita e dedicata solo alla selezione) -->
+  <div
+    style="
+      background: #1e1e1e;
+      border: 1px solid #333;
+      padding: 10px 15px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    "
+  >
+    <span style="color: #f39c12; font-weight: bold; font-size: 0.9em"
+      >🛠️ {{ _('Azioni Rapide') }}</span
+    >
+    <div>
+      <button
+        type="button"
+        class="btn btn-outline-warning btn-sm"
+        disabled
+        id="btn-modifica"
+        onclick="eseguiModifica()"
+        style="
+          padding: 4px 12px;
+          font-size: 0.85em;
+          border-radius: 6px;
+          margin-right: 5px;
+        "
+      >
+        ✏️ {{ _('Modifica') }}
+      </button>
+      <button
+        type="submit"
+        class="btn btn-outline-danger btn-sm"
+        disabled
+        id="btn-elimina-multipla"
+        onclick="return confirm('{{ _('Sei sicuro di voler eliminare le transazioni selezionate?') }}');"
+        style="
+          padding: 4px 12px;
+          font-size: 0.85em;
+          background-color: #c0392b;
+          color: white;
+          border: none;
+          border-radius: 6px;
+        "
+      >
+        🗑️ {{ _('Elimina Selezionate') }}
+      </button>
+    </div>
+  </div>
 
-        <!-- 🔹 Importo con simbolo valuta sempre visibile -->
-        <td
-          class="{% if t.importo >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
-        >
-          {{ t.importo | formatta_importo(t.valuta) }} {% if t.valuta and
-          t.valuta != current_user.default_currency %}
-          <br /><small style="color: #888">
-            ({{ "%.2f"|format(t.importo_valuta_base | float) }} {{
-            current_user.default_currency | currency_symbol }})
-          </small>
-          {% endif %}
-        </td>
-
-        <!-- 🔹 Controvalore BTC -->
-        <td style="color: #f39c12; font-weight: bold">
-          {% if t.controvalore_btc %} {{ "%.8f"|format(t.controvalore_btc) }} {%
-          else %} - {% endif %}
-        </td>
-
-        <!-- 🔹 Valore BTC con il simbolo della valuta utente -->
-        <td>
-          {% if t.valore_btc_eur %} {{ "%.2f"|format(t.valore_btc_eur) }} {{
-          current_user.default_currency | currency_symbol }} {% else %} - {%
-          endif %}
-        </td>
-
-        <td>
-          {% if t.conto.lower() == "banca" %} 🏦 {{ _('Banca') }} {% elif
-          t.conto.lower() == "contanti" %} 💶 {{ _('Contanti') }} {% elif
-          t.conto.lower() == "investimenti" %} 📈 {{ _('Investimenti') }} {%
-          elif t.conto.lower() == "pensione" %} 👴 {{ _('Pensione') }} {% else
-          %} {{ t.conto }} {% endif %}
-        </td>
-        <td>{{ t.note }}</td>
-        <td>
-          <form
-            method="post"
-            action="{{ url_for('elimina_transazione_eur', id_transazione=t.id) }}"
-            style="display: inline"
-          >
-            <button
-              type="submit"
-              onclick="
-                return confirm(
-                  '{{ _('Sei sicuro di voler eliminare questa transazione?') }}',
-                );
-              "
+  <div class="table-responsive-custom">
+    <table border="1">
+      <thead>
+        <tr>
+          <th style="width: 40px; text-align: center">
+            <input
+              type="checkbox"
+              id="seleziona-tutti"
+              title="{{ _('Seleziona tutti') }}"
+            />
+          </th>
+          <th>{{ _('ID') }}</th>
+          <th>{{ _('Data') }}</th>
+          <th>{{ _('Descrizione') }}</th>
+          <th>{{ _('Categoria') }}</th>
+          <th>{{ _('Sottocategoria') }}</th>
+          <th>
+            {{ _('Importo (%(simbolo)s)', simbolo=(current_user.default_currency
+            | currency_symbol)) }}
+          </th>
+          <th>{{ _('Controvalore BTC') }}</th>
+          <th>
+            {{ _('Valore BTC (%(simbolo)s)',
+            simbolo=(current_user.default_currency | currency_symbol)) }}
+          </th>
+          <th>{{ _('Conto') }}</th>
+          <th>{{ _('Note') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transazioni %}
+        <tr>
+          <td style="text-align: center">
+            {% if t.bloccata == 1 %}
+            <span
+              title="{{ _('Transazione automatica bloccata dal sistema') }}"
+              style="opacity: 0.4; cursor: not-allowed; font-size: 1.2em"
             >
-              🗑️ {{ _('Elimina') }}
-            </button>
-          </form>
-          <a
-            href="{{ url_for('modifica_transazione_eur', id_transazione=t.id) }}"
-            >✏️ {{ _('Modifica') }}</a
+              🔒
+            </span>
+            {% else %}
+            <!-- Nota il nome id_selezionate[] per passare una lista a Python -->
+            <input
+              type="checkbox"
+              name="id_selezionate"
+              value="{{ t.id }}"
+              class="row-checkbox"
+            />
+            {% endif %}
+          </td>
+          <td>{{ t.id }}</td>
+          <td>{{ t.data }}</td>
+          <td>{{ t.descrizione }}</td>
+          <td>{{ traduci(t.categoria) }}</td>
+          <td>{{ traduci(t.sottocategoria) }}</td>
+
+          <td
+            class="{% if t.importo >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
           >
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+            {{ t.importo | formatta_importo(t.valuta) }} {% if t.valuta and
+            t.valuta != current_user.default_currency %}
+            <br /><small style="color: #888">
+              ({{ "%.2f"|format(t.importo_valuta_base | float) }} {{
+              current_user.default_currency | currency_symbol }})
+            </small>
+            {% endif %}
+          </td>
+
+          <td style="color: #f39c12; font-weight: bold">
+            {% if t.controvalore_btc %} {{ "%.8f"|format(t.controvalore_btc) }}
+            {% else %} - {% endif %}
+          </td>
+
+          <td>
+            {% if t.valore_btc_eur %} {{ "%.2f"|format(t.valore_btc_eur) }} {{
+            current_user.default_currency | currency_symbol }} {% else %}{%
+            endif %}
+          </td>
+
+          <td>
+            {% if t.conto.lower() == "banca" %} 🏦 {{ _('Banca') }} {% elif
+            t.conto.lower() == "contanti" %} 💶 {{ _('Contanti') }} {% elif
+            t.conto.lower() == "investimenti" %} 📈 {{ _('Investimenti') }} {%
+            elif t.conto.lower() == "pensione" %} 👴 {{ _('Pensione') }} {% else
+            %} {{ t.conto }} {% endif %}
+          </td>
+          <td>{{ t.note }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</form>
+<!-- Script per la gestione delle checkbox e attivazione dei bottoni -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const selezionaTutti = document.getElementById("seleziona-tutti");
+    const checkboxes = document.querySelectorAll(".row-checkbox");
+    const btnElimina = document.getElementById("btn-elimina-multipla");
+    const btnModifica = document.getElementById("btn-modifica");
+
+    function aggiornaStatoBottoni() {
+      const spuntate = document.querySelectorAll(".row-checkbox:checked");
+
+      // Gestione bottone Elimina (si attiva con almeno 1 spunta)
+      if (spuntate.length > 0) {
+        btnElimina.removeAttribute("disabled");
+      } else {
+        btnElimina.setAttribute("disabled", "true");
+      }
+
+      // Gestione bottone Modifica (si attiva SOLO con ESATTAMENTE 1 spunta)
+      if (spuntate.length === 1) {
+        btnModifica.removeAttribute("disabled");
+      } else {
+        btnModifica.setAttribute("disabled", "true");
+      }
+    }
+
+    if (selezionaTutti) {
+      selezionaTutti.addEventListener("change", function () {
+        checkboxes.forEach((cb) => {
+          cb.checked = selezionaTutti.checked;
+        });
+        aggiornaStatoBottoni();
+      });
+    }
+
+    checkboxes.forEach((cb) => {
+      cb.addEventListener("change", aggiornaStatoBottoni);
+    });
+  });
+
+  // Funzione per reindirizzare alla pagina di modifica della transazione selezionata
+  function eseguiModifica() {
+    const spuntata = document.querySelector(".row-checkbox:checked");
+    if (spuntata) {
+      const idTransazione = spuntata.value;
+      // Reindirizza alla rotta di modifica esistente
+      window.location.href =
+        "{{ url_for('modifica_transazione_eur', id_transazione=0) }}".slice(
+          0,
+          -1,
+        ) + idTransazione;
+    }
+  }
+</script>
 {% endblock %}
