@@ -59,7 +59,7 @@ load_dotenv()
 # Logica di Progetto (i tuoi moduli)
 
 # --- CONFIGURAZIONE COSTANTI ---
-VERSIONE_APP = "0.1.2"
+VERSIONE_APP = "0.3.0"
 
 CATEGORIE = {
     'Entrate': [
