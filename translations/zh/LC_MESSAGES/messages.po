@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-24 17:30+0200\n"
-"PO-Revision-Date: 2026-10-24 17:55+0200\n"
+"POT-Creation-Date: 2026-11-08 14:22+0100\n"
+"PO-Revision-Date: 2026-11-08 14:40+0100\n"
 "Last-Translator: \n"
 "Language-Team: zh <LL@li.org>\n"
 "Language: zh\n"
@@ -351,269 +351,268 @@ msgstr "闪电"
 msgid "On-chain"
 msgstr "链上"
 
-#: app.py:563
+#: app.py:568
 msgid "Importo non valido"
 msgstr "无效金额"
 
-#: app.py:1756
+#: app.py:2010
 #, python-format
 msgid "Statistiche %(simbolo)s"
 msgstr "统计 %(simbolo)s"
 
-#: app.py:1757
+#: app.py:2011
 msgid "Statistiche Lightning (⚡)"
 msgstr "闪电统计数据（⚡）"
 
-#: app.py:1758
+#: app.py:2012
 msgid "Statistiche On-chain (₿)"
 msgstr "链上统计数据（₿）"
 
-#: app.py:1809 templates/analytics.html:2 templates/base.html:220
+#: app.py:2127 templates/analytics.html:2 templates/base.html:220
 #: templates/base.html:232 templates/base.html:247
 msgid "Statistiche"
 msgstr "统计数据"
 
-#: templates/analytics.html:18
+#: templates/analytics.html:24
 msgid "Uscite"
 msgstr "出口"
 
-#: templates/analytics.html:26
+#: templates/analytics.html:38
 msgid "Delta (Bilancio)"
 msgstr "达美航空（预算）"
 
-#: templates/analytics.html:40
+#: templates/analytics.html:68
 msgid "📈 Savings Rate (Efficienza del Risparmio)"
 msgstr "📈 储蓄率（储蓄效率）"
 
-#: templates/analytics.html:59
+#: templates/analytics.html:87
 msgid "Livello Leggenda!"
 msgstr "传奇级别！"
 
-#: templates/analytics.html:61
+#: templates/analytics.html:89
 msgid "Ottimo lavoro!"
 msgstr "干得好！"
 
-#: templates/analytics.html:63
+#: templates/analytics.html:91
 msgid "Buono, ma ottimizzabile."
 msgstr "不错，但还可以优化。"
 
-#: templates/analytics.html:65
+#: templates/analytics.html:93
 msgid "Deficit mensile."
 msgstr "月度亏损。"
 
-#: templates/analytics.html:79
+#: templates/analytics.html:107
 msgid "VISTA MENSILE"
 msgstr "月度概览"
 
-#: templates/analytics.html:84
+#: templates/analytics.html:112
 msgid "VISTA ANNUALE"
 msgstr "年度回顾"
 
-#: templates/analytics.html:89
+#: templates/analytics.html:117
 msgid "Totale Storico"
 msgstr "历史总计"
 
-#: templates/analytics.html:100
+#: templates/analytics.html:128
 msgid "Mese specifico"
 msgstr "具体月份"
 
-#: templates/analytics.html:112
+#: templates/analytics.html:140
 msgid "oppure"
 msgstr "或者"
 
-#: templates/analytics.html:115
+#: templates/analytics.html:143
 msgid "Solo Anno"
 msgstr "仅一年"
 
-#: templates/analytics.html:131
+#: templates/analytics.html:159
 msgid "Filtra"
 msgstr "筛选"
 
-#: templates/analytics.html:134
+#: templates/analytics.html:162
 msgid "Reset"
 msgstr "重置"
 
-#: templates/analytics.html:137
+#: templates/analytics.html:165
 msgid "Esporta Report"
 msgstr "出口报告"
 
-#: templates/analytics.html:145
+#: templates/analytics.html:173
 msgid "Analisi Uscite"
 msgstr "输出分析"
 
-#: templates/analytics.html:151
+#: templates/analytics.html:179
 msgid "Nessuna spesa registrata."
 msgstr "未记录任何费用。"
 
-#: templates/analytics.html:157
+#: templates/analytics.html:185
 msgid "Analisi Entrate"
 msgstr "收入分析"
 
-#: templates/analytics.html:163
+#: templates/analytics.html:191
 msgid "Nessuna entrata registrata."
 msgstr "未记录任何条目。"
 
-#: templates/analytics.html:173
+#: templates/analytics.html:201
 msgid "Aggiungi Nuovo Investimento"
 msgstr "新增投资"
 
-#: templates/analytics.html:176
+#: templates/analytics.html:204
 msgid "Nome (es. Buono Postale)"
 msgstr "名称（例如：邮政汇票）"
 
-#: templates/analytics.html:179
+#: templates/analytics.html:207
 msgid "Capitale Investito"
 msgstr "投资资本"
 
-#: templates/analytics.html:182
+#: templates/analytics.html:210
 msgid "Valore Iniziale"
 msgstr "初始值"
 
-#: templates/analytics.html:185
+#: templates/analytics.html:213
 msgid "Salva"
 msgstr "节省"
 
-#: templates/analytics.html:194
+#: templates/analytics.html:222
 msgid "Performance Investimenti"
 msgstr "投资业绩"
 
-#: templates/analytics.html:200 templates/analytics.html:295
+#: templates/analytics.html:228 templates/analytics.html:323
 msgid "Asset"
 msgstr "资产"
 
-#: templates/analytics.html:201
+#: templates/analytics.html:229
 msgid "Costo Storico (Carico)"
 msgstr "历史成本（负载）"
 
-#: templates/analytics.html:202
+#: templates/analytics.html:230
 msgid "Valore Attuale"
 msgstr "当前值"
 
-#: templates/analytics.html:203 templates/index.html:113 templates/index.html:137
+#: templates/analytics.html:231 templates/index.html:113 templates/index.html:137
 msgid "Rendimento"
 msgstr "表现"
 
-#: templates/analytics.html:205
+#: templates/analytics.html:233
 msgid "Registra Valore Mese"
 msgstr "创纪录的月度价值"
 
-#: templates/analytics.html:221
+#: templates/analytics.html:249
 msgid "Modifica il nome e clicca sul dischetto o premi Invio"
 msgstr "更改名称，然后单击磁盘或按 Enter 键"
 
-#: templates/analytics.html:224
+#: templates/analytics.html:252
 msgid "Conferma cambio nome"
 msgstr "确认姓名变更"
 
-#: templates/analytics.html:224
+#: templates/analytics.html:252
 msgid "Salva nome"
 msgstr "保存名称"
 
-#: templates/analytics.html:244
+#: templates/analytics.html:272
 msgid "Nuovo importo"
 msgstr "新金额"
 
-#: templates/analytics.html:247
+#: templates/analytics.html:275
 msgid "Salva rilevazione mese"
 msgstr "节省月份检测"
 
-#: templates/analytics.html:247
+#: templates/analytics.html:275
 msgid "Salva valore"
 msgstr "节省价值"
 
-#: templates/analytics.html:276
+#: templates/analytics.html:304
 msgid "Andamento Patrimoniale Euro"
 msgstr "欧元资产表现"
 
-#: templates/analytics.html:276
+#: templates/analytics.html:304
 msgid "Saldo Storico Patrimoniale (Controvalore"
 msgstr "历史平衡（反比）"
 
-#: templates/analytics.html:287
+#: templates/analytics.html:315
 msgid "Storico Rilevazioni Mese"
 msgstr "历史调查月"
 
-#: templates/analytics.html:294 templates/analytics.html:351
+#: templates/analytics.html:322 templates/analytics.html:379
 #: templates/importa_anteprima.html:14
-#: templates/modifica_transazione_lightning.html:8
-#: templates/modifica_transazione_onchain.html:8 templates/transazioni.html:70
-#: templates/transazioni_lightning.html:53 templates/transazioni_onchain.html:43
+#: templates/modifica_transazione_onchain.html:8 templates/transazioni.html:211
+#: templates/transazioni_lightning.html:177
+#: templates/transazioni_onchain.html:176
 msgid "Data"
 msgstr "日期"
 
-#: templates/analytics.html:296
+#: templates/analytics.html:324
 msgid "Valore"
 msgstr "价值"
 
-#: templates/analytics.html:316
+#: templates/analytics.html:344
 msgid "Sicuro di voler eliminare questa rilevazione?"
 msgstr "您确定要删除此检测结果吗？"
 
-#: templates/analytics.html:317
+#: templates/analytics.html:345
 msgid "Elimina errore"
 msgstr "删除错误"
 
-#: templates/analytics.html:317 templates/transazioni.html:147
-#: templates/transazioni_lightning.html:111 templates/transazioni_onchain.html:96
+#: templates/analytics.html:345
 msgid "Elimina"
 msgstr "删除"
 
-#: templates/analytics.html:327
+#: templates/analytics.html:355
 msgid "Nessuna rilevazione salvata finora."
 msgstr "目前尚未保存任何检测结果。"
 
-#: templates/analytics.html:346 templates/analytics.html:365
+#: templates/analytics.html:374 templates/analytics.html:393
 msgid "Dettaglio Categoria:"
 msgstr "类别详情："
 
-#: templates/analytics.html:347
+#: templates/analytics.html:375
 msgid "Caricamento in corso..."
 msgstr "加载中..."
 
-#: templates/analytics.html:348
+#: templates/analytics.html:376
 msgid "Transazioni Fiat"
 msgstr "法定货币交易"
 
-#: templates/analytics.html:349
+#: templates/analytics.html:377
 msgid "⚡ Transazioni Lightning Network"
 msgstr "⚡闪电网络交易"
 
-#: templates/analytics.html:350
+#: templates/analytics.html:378
 msgid "🔗 Transazioni Bitcoin On-Chain"
 msgstr "🔗 链上比特币交易"
 
-#: templates/analytics.html:352 templates/importa_anteprima.html:15
-#: templates/modifica_transazione_lightning.html:14
-#: templates/modifica_transazione_onchain.html:14 templates/transazioni.html:71
-#: templates/transazioni_lightning.html:55 templates/transazioni_onchain.html:45
+#: templates/analytics.html:380 templates/importa_anteprima.html:15
+#: templates/modifica_transazione_onchain.html:14 templates/transazioni.html:212
+#: templates/transazioni_lightning.html:179
+#: templates/transazioni_onchain.html:178
 msgid "Descrizione"
 msgstr "描述"
 
-#: templates/analytics.html:353
+#: templates/analytics.html:381
 msgid "Importo"
 msgstr "数量"
 
-#: templates/analytics.html:354 templates/transazioni_lightning.html:58
+#: templates/analytics.html:382 templates/transazioni_lightning.html:182
 msgid "Satoshi"
 msgstr "聪"
 
-#: templates/analytics.html:355
+#: templates/analytics.html:383
 msgid "BTC"
 msgstr "比特币"
 
-#: templates/analytics.html:356
+#: templates/analytics.html:384
 msgid "Nessuna transazione trovata per questa categoria nel periodo selezionato."
-msgstr "在所选期间内，未找到该类别的任何交易记录"
+msgstr "在所选期间内，未找到该类别的任何交易记录."
 
-#: templates/analytics.html:357
+#: templates/analytics.html:385
 msgid "Si è verificato un errore durante il caricamento dei dati."
 msgstr "加载数据时发生错误."
 
-#: templates/analytics.html:368 templates/analytics.html:377
+#: templates/analytics.html:396 templates/analytics.html:405
 msgid "Chiudi"
 msgstr "关闭"
 
-#: templates/analytics.html:430
+#: templates/analytics.html:458
 msgid "Totale Speso"
 msgstr "总支出"
 
@@ -815,7 +814,7 @@ msgstr ""
 "如果没有您的密码或 Nostr 签名，该文件将\n"
 "完全无法解读。这确保即使您丢失了\n"
 "U盘或文件落入不法分子之手，也绝不会有人\n"
-"能够访问您的交易记录"
+"能够访问您的交易记录."
 
 #: templates/faq.html:43
 msgid "Come faccio un backup manuale del database \"al volo\"?"
@@ -825,7 +824,7 @@ msgstr "如何手动实时备份数据库?"
 msgid ""
 "Prima di fare test o modifiche, puoi creare una copia diretta\n"
 "            del file del database tramite il terminale di VS Code:"
-msgstr "在进行测试或更改之前，您可以使用 VS Code 终端创建数据库文件的直接副本."
+msgstr "在进行测试或更改之前，您可以使用 VS Code 终端创建数据库文件的直接副本:"
 
 #: templates/faq.html:63
 msgid ""
@@ -834,7 +833,7 @@ msgid ""
 "            cartella del progetto."
 msgstr ""
 "此命令会在您的桌面上创建一个带有日期标记的副本。要恢复它，只需关闭 Beesy 并将文"
-"件放回项目文件夹即可"
+"件放回项目文件夹即可."
 
 #: templates/faq.html:80
 msgid ""
@@ -928,7 +927,7 @@ msgstr "安全更新 - ₿eesy"
 
 #: templates/force_password_reset.html:36
 msgid "Ciao <strong>{{ username }}</strong>, abbiamo rafforzato i requisiti di"
-msgstr "您好 <strong>{{ username }}</strong>，我们已加强了对以下各项的要求."
+msgstr "您好 <strong>{{ username }}</strong>，我们已加强了对以下各项的要求"
 
 #: templates/force_password_reset.html:37
 msgid "sicurezza. Per continuare, devi impostare subito una nuova password:"
@@ -978,26 +977,26 @@ msgstr "导入预览 - ₿eesy"
 msgid "Anteprima Importazione"
 msgstr "导入预览"
 
-#: templates/importa_anteprima.html:16 templates/transazioni.html:75
+#: templates/importa_anteprima.html:16 templates/transazioni.html:216
 #, python-format
 msgid "Importo (%(simbolo)s)"
 msgstr "金额 (%(simbolo)s)"
 
-#: templates/importa_anteprima.html:17 templates/transazioni.html:78
+#: templates/importa_anteprima.html:17 templates/transazioni.html:219
 msgid "Controvalore BTC"
 msgstr "比特币价值"
 
 #: templates/importa_anteprima.html:18
-#: templates/modifica_transazione_lightning.html:17
-#: templates/modifica_transazione_onchain.html:17 templates/transazioni.html:72
-#: templates/transazioni_lightning.html:56 templates/transazioni_onchain.html:46
+#: templates/modifica_transazione_onchain.html:17 templates/transazioni.html:213
+#: templates/transazioni_lightning.html:180
+#: templates/transazioni_onchain.html:179
 msgid "Categoria"
 msgstr "类别"
 
 #: templates/importa_anteprima.html:19
-#: templates/modifica_transazione_lightning.html:25
-#: templates/modifica_transazione_onchain.html:25 templates/transazioni.html:73
-#: templates/transazioni_lightning.html:57 templates/transazioni_onchain.html:47
+#: templates/modifica_transazione_onchain.html:25 templates/transazioni.html:214
+#: templates/transazioni_lightning.html:181
+#: templates/transazioni_onchain.html:180
 msgid "Sottocategoria"
 msgstr "子类别"
 
@@ -1253,20 +1252,24 @@ msgstr "编辑交易"
 msgid "Data (YYYY-MM-DD):"
 msgstr "日期（YYYY-MM-DD）："
 
-#: templates/modifica_transazione.html:16 templates/nuova_transazione.html:16
+#: templates/modifica_transazione.html:16
+#: templates/modifica_transazione_lightning.html:15
+#: templates/nuova_transazione.html:16
 #: templates/nuova_transazione_lightning.html:14
 #: templates/nuova_transazione_onchain.html:14
 msgid "Descrizione:"
 msgstr "描述:"
 
-#: templates/modifica_transazione.html:25 templates/nuova_transazione.html:25
+#: templates/modifica_transazione.html:25
+#: templates/modifica_transazione_lightning.html:18
+#: templates/nuova_transazione.html:25
 #: templates/nuova_transazione_lightning.html:17
 #: templates/nuova_transazione_onchain.html:17
 msgid "Categoria:"
 msgstr "类别:"
 
 #: templates/modifica_transazione.html:32
-#: templates/modifica_transazione_lightning.html:19
+#: templates/modifica_transazione_lightning.html:20
 #: templates/modifica_transazione_onchain.html:19
 #: templates/nuova_transazione.html:32
 #: templates/nuova_transazione_lightning.html:24
@@ -1274,7 +1277,9 @@ msgstr "类别:"
 msgid "Seleziona Categoria"
 msgstr "子类别"
 
-#: templates/modifica_transazione.html:55 templates/nuova_transazione.html:55
+#: templates/modifica_transazione.html:55
+#: templates/modifica_transazione_lightning.html:36
+#: templates/nuova_transazione.html:55
 #: templates/nuova_transazione_lightning.html:39
 #: templates/nuova_transazione_onchain.html:34
 msgid "Sottocategoria:"
@@ -1297,22 +1302,22 @@ msgid "Conto:"
 msgstr "银行:"
 
 #: templates/modifica_transazione.html:106 templates/nuova_transazione.html:110
-#: templates/transazioni.html:13 templates/transazioni.html:126
+#: templates/transazioni.html:49 templates/transazioni.html:279
 msgid "Banca"
 msgstr "银行"
 
 #: templates/modifica_transazione.html:107 templates/nuova_transazione.html:111
-#: templates/transazioni.html:19 templates/transazioni.html:127
+#: templates/transazioni.html:59 templates/transazioni.html:280
 msgid "Contanti"
 msgstr "银行"
 
 #: templates/modifica_transazione.html:108 templates/nuova_transazione.html:112
-#: templates/transazioni.html:23 templates/transazioni.html:128
+#: templates/transazioni.html:70 templates/transazioni.html:281
 msgid "Investimenti"
 msgstr "投资业绩"
 
 #: templates/modifica_transazione.html:109 templates/nuova_transazione.html:113
-#: templates/transazioni.html:27 templates/transazioni.html:129
+#: templates/transazioni.html:79 templates/transazioni.html:282
 msgid "Pensione"
 msgstr "养老金"
 
@@ -1321,7 +1326,7 @@ msgid "Note (opzionale)"
 msgstr "备注（可选）"
 
 #: templates/modifica_transazione.html:120
-#: templates/modifica_transazione_lightning.html:31
+#: templates/modifica_transazione_lightning.html:42
 #: templates/modifica_transazione_onchain.html:42 templates/profile.html:45
 msgid "Salva Modifiche"
 msgstr "保存更改"
@@ -1330,35 +1335,61 @@ msgstr "保存更改"
 msgid "Torna alle transazioni"
 msgstr "返回交易记录"
 
-#: templates/modifica_transazione.html:146 templates/nuova_transazione.html:151
+#: templates/modifica_transazione.html:146
+#: templates/modifica_transazione_lightning.html:72
+#: templates/nuova_transazione.html:151
 #: templates/nuova_transazione_lightning.html:81
 #: templates/nuova_transazione_onchain.html:78
 msgid "Nessuna sottocategoria"
 msgstr "没有子类别"
 
-#: templates/modifica_transazione_lightning.html:1
-#: templates/modifica_transazione_lightning.html:4
-msgid "Modifica Transazione Lightning"
-msgstr "新的闪电网络交易（⚡️）"
+#: templates/modifica_transazione_lightning.html:2
+msgid "Modifica transazione Lightning⚡️ - ₿eesy"
+msgstr "编辑闪电交易⚡️ - ₿eesy"
 
-#: templates/modifica_transazione_lightning.html:11
-#: templates/modifica_transazione_onchain.html:11
-#: templates/transazioni_lightning.html:54 templates/transazioni_onchain.html:44
-msgid "Wallet"
-msgstr "钱包"
+#: templates/modifica_transazione_lightning.html:6
+msgid "Modifica Transazione Lightning ⚡️"
+msgstr "编辑闪电交易⚡️"
 
-#: templates/modifica_transazione_lightning.html:28
-msgid "Importo (satoshi)"
-msgstr "新金额 €"
+#: templates/modifica_transazione_lightning.html:9
+#: templates/nuova_transazione_lightning.html:8
+#: templates/nuova_transazione_onchain.html:8
+msgid "Data:"
+msgstr "日期:"
 
-#: templates/modifica_transazione_lightning.html:34
-msgid "Torna alle transazioni Lightning"
-msgstr "新的闪电网络交易（⚡️）"
+#: templates/modifica_transazione_lightning.html:12
+#: templates/nuova_transazione_lightning.html:11
+#: templates/nuova_transazione_onchain.html:11
+msgid "Wallet:"
+msgstr "钱包："
+
+#: templates/modifica_transazione_lightning.html:39
+#: templates/nuova_transazione_lightning.html:43
+msgid "Importo (satoshi):"
+msgstr "金额（聪）："
+
+#: templates/modifica_transazione_lightning.html:46
+#: templates/nuova_transazione_lightning.html:58
+msgid "Torna alle transazioni Lightning ⚡️"
+msgstr "恢复闪电交易⚡️"
+
+#: templates/modifica_transazione_lightning.html:48
+#: templates/nuova_transazione.html:128
+#: templates/nuova_transazione_lightning.html:61
+#: templates/nuova_transazione_onchain.html:55
+msgid "Torna alla Home"
+msgstr "返回首页"
 
 #: templates/modifica_transazione_onchain.html:1
 #: templates/modifica_transazione_onchain.html:4
 msgid "Modifica Transazione On-Chain"
 msgstr "新的链上交易（₿）"
+
+#: templates/modifica_transazione_onchain.html:11
+#: templates/transazioni_lightning.html:178
+#: templates/transazioni_onchain.html:177
+msgid "Wallet"
+msgstr "钱包"
 
 #: templates/modifica_transazione_onchain.html:27
 msgid "Transaction ID"
@@ -1398,12 +1429,6 @@ msgstr "留空表示自动定价。留空则表示自动定价"
 msgid "Aggiungi"
 msgstr "添加"
 
-#: templates/nuova_transazione.html:128
-#: templates/nuova_transazione_lightning.html:61
-#: templates/nuova_transazione_onchain.html:55
-msgid "Torna alla Home"
-msgstr "返回首页"
-
 #: templates/nuova_transazione_lightning.html:1
 msgid ""
 "Nuova transazione Lightning⚡️ -\n"
@@ -1420,24 +1445,6 @@ msgstr "比特币闪电网络⚡️"
 #: templates/nuova_transazione_lightning.html:5
 msgid "Nuova transazione Lightning ⚡️"
 msgstr "新的闪电交易⚡️"
-
-#: templates/nuova_transazione_lightning.html:8
-#: templates/nuova_transazione_onchain.html:8
-msgid "Data:"
-msgstr "日期:"
-
-#: templates/nuova_transazione_lightning.html:11
-#: templates/nuova_transazione_onchain.html:11
-msgid "Wallet:"
-msgstr "钱包："
-
-#: templates/nuova_transazione_lightning.html:43
-msgid "Importo (satoshi):"
-msgstr "金额（聪）："
-
-#: templates/nuova_transazione_lightning.html:58
-msgid "Torna alle transazioni Lightning ⚡️"
-msgstr "恢复闪电交易⚡️"
 
 #: templates/nuova_transazione_onchain.html:1
 msgid "Nuova transazione on-chain - ₿eesy"
@@ -1671,118 +1678,145 @@ msgstr "每月下载链上 CSV 文件🔗"
 msgid "Transazioni"
 msgstr "交易"
 
-#: templates/transazioni.html:5
+#: templates/transazioni.html:15
 #, python-format
 msgid "Transazioni (%(simbolo)s)"
 msgstr "交易记录 (%(simbolo)s)"
 
-#: templates/transazioni.html:31
+#: templates/transazioni.html:29
+msgid "Nuova Transazione"
+msgstr "新交易"
+
+#: templates/transazioni.html:98
 msgid "Saldo Totale"
 msgstr "总余额"
 
-#: templates/transazioni.html:38 templates/transazioni_lightning.html:24
-#: templates/transazioni_onchain.html:17
+#: templates/transazioni.html:122 templates/transazioni_lightning.html:89
+#: templates/transazioni_onchain.html:88
 msgid "Esporta CSV"
 msgstr "导出 CSV 文件"
 
-#: templates/transazioni.html:42 templates/transazioni_lightning.html:28
-#: templates/transazioni_onchain.html:21
-msgid "Esporta CSV per mese"
-msgstr "导出 CSV 文件"
+#: templates/transazioni.html:137 templates/transazioni_lightning.html:103
+#: templates/transazioni_onchain.html:102
+msgid "Esporta per mese"
+msgstr "按月导出 CSV 文件"
 
-#: templates/transazioni.html:50
-msgid "Aggiungi una nuova transazione"
-msgstr "添加新交易"
+#: templates/transazioni.html:161 templates/transazioni_lightning.html:127
+#: templates/transazioni_onchain.html:126
+msgid "Azioni Rapide"
+msgstr "快速操作"
 
-#: templates/transazioni.html:69 templates/transazioni_lightning.html:52
-#: templates/transazioni_onchain.html:42
+#: templates/transazioni.html:177 templates/transazioni_lightning.html:143
+#: templates/transazioni_onchain.html:142
+msgid "Modifica"
+msgstr "编辑"
+
+#: templates/transazioni.html:184
+msgid "Sei sicuro di voler eliminare le transazioni selezionate?"
+msgstr "您确定要删除所选交易记录吗？"
+
+#: templates/transazioni.html:194 templates/transazioni_lightning.html:160
+#: templates/transazioni_onchain.html:159
+msgid "Elimina Selezionate"
+msgstr "删除所选内容"
+
+#: templates/transazioni.html:207 templates/transazioni_lightning.html:173
+#: templates/transazioni_onchain.html:172
+msgid "Seleziona tutti"
+msgstr "全选"
+
+#: templates/transazioni.html:210 templates/transazioni_lightning.html:176
+#: templates/transazioni_onchain.html:175
 msgid "ID"
 msgstr "ID"
 
-#: templates/transazioni.html:80
+#: templates/transazioni.html:221
 #, python-format
 msgid "Valore BTC (%(simbolo)s)"
 msgstr "BTC 价值 (%(simbolo)s)"
 
-#: templates/transazioni.html:83
+#: templates/transazioni.html:224
 msgid "Conto"
 msgstr "我数数"
 
-#: templates/transazioni.html:84
+#: templates/transazioni.html:225
 msgid "Note"
 msgstr "笔记"
 
-#: templates/transazioni.html:85 templates/transazioni_lightning.html:62
-#: templates/transazioni_onchain.html:54
-msgid "Azioni"
-msgstr "行动"
-
-#: templates/transazioni.html:143
-msgid "Sei sicuro di voler eliminare questa transazione?"
-msgstr "您确定要删除此交易吗？"
-
-#: templates/transazioni.html:152 templates/transazioni_lightning.html:116
-#: templates/transazioni_onchain.html:101
-msgid "Modifica"
-msgstr "编辑"
+#: templates/transazioni.html:234
+msgid "Transazione automatica bloccata dal sistema"
+msgstr "自动交易已被系统阻止"
 
 #: templates/transazioni_lightning.html:1
 msgid "Transazioni Lightning - ₿eesy"
 msgstr "闪电交易 - ₿eesy"
 
-#: templates/transazioni_lightning.html:3
+#: templates/transazioni_lightning.html:13
 msgid "Transazioni Lightning ⚡"
 msgstr "闪电交易⚡"
 
-#: templates/transazioni_lightning.html:7
-msgid "Lightning Balance:"
-msgstr "闪电平衡："
+#: templates/transazioni_lightning.html:26
+msgid "Nuova Lightning"
+msgstr "新闪电"
 
-#: templates/transazioni_lightning.html:17 templates/transazioni_onchain.html:11
+#: templates/transazioni_lightning.html:47
+msgid "Lightning Balance"
+msgstr "闪电平衡"
+
+#: templates/transazioni_lightning.html:64 templates/transazioni_onchain.html:63
 msgid "Controvalore Totale"
 msgstr "总价值"
 
-#: templates/transazioni_lightning.html:35
-msgid "Aggiungi una nuova transazione Lightning"
-msgstr "添加新的 Lightning 交易"
+#: templates/transazioni_lightning.html:150
+msgid "Sei sicuro di voler eliminare le transazioni Lightning selezionate?"
+msgstr "您确定要删除选定的 Lightning 交易吗？"
 
-#: templates/transazioni_lightning.html:59 templates/transazioni_onchain.html:51
+#: templates/transazioni_lightning.html:183
+#: templates/transazioni_onchain.html:184
 msgid "Controvalore Storico"
 msgstr "历史价值"
 
-#: templates/transazioni_lightning.html:60 templates/transazioni_onchain.html:52
+#: templates/transazioni_lightning.html:184
+#: templates/transazioni_onchain.html:185
 msgid "Controvalore Live"
 msgstr "实时反价值"
 
-#: templates/transazioni_lightning.html:61 templates/transazioni_onchain.html:53
+#: templates/transazioni_lightning.html:185
+#: templates/transazioni_onchain.html:186
 msgid "Valore BTC"
 msgstr "比特币价值"
 
 #: templates/transazioni_onchain.html:1
-msgid "Transazioni ₿itcoin On-chain - ₿eesy"
+msgid ""
+"Transazioni ₿itcoin On-chain -\n"
+"₿eesy"
 msgstr "链上比特币交易 - ₿eesy"
 
-#: templates/transazioni_onchain.html:3
+#: templates/transazioni_onchain.html:13
 msgid "Transazioni ₿itcoin On-chain 🔗"
 msgstr "链上比特币交易🔗"
 
-#: templates/transazioni_onchain.html:6
-msgid "Saldo ₿itcoin On-chain🔗"
-msgstr "链上比特币余额🔗"
+#: templates/transazioni_onchain.html:26
+msgid "Nuova On-chain"
+msgstr "新的链上"
 
-#: templates/transazioni_onchain.html:27
-msgid "Aggiungi una nuova transazione On-chain"
-msgstr "添加新的链上交易"
+#: templates/transazioni_onchain.html:47
+msgid "Saldo ₿itcoin On-chain"
+msgstr "链上比特币余额"
 
-#: templates/transazioni_onchain.html:48
+#: templates/transazioni_onchain.html:149
+msgid "Sei sicuro di voler eliminare le transazioni On-chain selezionate?"
+msgstr "您确定要删除选定的链上交易吗？"
+
+#: templates/transazioni_onchain.html:181
 msgid "TransactionID"
 msgstr "交易 ID"
 
-#: templates/transazioni_onchain.html:49
+#: templates/transazioni_onchain.html:182
 msgid "Importo BTC"
 msgstr "比特币金额"
 
-#: templates/transazioni_onchain.html:50
+#: templates/transazioni_onchain.html:183
 msgid "Fee"
 msgstr "费用"
 
@@ -1951,3 +1985,18 @@ msgstr "费用"
 
 #~ msgid "Controvalore"
 #~ msgstr "反价值"
+
+#~ msgid "Importo (satoshi)"
+#~ msgstr "新金额 €"
+
+#~ msgid "Torna alle transazioni Lightning"
+#~ msgstr "新的闪电网络交易（⚡️）"
+
+#~ msgid "Aggiungi una nuova transazione"
+#~ msgstr "添加新交易"
+
+#~ msgid "Aggiungi una nuova transazione Lightning"
+#~ msgstr "添加新的 Lightning 交易"
+
+#~ msgid "Aggiungi una nuova transazione On-chain"
+#~ msgstr "添加新的链上交易"
