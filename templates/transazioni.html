@@ -46,13 +46,19 @@ block content %}
   "
 >
   <div style="flex: 1 1 100px; min-width: 85px">
-    <span style="color: #888; font-size: 0.8em">🏦 {{ _('Banca') }}</span><br />
-    <strong
-      class="{% if banca >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
-      style="font-size: 0.9em"
-      >{{ "%.2f"|format(banca) }} {{ current_user.default_currency |
-      currency_symbol }}</strong
+    <a
+      href="{{ url_for('analytics_banca') }}"
+      class="text-decoration-none text-reset hover-primary"
     >
+      <span style="color: #888; font-size: 0.8em">🏦 {{ _('Banca') }}</span
+      ><br />
+      <strong
+        class="{% if banca >= 0 %}importo-positivo{% else %}importo-negativo{% endif %}"
+        style="font-size: 0.9em"
+        >{{ "%.2f"|format(banca) }} {{ current_user.default_currency |
+        currency_symbol }}</strong
+      >
+    </a>
   </div>
 
   <div style="flex: 1 1 100px; min-width: 85px">

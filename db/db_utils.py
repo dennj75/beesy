@@ -1145,16 +1145,16 @@ def pulisci_mese(mese_input):
     return None
 
 
-def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
+def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None, conto=None):
     import sqlite3
 
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
+    # 1. Impostiamo la tabella e la colonna del valore in base al tipo di conto (Fiat, Lightning o On-Chain)
     if tipo_conto == 'LIGHTNING':
         tabella = "transazioni_lightning"
-        # Per Lightning usiamo direttamente i satoshi assoluti
         colonna_valore = "ABS(satoshi)"
     elif tipo_conto == 'ONCHAIN':
         tabella = "transazioni_onchain"
@@ -1166,6 +1166,13 @@ def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
     filtro_tempo = ""
     parametri = [user_id]
 
+    # 2. Gestiamo il filtro del conto solo se viene esplicitamente passato (es. 'BANCA')
+    filtro_conto = ""
+    if conto and tipo_conto not in ['LIGHTNING', 'ONCHAIN']:
+        filtro_conto = "AND conto = ?"
+        parametri.append(conto)
+
+    # 3. Gestione dei filtri temporali (Mese o Anno)
     if mese and '-' in str(mese):
         filtro_tempo = "AND data LIKE ?"
         parametri.append(f"{mese.strip()}%")
@@ -1176,8 +1183,9 @@ def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
         filtro_tempo = "AND data LIKE ?"
         parametri.append(f"{str(anno).strip()}%")
 
+    # 4. Costruzione della query SQL in base alla vista in cui ci troviamo
     if tipo_conto in ['LIGHTNING', 'ONCHAIN']:
-        # Query dedicata per le crypto: prende tutto ciò che non è entrata
+        # Per le cripto la logica è semplice (prende tutto tranne le entrate)
         query = f"""
             SELECT categoria, SUM({colonna_valore}) as totale 
             FROM {tabella} 
@@ -1187,18 +1195,39 @@ def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
             GROUP BY categoria
             ORDER BY totale DESC
         """
-    else:
-        # Query Fiat con i filtri raffinati che abbiamo fatto prima
+    elif conto == 'BANCA':
+        # --- VISTA BANCA ---
+        # Qui vogliamo vedere TUTTE le uscite reali dal conto, compresi i giroconti e gli investimenti.
+        # Escludiamo solo le entrate e il saldo iniziale, senza tagliare fuori Patrimonio & Finanze!
         query = f"""
             SELECT categoria, SUM({colonna_valore}) as totale 
             FROM {tabella} 
             WHERE user_id=? 
+            {filtro_conto}
             AND LOWER(TRIM(categoria)) != 'entrate'
+            AND LOWER(descrizione) NOT LIKE '%saldo iniziale%'
+            AND LOWER(sottocategoria) NOT LIKE '%rimborso%'
+            {filtro_tempo}
+            GROUP BY categoria
+            ORDER BY totale DESC
+        """
+    else:
+        # --- VISTA GENERALE / BILANCIO DI VITA ---
+        # Qui invece vogliamo il bilancio pulito, quindi escludiamo i giroconti interni 
+        # per non falsificare le spese di vita quotidiana.
+        query = f"""
+            SELECT categoria, SUM({colonna_valore}) as totale 
+            FROM {tabella} 
+            WHERE user_id=? 
+            {filtro_conto}
+            AND LOWER(TRIM(categoria)) != 'entrate'
+            AND LOWER(descrizione) NOT LIKE '%saldo iniziale%'
             AND NOT (
                 LOWER(TRIM(categoria)) IN ('patrimonio & finanze', 'patrimonio e finanze') 
                 AND LOWER(TRIM(COALESCE(sottocategoria, ''))) NOT IN ('imposte di bollo / ivafe', 'commissioni bancarie', 'bolli', 'commissioni')
             )
             AND LOWER(TRIM(sottocategoria)) NOT IN ('acquisto titoli', 'versamento pensione', 'giroconto', 'prelievo contanti')
+            AND LOWER(sottocategoria) NOT LIKE '%rimborso%'
             {filtro_tempo}
             GROUP BY categoria
             ORDER BY totale DESC
@@ -1208,10 +1237,10 @@ def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
     righe = cursor.fetchall()
     conn.close()
 
+    # 5. Prepariamo le liste per il grafico (Labels e Valori)
     labels_spese = [r[0] if r[0] else "Generale" for r in righe]
 
     if tipo_conto == 'LIGHTNING':
-        # Per Lightning restituiamo i satoshi interi senza decimali
         valori_spese = [int(r[1]) if r[1] else 0 for r in righe]
     elif tipo_conto == 'ONCHAIN':
         valori_spese = [round(r[1], 8) if r[1] else 0.0 for r in righe]
@@ -1221,7 +1250,7 @@ def get_spese_per_categoria_filtrate(user_id, tipo_conto, mese=None, anno=None):
     return labels_spese, valori_spese
 
 
-def get_entrate_per_sottocategoria(user_id, tipo_conto, mese=None, anno=None):
+def get_entrate_per_sottocategoria(user_id, tipo_conto, mese=None, anno=None, conto=None):
     import sqlite3
 
     conn = sqlite3.connect(DB_PATH)
@@ -1236,11 +1265,16 @@ def get_entrate_per_sottocategoria(user_id, tipo_conto, mese=None, anno=None):
         colonna_valore = "importo_btc"
     else:
         tabella = "transazioni"
-        # 🎯 Usiamo la colonna base EUR per le aggregazioni Fiat
         colonna_valore = "COALESCE(importo_valuta_base, importo)"
 
     filtro_tempo = ""
+    # Aggiungiamo il conto nei parametri iniziali per la tabella transazioni fiat
     parametri = [user_id]
+
+    filtro_conto = ""
+    if tipo_conto not in ['LIGHTNING', 'ONCHAIN']:
+        filtro_conto = "AND conto = ?"
+        parametri.append(conto)
 
     if mese and '-' in str(mese):
         filtro_tempo = "AND data LIKE ?"
@@ -1256,6 +1290,7 @@ def get_entrate_per_sottocategoria(user_id, tipo_conto, mese=None, anno=None):
         SELECT sottocategoria, SUM(ABS({colonna_valore})) as totale 
         FROM {tabella} 
         WHERE user_id=? 
+        {filtro_conto}
         AND LOWER(TRIM(categoria)) = 'entrate' 
         {filtro_tempo}
         GROUP BY sottocategoria
@@ -1273,7 +1308,7 @@ def get_entrate_per_sottocategoria(user_id, tipo_conto, mese=None, anno=None):
     return labels_entrate, valori_entrate
 
 
-def get_bilancio_periodo(user_id, tipo_conto, mese=None, anno=None):
+def get_bilancio_periodo(user_id, tipo_conto, mese=None, anno=None, conto=None):
     import sqlite3
 
     conn = sqlite3.connect(DB_PATH)
@@ -1285,11 +1320,16 @@ def get_bilancio_periodo(user_id, tipo_conto, mese=None, anno=None):
     elif tipo_conto == 'ONCHAIN':
         tabella, colonna = "transazioni_onchain", "importo_btc"
     else:
-        # 🎯 Usiamo la colonna base EUR per il bilancio Fiat
         tabella, colonna = "transazioni", "COALESCE(importo_valuta_base, importo)"
 
     filtro_tempo = ""
     parametri = [user_id]
+
+    # Applichiamo il filtro sul conto SOLO SE viene esplicitamente richiesto (es. 'BANCA')
+    filtro_conto = ""
+    if conto and tipo_conto not in ['LIGHTNING', 'ONCHAIN']:
+        filtro_conto = "AND conto = ?"
+        parametri.append(conto)
 
     if mese and '-' in str(mese):
         filtro_tempo = "AND data LIKE ?"
@@ -1301,48 +1341,53 @@ def get_bilancio_periodo(user_id, tipo_conto, mese=None, anno=None):
         filtro_tempo = "AND data LIKE ?"
         parametri.append(f"{str(anno).strip()}%")
 
-    # Query diretta sulle entrate (escludendo il saldo iniziale)
+    # 1. Query Entrate
     query_entrate = f"""
         SELECT COALESCE(SUM(ABS({colonna})), 0.0) 
         FROM {tabella} 
         WHERE user_id=? 
+        {filtro_conto}
         AND LOWER(TRIM(categoria)) = 'entrate' 
         AND LOWER(descrizione) NOT LIKE '%saldo iniziale%'
         AND LOWER(sottocategoria) NOT LIKE '%rimborso%'
         {filtro_tempo}
     """
     cursor.execute(query_entrate, parametri)
-    totale_entrate = cursor.fetchone()[0]
+    row_entrate = cursor.fetchone()
+    totale_entrate = row_entrate[0] if row_entrate and row_entrate[0] is not None else 0.0
 
-    # Query diretta sulle uscite (escludendo Entrate, saldi, prelievi e rimborsi)
-    query_spese = f"""
-        SELECT COALESCE(SUM(ABS({colonna})), 0.0) 
-        FROM {tabella} 
-        WHERE user_id=? 
-        AND LOWER(TRIM(categoria)) != 'entrate'
-        AND LOWER(descrizione) NOT LIKE '%saldo iniziale%'
-        AND LOWER(sottocategoria) NOT LIKE '%giroconto%'
-        AND LOWER(sottocategoria) NOT LIKE '%trasferimento%'
-        AND LOWER(sottocategoria) NOT LIKE '%prelievo contante%'
-        AND LOWER(sottocategoria) NOT LIKE '%rimborso%'
-        {filtro_tempo}
-    """
-    cursor.execute(query_spese, parametri)
-    totale_spese = cursor.fetchone()[0]
-
-    # Gestione delle Fee On-chain
-    if tipo_conto == 'ONCHAIN':
-        query_fee = f"""
-            SELECT COALESCE(SUM(ABS(fee)), 0.0) 
-            FROM transazioni_onchain 
-            WHERE user_id=? {filtro_tempo}
+    # 2. Query Spese
+    if conto == 'BANCA':
+        query_spese = f"""
+            SELECT COALESCE(SUM(ABS({colonna})), 0.0) 
+            FROM {tabella} 
+            WHERE user_id=? 
+            {filtro_conto}
+            AND LOWER(TRIM(categoria)) != 'entrate'
+            AND LOWER(descrizione) NOT LIKE '%saldo iniziale%'
+            AND LOWER(sottocategoria) NOT LIKE '%rimborso%'
+            {filtro_tempo}
         """
-        cursor.execute(query_fee, parametri)
-        totale_fee = cursor.fetchone()[0]
-        totale_spese += totale_fee
+    else:
+        query_spese = f"""
+            SELECT COALESCE(SUM(ABS({colonna})), 0.0) 
+            FROM {tabella} 
+            WHERE user_id=? 
+            {filtro_conto}
+            AND LOWER(TRIM(categoria)) != 'entrate'
+            AND LOWER(descrizione) NOT LIKE '%saldo iniziale%'
+            AND LOWER(sottocategoria) NOT LIKE '%giroconto%'
+            AND LOWER(sottocategoria) NOT LIKE '%trasferimento%'
+            AND LOWER(sottocategoria) NOT LIKE '%prelievo contante%'
+            AND LOWER(sottocategoria) NOT LIKE '%rimborso%'
+            {filtro_tempo}
+        """
+
+    cursor.execute(query_spese, parametri)
+    row_spese = cursor.fetchone()
+    totale_spese = row_spese[0] if row_spese and row_spese[0] is not None else 0.0
 
     conn.close()
-
     return float(totale_entrate), float(totale_spese)
 
 

@@ -27,15 +27,22 @@ block content %}
         <br/><br/>  
       </div>
     <div class="row align-items-center text-center text-md-start">
-      <div class="col-md-4 border-end border-dark">
-        <span class="text-muted">{{ _('Liquidità Spendibile:') }}</span>
-        <h3 class="fw-bold text-white mb-1">
-          {{ "%.2f"|format(liquidita_totale) }} {{ current_user.default_currency | currency_symbol }}
-        </h3>
-        <small class="text-muted">
-          🏦 {{ "%.2f"|format(banca) }}{{ current_user.default_currency | currency_symbol }} | 💼 {{ "%.2f"|format(contanti) }}{{ current_user.default_currency | currency_symbol }}
-        </small>
-      </div>
+  <div class="col-md-4 border-end border-dark">
+    <span class="text-muted">{{ _('Liquidità Spendibile:') }}</span>
+    <h3 class="fw-bold text-white mb-1">
+      {{ "%.2f"|format(liquidita_totale) }} {{ current_user.default_currency | currency_symbol }}
+    </h3>
+    <small class="text-muted">
+      <!-- 🏦 BANCA TRASFORMATA IN LINK CLICCABILE -->
+      <a href="{{ url_for('analytics_banca') }}" class="text-decoration-none text-reset hover-primary">
+        🏦 {{ "%.2f"|format(banca) }}{{ current_user.default_currency | currency_symbol }}
+      </a> 
+      | 
+      <!-- 💼 CONTANTI (per ora testo normale, poi faremo anche questa!) -->
+      💼 {{ "%.2f"|format(contanti) }}{{ current_user.default_currency | currency_symbol }}
+    </small>
+  </div>
+</div>
 
       <div class="col-md-4 border-end border-dark">
         <span class="text-muted">{{ _('Risparmi & Futuro:') }}</span>
@@ -152,8 +159,11 @@ block content %}
       </button>
     </a>
     <p class="saldo-detail">
-      🏦 {{ _('Banca:') }} {{ "%.2f"|format(banca) }} {{ current_user.default_currency | currency_symbol }}
+	    <a href="{{ url_for('analytics_banca') }}" class="text-decoration-none text-reset hover-primary">
+      		🏦 {{ _('Banca:') }} {{ "%.2f"|format(banca) }} {{ current_user.default_currency | currency_symbol }}
+	    </a> 
     </p>
+
     <p class="saldo-detail">
       💼 {{ _('Contanti:') }} {{ "%.2f"|format(contanti) }} {{ current_user.default_currency | currency_symbol }}
     </p>

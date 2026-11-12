@@ -2146,6 +2146,107 @@ def analytics(tipo):
                            )
 
 
+@app.route('/analytics/banca')
+@login_required
+def analytics_banca():
+    from flask_babel import gettext as _
+    from db.db_utils import (
+        get_spese_per_categoria_filtrate,
+        get_entrate_per_sottocategoria,
+        get_bilancio_periodo
+    )
+
+    user_currency = getattr(current_user, 'default_currency', 'EUR') or 'EUR'
+    info_valuta = VALUTE_SUPPORTATE.get(user_currency, {'simbolo': '€'})
+    simbolo_valuta = info_valuta.get('simbolo', '€') if isinstance(
+        info_valuta, dict) else info_valuta
+
+    tasso_fiat = float(get_exchange_rate('EUR', user_currency)
+                       or 1.0) if user_currency != 'EUR' else 1.0
+
+    # Filtri Mese / Anno
+    mese_selezionato = request.args.get('mese')
+    anno_selezionato = request.args.get('anno')
+
+    if mese_selezionato:
+        mese_selezionato = mese_selezionato.strip()
+        if not mese_selezionato:
+            mese_selezionato = None
+        else:
+            anno_selezionato = None
+
+    if anno_selezionato:
+        anno_selezionato = anno_selezionato.strip()
+        if not anno_selezionato:
+            anno_selezionato = None
+        else:
+            mese_selezionato = None
+
+    # Recupero dati FILTRATI ESCLUSIVAMENTE SULLA BANCA
+    labels_spese, valori_spese = get_spese_per_categoria_filtrate(
+        current_user.id, 'EURO', mese=mese_selezionato, anno=anno_selezionato, conto='BANCA'
+    )
+
+    labels_entrate, valori_entrate = get_entrate_per_sottocategoria(
+        current_user.id, 'EURO', mese=mese_selezionato, anno=anno_selezionato, conto='BANCA'
+    )
+
+    tot_entrate, tot_spese = get_bilancio_periodo(
+        current_user.id, 'EURO', mese=mese_selezionato, anno=anno_selezionato, conto='BANCA'
+    )
+
+    # Conversione valuta utente
+    tot_entrate = float(tot_entrate or 0) * tasso_fiat
+    tot_spese = float(tot_spese or 0) * tasso_fiat
+    valori_spese = [float(v or 0) * tasso_fiat for v in valori_spese]
+    valori_entrate = [float(v or 0) * tasso_fiat for v in valori_entrate]
+
+    delta = tot_entrate - tot_spese
+    saving_rate = (delta / tot_entrate * 100) if tot_entrate > 0 else 0.0
+    # Calcoliamo il saldo totale attuale del conto Banca (somma di tutti i movimenti storici)
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COALESCE(SUM(importo), 0.0) 
+        FROM transazioni 
+        WHERE user_id = ? AND conto = 'BANCA'
+    """, (current_user.id,))
+    row_saldo = cursor.fetchone()
+    saldo_totale_banca = float(
+        row_saldo[0]) if row_saldo and row_saldo[0] is not None else 0.0
+    conn.close()
+
+    return render_template('analytics_banca.html',
+                           labels_spese=labels_spese,
+                           valori_spese=valori_spese,
+                           labels_entrate=labels_entrate,
+                           valori_entrate=valori_entrate,
+                           tipo='BANCA',
+                           titolo_pagina=_("Statistiche Conto Banca"),
+                           mese_selezionato=mese_selezionato,
+                           anno_selezionato=anno_selezionato,
+                           tot_entrate=tot_entrate,
+                           tot_spese=tot_spese,
+                           delta=delta,
+                           savings_rate=saving_rate,
+                           # <-- Qui c'è il simbolo corretto (es. €)
+                           simbolo_valuta=simbolo_valuta,
+                           # Le variabili vuote per non far crashare il vecchio template copiato:
+                           costo_storico_eur=0.0,
+                           valore_attuale_eur=0.0,
+                           rendimento=0.0,
+                           percentuale=0.0,
+                           investimenti_fiat=[],
+                           cronologia_fiat=[],
+                           date_fiat=[],
+                           valori_fiat=[],
+                           date_btc=[],
+                           saldi_btc=[],
+                           saldi_eur_btc=[],
+                           saldo_totale_banca=saldo_totale_banca)
+
+
 @app.route('/add_asset', methods=['POST'])
 @login_required
 def add_asset():
